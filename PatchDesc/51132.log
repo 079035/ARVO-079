@@ -1,0 +1,25 @@
+Vulnerability:
+
+The vulnerability in the code is a double-free issue. The code attempts to free the variable `tmp` twice, once before the `goto` statement at `line 202`, and again after the `goto` statement at `line 210`.
+
+Summary of the fix:
+
+The fix addresses the double-free issue by removing the unnecessary freeing of the variable `tmp` before the `goto` statement at `line 202`.
+
+Detailed description of the fix:
+
+To fix the double-free issue, the code at `line 191` should be updated as follows:
+
+Before:
+```c
+flb_sds_destroy(tmp);
+```
+
+After:
+```c
+/* Remove the unnecessary freeing of tmp */
+```
+
+By removing the line `flb_sds_destroy(tmp);`, the issue of double-freeing `tmp` is resolved. Since `tmp` is already freed within the `if` statement at `line 198`, there is no need to free it again after the `goto` statement at `line 210`.
+
+This fix ensures that the variable `tmp` is only freed once, preventing any potential double-free vulnerability.

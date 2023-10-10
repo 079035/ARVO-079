@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability in this code is a bounds checking issue in the function `x509_parse_ext_certificate_policies()`. The code does not properly calculate the remaining length of the buffer, which can result in reading beyond the end of the buffer in case of corrupted input data.
+
+Fix:
+The fix for this vulnerability involves correcting the calculation of the remaining length of the buffer to avoid reading beyond its bounds.
+
+Detailed description of the fix:
+1. The code first checks if the next ASN.1 header can be retrieved correctly using `asn1_get_next()`. If the retrieval fails or the header is not of the expected type (SEQUENCE), the function immediately returns -1 to indicate an error.
+2. The fix introduces a new variable `end` to keep track of the end position of the buffer. This is initialized to `pos + len`, which is the originally calculated end position.
+3. In the loop that processes each `PolicyInformation` entry, the fix updates the bounds checking condition from `hdr.length > pos + len - hdr.payload` to `hdr.length > end - hdr.payload`. This ensures that the length of the current entry does not exceed the remaining buffer length.
+4. The fix also updates the logging statements to use `wpa_hexdump()` to print the debug information.
+5. After processing all the `PolicyInformation` entries, the fix updates the `cert->extensions_present` flag to indicate that the `X509_EXT_CERTIFICATE_POLICY` extension is present.
+6. Finally, the fixed function returns 0 to indicate success.
+
+This fix ensures that the bounds of the buffer are properly checked before accessing it, preventing potential buffer overflows.

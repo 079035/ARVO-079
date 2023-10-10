@@ -1,0 +1,98 @@
+{
+    "fix": "https://github.com/google/draco/commit/b2059d9ab76e9fedb793ecfe28516dca744cd805",
+    "verify": "0",
+    "localId": 27950,
+    "project": "draco",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Global-buffer-overflow READ 4",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27950,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1606463314,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5336948063076352\n\nProject: draco\nFuzzing Engine: libFuzzer\nFuzz Target: draco_pc_decoder_without_dequantization_fuzzer\nJob Type: libfuzzer_asan_draco\nPlatform Id: linux\n\nCrash Type: Global-buffer-overflow READ 4\nCrash Address: 0x0000007e35d8\nCrash State:\n  draco::MeshEdgebreakerDecoderImpl<draco::MeshEdgebreakerTraversalValenceDecoder>\n  draco::MeshEdgebreakerDecoderImpl<draco::MeshEdgebreakerTraversalValenceDecoder>\n  draco::MeshDecoder::DecodeGeometryData\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_draco&range=202006230231:202007071657\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5336948063076352\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27950,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1606507361,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2021-02-25"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27950,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1613763805,
+                "content": "This bug is approaching its deadline for being fixed, and will be automatically derestricted within 7 days. If a fix is planned within 2 weeks after the deadline has passed, a grace extension can be granted.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Deadline-Approaching"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27950,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1614368784,
+                "content": "This bug has exceeded our disclosure deadline. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit -deadline-approaching Deadline-Exceeded"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27950,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1630073927,
+                "content": "ClusterFuzz testcase 5336948063076352 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_draco&range=202012010604:202108261307\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "b2059d9ab76e9fedb793ecfe28516dca744cd805",
+    "repo_addr": "https://github.com/google/draco"
+}

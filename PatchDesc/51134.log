@@ -1,0 +1,9 @@
+Vulnerability: Potential out-of-bounds read in PfxEntry::test_condition()
+
+Summary of the fix: The fix introduces a check to ensure that the index `st` is within the bounds of the string `s` before accessing the character at that index.
+
+Detailed description of the fix: The vulnerability in the code arises from the fact that the code does not correctly handle the situation where the index `st` exceeds the length of the string `s`. This can lead to accessing memory outside the bounds of the string, resulting in undefined behavior and potentially a crash or information leak.
+
+To fix this vulnerability, a check is added to the code to verify if the index `st` is less than the size of the string `s` before trying to access the character at that index. If the index is out of bounds, the code returns 0, indicating that the word does not satisfy the condition.
+
+This check prevents the code from accessing memory outside the boundaries of the string `s` and ensures that the behavior is well defined.

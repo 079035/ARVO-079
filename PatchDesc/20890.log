@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is a potential memory leak. In the function `ReadGRADIENTImage`, the `stops` array is allocated using `AcquireQuantumMemory` but it is never freed.
+
+Summary of the fix:
+The fix involves explicitly freeing the allocated `stops` array before returning from the function.
+
+Detailed description of the fix:
+1. At line 220, add the code to free the allocated `stops` array:
+   ```c
+   stops = (StopInfo *) RelinquishMagickMemory(stops);
+   ```
+   This will release the memory allocated for the `stops` array and prevent a memory leak.
+
+With this fix, the potential memory leak in the `ReadGRADIENTImage` function is patched by correctly freeing the `stops` array before returning from the function.

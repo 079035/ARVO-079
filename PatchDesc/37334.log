@@ -1,0 +1,34 @@
+Vulnerability:
+The vulnerability patched in this diff file is an integer overflow vulnerability.
+
+Summary of Fix:
+The fix adds an additional check to prevent integer overflow.
+
+Detailed Description of Fix:
+1. The fix adds the following code snippet:
+```c
+if (buf_size / d->entries[i].components < exif_format_get_size(d->entries[i].format)) {
+    exif_log (md->log, EXIF_LOG_CODE_CORRUPT_DATA,
+        "ExifMnoteApplet", "Tag size overflow detected (components %lu vs size %u)", d->entries[i].components, buf_size);
+    break;
+}
+```
+This code checks if the calculated tag size (buf_size / d->entries[i].components) is less than the size of the format (exif_format_get_size(d->entries[i].format)). If it is, it indicates an integer overflow, and the code logs an error message and breaks out of the loop.
+
+2. The if condition is added before allocating memory for the tag data:
+```c
+d->entries[i].data = exif_mem_alloc(md->mem, dsize);
+```
+If the if condition fails (indicating an integer overflow), the loop is broken, and the execution continues after the loop.
+
+3. Additionally, the code adds a similar check to detect tag size overflow in a different scenario:
+```c
+if (dofs + dsize > buf_size) {
+    exif_log (md->log, EXIF_LOG_CODE_CORRUPT_DATA,
+        "ExifMnoteApplet", "Tag size overflow detected (%u vs size %u)", dofs + dsize, buf_size);
+    continue;
+}
+```
+This check is performed after calculating the offset and size of the tag data. If the sum of the offset (dofs) and size (dsize) exceeds the buffer size (buf_size), it indicates an integer overflow, and the code logs an error message and continues to the next iteration of the loop.
+
+4. These additional checks prevent integer overflow vulnerabilities by ensuring that the calculated tag sizes and offsets do not exceed the buffer size.

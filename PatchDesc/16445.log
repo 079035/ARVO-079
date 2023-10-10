@@ -1,0 +1,12 @@
+Vulnerability:
+There is a buffer overflow vulnerability in the `ZSTD_decodeLiteralsBlock` function in the file `zstd_v03.c`.
+
+Summary of the fix:
+The fix prevents the buffer overflow vulnerability by adding two conditional statements to check the value of `litSize` before executing the memcpy function.
+
+Detailed description of the fix:
+The vulnerability occurs in the `case IS_RAW` section of the `ZSTD_decodeLiteralsBlock` function. The code checks if the value of `litSize` is greater than `srcSize-11` and if so, returns an error indicating a corruption is detected. However, the code does not check if `litSize` is greater than `BLOCKSIZE` or if it is greater than `srcSize-3`. This introduces a potential buffer overflow vulnerability.
+
+To fix the vulnerability, two conditional statements are added before the `memcpy` function. The first conditional statement checks if `litSize` is greater than `BLOCKSIZE`, and if so, returns an error. This prevents the buffer overflow from occurring. The second conditional statement checks if `litSize` is greater than `srcSize-3`, and if so, returns an error. This ensures that the `memcpy` function does not read beyond the available source data.
+
+By adding these two conditional statements, the fix prevents the buffer overflow vulnerability and ensures the safe execution of the `memcpy` function.

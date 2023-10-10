@@ -1,0 +1,17 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is a heap-buffer-overflow in the function `onigenc_unicode_mbc_case_fold`. 
+
+Summary of the fix:
+
+The patch fixes the vulnerability by adding a check to ensure that the `data_pattern` is a valid multi-byte character string before passing it to the `search` function.
+
+Detailed description of the fix:
+
+In the previous code, there was no check to verify if the `data_pattern` is a valid multi-byte character string before passing it to the `search` function. This could lead to a heap-buffer-overflow if an invalid `data_pattern` is used.
+
+The fix in this diff file addresses this vulnerability by adding a check before calling the `search` function. The code now checks if `data_pattern` is equal to `pattern` (the main pattern used for the regular expression) or if `data_pattern` is a valid multi-byte character string using the `onigenc_is_valid_mbc_string` function.
+
+If `data_pattern` is either equal to `pattern` or a valid multi-byte character string, then the `search` function is called with the `data_pattern` as an argument. Otherwise, the `search` function is not called.
+
+This fix ensures that only valid multi-byte character strings are passed to the `search` function, preventing a potential heap-buffer-overflow vulnerability.

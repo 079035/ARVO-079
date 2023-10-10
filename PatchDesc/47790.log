@@ -1,0 +1,33 @@
+Vulnerability:
+Heap-buffer-overflow in CFF::Charset::collect_glyph_to_sid_map. This vulnerability could result in a heap buffer overflow when executing the `collect_glyph_to_sid_map` function in the `Charset1_2` struct.
+
+Summary of the fix:
+The fix for this vulnerability is to add a bounds check before entering the loop in the `collect_glyph_to_sid_map` function. If `gid` is greater than or equal to `num_glyphs`, the function will return early, preventing the heap buffer overflow.
+
+Detailed description of the fix:
+In the original code, there is no bounds check when initializing the `gid` variable before entering the loop in the `collect_glyph_to_sid_map` function. This means that if `gid` is greater than or equal to `num_glyphs`, the loop will continue to execute and potentially result in a heap buffer overflow.
+
+The fix addresses this issue by adding a bounds check before entering the loop. If `gid` is greater than or equal to `num_glyphs`, the function will return early without executing the loop, effectively preventing the heap buffer overflow.
+
+The updated code with the fix is as follows:
+
+```cpp
+void collect_glyph_to_sid_map (hb_map_t *mapping, unsigned int num_glyphs) const
+{
+  hb_codepoint_t gid = 1;
+  if (gid >= num_glyphs)
+    return;
+  for (unsigned i = 0;; i++)
+  {
+    hb_codepoint_t sid = ranges[i].first;
+    unsigned count = ranges[i].nLeft + 1;
+    for (unsigned j = 0; j < count; j++)
+      mapping->set (gid++, sid++);
+
+    if (gid >= num_glyphs)
+      break;
+  }
+}
+```
+
+This fix ensures that the `collect_glyph_to_sid_map` function will return early if `gid` is greater than or equal to `num_glyphs`, preventing any potential heap buffer overflow.

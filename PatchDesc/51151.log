@@ -1,0 +1,21 @@
+Vulnerability:
+The vulnerability patched in this diff file is a bug in the black point detection when using a matrix-shaper with inverted curves. This bug could lead to incorrect black point values being returned.
+
+Summary of the fix:
+The fix addresses the bug by checking for inconsistencies in the Lab values before setting the L value to 0 if it is greater than 50 or less than 0. This ensures that the black point is forced to be neutral.
+
+Detailed description of the fix:
+1. The function `BlackPointAsDarkerColorant` takes an input profile, an intent, a black point value, and flags as parameters.
+2. First, the function checks if the profile supports the input direction for the given intent. If not, it sets the black point values to 0 and returns FALSE.
+3. Next, the function determines the color space of the input profile.
+4. Then, it retrieves the darker colorant values for the color space using the `_cmsEndPointsBySpace` function. If the function fails to retrieve the values, it sets the black point values to 0 and returns FALSE.
+5. The function checks if the number of channels in the profile matches the expected number of channels based on the color space. If not, it sets the black point values to 0 and returns FALSE.
+6. It creates a Lab profile (`hLab`) using the `cmsCreateLab2ProfileTHR` function. If the creation fails, it sets the black point values to 0 and returns FALSE.
+7. The function creates a transform (`xform`) using `cmsCreateTransformTHR` with the input profile, output format, Lab profile, output format (TYPE_Lab_DBL), intent, and flags. If the creation fails, it sets the black point values to 0 and returns FALSE.
+8. It performs a transformation of the black colorant values to Lab using `cmsDoTransform`.
+9. The fixed code then checks for inconsistencies in the Lab values by setting the `a` and `b` values to 0 if the `L` value is greater than 50 or less than 0. This ensures that the black point is forced to be neutral.
+10. The transform is deleted using `cmsDeleteTransform`.
+11. Finally, the Lab values are converted back to XYZ using `cmsLab2XYZ` and assigned to `BlackXYZ`.
+12. If `BlackPoint` is not `NULL`, the `BlackXYZ` value is assigned to `BlackPoint`.
+13. The function returns TRUE to indicate successful black point detection.
+14. `dwFlags` parameter is marked as unused.

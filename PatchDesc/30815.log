@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability in this code is that the test `pdo_mysql_prepare_load_data.phpt` is no longer valid because `LOAD DATA INFILE` is supported for prepared statements on Windows with mysqlnd. Therefore, the test is not testing what it is supposed to.
+
+Summary of the Fix:
+The fix removes the `pdo_mysql_prepare_load_data.phpt` test because it is no longer valid.
+
+Detailed Description of the Fix:
+The fix involves deleting the `pdo_mysql_prepare_load_data.phpt` test file from the codebase. This is done because the test is no longer valid since `LOAD DATA INFILE` is now supported for prepared statements on Windows with mysqlnd. The test was originally designed to check if `::prepare()` fails when using `LOAD DATA INFILE` as a prepared statement, and then check if follow-up queries succeed. However, since the functionality now works, the test is dropped from the codebase.
+
+This fix ensures that the codebase is up-to-date and removes unnecessary and invalid tests. The removal of the test file does not affect the functionality of the code as it was no longer valid. This change closes the issue GH-6509.

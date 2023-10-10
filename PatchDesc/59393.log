@@ -1,0 +1,9 @@
+Vulnerability: Heap buffer overflow
+
+Summary of the fix: The fix modifies the code in `ndpi_check_punycode_string` function to correctly check for a punycode string and prevents a heap buffer overflow.
+
+Detailed description of the fix: In the original code, there is a loop that checks the characters in the `buffer` array to determine if it is a punycode string. However, the loop condition is incorrect. The condition `(i < len - 3)` assumes that there are at least four characters left in the array, but this is not guaranteed. If the length of the `buffer` array is less than 4, the loop will iterate out of bounds, causing a heap buffer overflow.
+
+The fix modifies the loop condition to `(i++ < len - 3)` to first check if there are enough characters remaining in the array before accessing them. On each iteration, it checks if the current characters form a punycode string and returns 1 if a punycode string is found. Additionally, the fix includes an increment statement `i++` inside the loop to increment the loop counter after checking the characters, ensuring that the loop progresses correctly.
+
+With the fix, the code now correctly checks for punycode strings without causing a heap buffer overflow.

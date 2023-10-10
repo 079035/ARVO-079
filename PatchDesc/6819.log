@@ -1,0 +1,82 @@
+Vulnerability: Improper memory allocation leading to a heap buffer overflow.
+This vulnerability can be exploited by an attacker to execute arbitrary code or cause a denial of service.
+
+Summary of Fix: The fix for this vulnerability is to properly allocate memory for the "pixels" array to prevent a heap buffer overflow.
+
+Detailed Description of Fix:
+In the function `ReadPDBImage`, the `pixels` array is allocated using the `AcquireQuantumMemory` function. However, the size of memory allocated is not correctly calculated, leading to a potential heap buffer overflow.
+
+To fix this vulnerability, the code has been modified as follows:
+
+```diff
+ size_t
+    bits_per_pixel,
+    num_pad_bytes,
+    one,
+    packets;
+  
+  ssize_t
+    count,
+    img_offset,
+    comment_offset = 0,
+    y;
+ 
+  unsigned char
+    *pixels;
+ 
+  /*
+  ...
+  */
+  
++  num_pad_bytes = (size_t) (img_offset - TellBlob(image));
++  while (num_pad_bytes-- != 0)
++  {
++    int
++      c;
++ 
++    c = ReadBlobByte(image);
++    if (c == EOF)
++      break;
++  }
++  /*
++    Read image header.
++  */
++  count = ReadBlob(image, sizeof(pdb_image.name), (unsigned char *) pdb_image.name);
++  if (count != sizeof(pdb_image.name))
++    ThrowReaderException(CorruptImageError,"ImproperImageHeader");
+
+  pdb_image.version = ReadBlobByte(image);
+  pdb_image.type = (unsigned char) (ReadBlobByte(image));
+  pdb_image.reserved_1 = ReadBlobMSBLong(image);
+  pdb_image.note = ReadBlobMSBLong(image);
+  pdb_image.x_last = (short) ReadBlobMSBShort(image);
+  pdb_image.y_last = (short) ReadBlobMSBShort(image);
+  pdb_image.reserved_2 = ReadBlobMSBLong(image);
+  pdb_image.x_anchor = ReadBlobMSBShort(image);
+  pdb_image.y_anchor = ReadBlobMSBShort(image);
+  pdb_image.width = (short) ReadBlobMSBShort(image);
+  pdb_image.height = (short) ReadBlobMSBShort(image);
+
+  /*
+  ...
+  */
+
+  // Allocate memory for the pixels array
+-  packets=(bits_per_pixel*image->columns+7)/8;
+-  pixels=(unsigned char *) AcquireQuantumMemory(packets+257UL,image->rows*
+-    sizeof(*pixels));
++  packets = (bits_per_pixel * image->columns + 7) / 8;
++  pixels = (unsigned char *) AcquireQuantumMemory(packets * image->rows,
++    sizeof(*pixels));
+  if (pixels == (unsigned char *) NULL)
+-    ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
++  {
++    (void) CloseBlob(image);
++    return(DestroyImageList(image));
++  }
+  
+  (void) ResetMagickMemory(pixels, 0, packets * image->rows * sizeof(*pixels));
+  
+  switch (pdb_image.version & 0x07) 
+  {
+    case 

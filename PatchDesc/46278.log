@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability that could be patched in this diff file is an incorrect version suffix in the LIBRAW_VERSION_TAIL macro. It is currently set to "Beta1" but it should be changed to "RC1".
+
+Summary of the fix:
+The fix changes the LIBRAW_VERSION_TAIL macro in libraw_version.h from "Beta1" to "RC1".
+
+Detailed description of the fix:
+In the original code, the LIBRAW_VERSION_TAIL macro is set to "Beta1". However, this is incorrect and could lead to confusion or incorrect version identification. To address this issue, the fix changes the LIBRAW_VERSION_TAIL macro to "RC1". This update ensures that the version suffix accurately reflects the release candidate status of the software. By updating the macro, the vulnerability is patched and the correct version suffix is used in the code.

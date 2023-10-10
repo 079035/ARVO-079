@@ -1,0 +1,16 @@
+Vulnerability:
+In the provided diff file, there is a vulnerability related to insufficient data copying. The vulnerable code is in the function `ParseIpcoAtom()` where the property data is being copied from the `propDb` data buffer to the `prop->data` buffer using the `memcpy()` function. However, there is a mistake in the size calculation, and an extra 4 bytes are being added to the size of the data to be copied.
+
+Summary of the fix:
+The fix in this patch involves removing the extra 4 bytes from the size argument passed to `memcpy()` when copying the property data.
+
+Detailed description of the fix:
+To fix the vulnerability, the line of code:
+```cpp
+memcpy(prop->data, propDb.data, prop->size+4);
+```
+should be changed to:
+```cpp
+memcpy(prop->data, propDb.data, prop->size);
+```
+This change ensures that only the correct amount of data is copied from `propDb.data` to `prop->data`. The `prop->size` is used as the size argument for `memcpy()`, removing the extra 4 bytes added in the vulnerable code. This prevents any potential buffer overflow or memory corruption caused by copying additional data beyond the allocated memory for `prop->data`.

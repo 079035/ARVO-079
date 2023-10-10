@@ -1,0 +1,12 @@
+Vulnerability: Out of boundary vector access
+
+Summary of the fix: The fix addresses the issue of out of boundary vector access by adding a check for an empty vector at the beginning of the `permutate` and `permutateAlt` functions.
+
+Detailed description of the fix:
+1. The fix checks if the input vector (`in`) is empty at the beginning of the `permutate` and `permutateAlt` functions using the condition `if (L == 0) return {};`.
+2. If the input vector is empty, an empty vector is returned indicating an early exit from the functions.
+3. Additionally, a check is added to exit early if any of the sub-vectors (`in[i]`) within the input vector is also empty using the condition `if (in[i].size() == 0) return {};`.
+4. These checks prevent accessing elements of an empty vector, avoiding potential out of boundary errors.
+5. The rest of the code in the `permutate` and `permutateAlt` functions remains the same, ensuring all states are properly initialized and permutations are created.
+
+This fix addresses the vulnerability of out of boundary vector access by preventing the execution of the code that would lead to such access when the input vector or sub-vectors are empty.

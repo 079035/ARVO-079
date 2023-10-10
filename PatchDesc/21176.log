@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability in the given diff file is a double free bug. The issue occurs when parsing a DNS response containing an SOA record with multiple answers. If the qclass is T_SOA and the ancount is greater than 1, the function incorrectly frees the `rr_name` pointer twice.
+
+Summary of the fix:
+The fix attempts to address the double free bug introduced in the previous commit.
+
+Detailed description of the fix:
+1. Before the fix, the code executed the following steps to expand the name for each record in the response:
+   - Allocate memory for `rr_name`.
+   - Call `ares__expand_name_for_response` function, passing `aptr`, `abuf`, `alen`, `&rr_name`, and `&len`.
+   - If the expansion was successful, update `aptr` and proceed with the rest of the code.
+2. The fix adds a new line before calling `ares__expand_name_for_response` to set `rr_name` to NULL. This prevents the double free bug when freeing `rr_name` later in the code.
+3. The rest of the code remains the same, performing the necessary checks and parsing the SOA record.
+4. After successfully parsing the SOA record and storing the data in the `soa` structure, `qname` and `rr_name` are freed, and then `soa` is assigned to `*soa_out`.
+5. The function returns `ARES_SUCCESS` as the SOA record is successfully parsed.
+6. If no SOA record is found, the code jumps to the `failed_stat` label, setting `status` to `ARES_EBADRESP` and frees `rr_name`.
+7. The fix does not address any possible memory leaks or other potential issues in the code.

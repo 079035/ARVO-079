@@ -1,0 +1,35 @@
+Vulnerability:
+- The code does not perform a boundary check when decoding a symbol.
+- If the `codeLen` is `LONG_ZEROCODE_RUN`, the code attempts to read 8 more bits from `currByte`, but it does not check if `currByte` is already beyond the valid boundary.
+
+Fix Summary:
+- The fix adds a boundary check before attempting to read the additional 8 bits when `codeLen` is `LONG_ZEROCODE_RUN`.
+- If `currByte` is already beyond the valid boundary, the code returns an error.
+
+Detailed Fix Description:
+1. After the check for `codeLen == (uint64_t) LONG_ZEROCODE_RUN`, the fix adds the following code:
+   ```
+   if (currByte >= topByte)
+   {
+       if (pctxt)
+           pctxt->print_error (
+               pctxt,
+               EXR_ERR_CORRUPT_CHUNK,
+               "Error decoding Huffman table (Truncated table data).");
+       return EXR_ERR_CORRUPT_CHUNK;
+   }
+   ```
+   - This block checks if `currByte` is already beyond the valid boundary of `table`.
+   - If `currByte` is beyond the valid boundary, it means that the table data is truncated, and an error is returned.
+
+2. In the block where `symbol` is updated when `codeLen == (uint64_t) LONG_ZEROCODE_RUN`, the fix adds the following code:
+   ```
+   symbol +=
+       fasthuf_read_bits (8, &currBits, &currBitCount, &currByte) +
+       SHORTEST_LONG_RUN - 1;
+   ```
+   - This block reads an additional 8 bits from `currByte` to calculate the updated value of `symbol`.
+   - The value read from `currByte` is added to `symbol`.
+   - The `SHORTEST_LONG_RUN - 1` term adjusts the value of `symbol` so that it corresponds to the correct position in the symbol table.
+
+3. The fix also removes unnecessary comments and reorganizes some variable declarations for clarity, but these changes do not affect the behavior of the code.

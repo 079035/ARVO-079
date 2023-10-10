@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability in the given diff file is that the z arrays are not properly initialized within the functions bigint_cnd_add and bigint_cnd_sub in the mp_core.cpp file. This leads to potential uninitialized memory usage.
+
+Summary of the fix:
+The fix initializes the z arrays with zeroes before using them in the functions bigint_cnd_add and bigint_cnd_sub.
+
+Detailed description of the fix:
+1. In the function bigint_cnd_add:
+   - The line `word z[8];` is removed.
+   - The line `word z[8] = { 0 };` is added to initialize the z array with zeroes.
+
+2. In the function bigint_cnd_sub:
+   - The line `word z[8];` is removed.
+   - The line `word z[8] = { 0 };` is added to initialize the z array with zeroes.
+
+By initializing the z arrays with zeroes before using them, the fix ensures that there is no uninitialized memory usage in the functions. This helps address the vulnerability reported by OSS-Fuzz.

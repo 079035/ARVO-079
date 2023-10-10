@@ -1,0 +1,24 @@
+Vulnerability:
+There is a vulnerability in the code that allows an attacker to perform a denial-of-service attack by consuming excessive memory resources. 
+
+Summary of the fix:
+The fix added code to check for out-of-memory conditions and handle them appropriately to prevent resource exhaustion. 
+
+Detailed description of the fix:
+The fix added the following changes to the code:
+
+1. Within the function `ReadWEBPImage`, a check for out-of-memory conditions was added after the call to `WebPInitDecoderConfig`. If the call to `WebPInitDecoderConfig` fails (returns 0), the code throws a "ResourceLimitError" exception to indicate a memory allocation failure.
+
+2. The fix added code to check if the length of the WebP image data is less than 12 bytes. If it is, then the code throws a "CorruptImageError" exception to indicate a corrupt image.
+
+3. After reading the image data into the `stream` variable, the code now checks if the call to `WebPGetFeatures` fails. If it fails, the code throws a "CorruptImageError" exception to indicate a corrupt image.
+
+4. The fix added code to check if the call to `WebPDecode` fails. If it fails, the code throws different exceptions depending on the type of failure, such as "ResourceLimitError", "CorruptImageError", or "CoderError".
+
+5. The fix added code to check for out-of-memory conditions after each iteration of the loop that processes the image pixel data. If an out-of-memory condition is detected, the code breaks the loop and throws a "MemoryAllocationFailed" exception.
+
+6. The fix added a call to `WebPFreeDecBuffer` to free the memory allocated for the WebPDecBuffer structure before returning.
+
+7. Lastly, the fix added code to extract any profiles (ICC, EXIF, XMP) from the WebP image using the WebPMux API. If profiles are found, they are set as image profiles using the `SetImageProfile` function.
+
+These changes ensure that the code handles out-of-memory conditions correctly and prevents resource exhaustion.

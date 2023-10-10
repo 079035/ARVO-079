@@ -1,0 +1,10 @@
+Vulnerability: Double Free
+Summary of the fix: The fix patches a double free vulnerability that occurs when processing an XInclude with an empty fallback.
+Detailed description of the fix: Previously, if an XInclude with an empty fallback was encountered, it could lead to a double free in the xmlTextReaderRead function. The fix addresses this vulnerability by adding a check to ensure that the old node being freed is not set as the current node before sending it to be freed. The fix adds the following lines of code:
+
+```c
+if (oldnode == tmp)
+    oldnode = NULL;
+```
+
+This check ensures that the old node is set to NULL if it is equal to the temporary node being freed. This prevents a double free from occurring.

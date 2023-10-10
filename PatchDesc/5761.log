@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability in the code patched in the given diff file is the improper use of the AcquireQuantumMemory function. In the line `one_row=(unsigned char *) AcquireQuantumMemory(MagickMax(bytes_per_row,2*image->columns),sizeof(*one_row));`, the `AcquireQuantumMemory` function is called with the size of `bytes_per_row` or `2 * image->columns`, whichever is larger. This call does not account for the possibility that `bytes_per_row` or `2 * image->columns` could be zero, leading to a potential memory allocation of zero size.
+
+Summary of the Fix:
+The fix in the code is to assign the value of the `MagickMax(bytes_per_row, 2 * image->columns)` expression to a variable `extent` and then check if `extent` is zero. If it is, the `AcquireQuantumMemory` function is not called, and instead, the `MemoryAllocationFailed` exception is thrown.
+
+Detailed Description of the Fix:
+1. Initialize an `extent` variable with the value of `MagickMax(bytes_per_row, 2 * image->columns)`.
+2. Check if `extent` is zero.
+3. If `extent` is zero,

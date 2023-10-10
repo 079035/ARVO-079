@@ -1,0 +1,26 @@
+Vulnerability:
+The vulnerability in the provided diff file is a potential integer overflow in the `number_stitches` variable. This variable is initially set to 64 and is incremented by multiplying it by 2 when it exceeds its maximum value. However, there is no check to ensure that the multiplication does not cause an integer overflow, which could lead to undefined behavior.
+
+Summary of the Fix:
+The fix corrects the integer overflow issue by adding a check before multiplying the `number_stitches` variable by 2. If the multiplication would cause an overflow, the code throws a "MemoryAllocationFailed" exception instead of incrementing the variable.
+
+Detailed Description of the Fix:
+In the `ReadPESImage` function, after reading the stitches from the image, the code checks if the current number of stitches (`number_stitches`) has exceeded its limit by comparing it with the maximum value (`ssize_t`). If the limit is reached or exceeded, the code throws a "MemoryAllocationFailed" exception using the `ThrowReaderException` function. This prevents an integer overflow from occurring and ensures the program does not continue executing with potentially corrupted memory.
+
+Here is the relevant code snippet showcasing the fix:
+
+```diff
+  if (i >= (ssize_t) number_stitches)
+    {
+      /*
+        Make room for more stitches.
+      */
+      number_stitches<<=1;
+      stitches=(PointInfo *)  ResizeQuantumMemory(stitches,(size_t)
+        number_stitches,sizeof(*stitches));
+      if (stitches == (PointInfo *) NULL)
+        ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
+   }
+```
+
+This fix ensures that the `number_stitches` variable is correctly incremented without the risk of an integer overflow.

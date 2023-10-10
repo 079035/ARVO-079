@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given diff file is a bug introduced in the commit 9b0b40b3c1ac8155c80ed5dc976228f4d3ec7e1f and it was discovered by the msan bot.
+
+Summary of Fix:
+The bug introduced in the previous commit has been fixed.
+
+Detailed Description of Fix:
+In the previous code, the condition `!(buffer->cur().mask & kern_mask)` is used to check if the current glyph has the kerning mask. However, this is incorrect because `cur()` returns the current glyph position rather than the info for glyph at `idx`. 
+
+The fix for this bug is to change `!(buffer->cur().mask & kern_mask)` to `!(info[idx].mask & kern_mask)` in the `for` loop condition. This ensures that the check is performed on the correct glyph.
+
+By making this change, the fix ensures that the correct glyph is checked for the kerning mask, and the kerning operations are applied correctly to the glyph positions. This prevents any potential incorrect glyph positioning that could occur due to the previous bug.

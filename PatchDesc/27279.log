@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is a miscalculation of the compression size in the `flb_gzip_compress` function.
+
+Summary of Fix:
+The fix in this diff file corrects the calculation of the maximum compressed size in the `flb_gzip_compress` function. It takes into account the worst-case expansion of 5 bytes per 32KB data, as specified in RFC 1951.
+
+Detailed Description of Fix:
+1. The fix introduces a new variable `max_input_expansion`, which calculates the maximum possible expansion of the input data based on the input length. It uses the formula `((int)(in_len / 32000) + 1) * 5` to estimate the expansion size.
+2. The fix updates the calculation of `out_size` to include the maximum input expansion, in addition to the original calculations for the header, footer, and size of input.
+3. The fix allocates a new `out_buf` with the updated `out_size`.
+4. The fix then proceeds with the compression process as before, with the updated buffer size.
+5. After the compression is complete, the fix constructs the gzip checksum (CRC32 footer) correctly using the updated buffer size.
+6. Finally, the fix updates the `out_len` and sets the `out_data` with the corrected buffer size and buffer pointer, respectively.
+
+Overall, the fix in this diff file ensures that the calculation of the compression size in the `flb_gzip_compress` function is accurate, taking into account the worst-case expansion of the input data.

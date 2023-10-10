@@ -1,0 +1,17 @@
+Vulnerability:
+
+The vulnerability in this code is a potential buffer overflow caused by unsafe string copy operation. Specifically, the `strcpy_url` function URL-encodes the spaces in the source URL and copies it to an output buffer. However, it does not properly handle characters with ASCII value greater than or equal to 0x80. This could lead to buffer overflow if such characters are encountered in the URL.
+
+Summary of the Fix:
+
+The fix for this vulnerability is to modify the condition in line 57 to only URL-encode values that are greater than or equal to 0x80. This ensures that only characters outside the ASCII range would be encoded, preventing a potential buffer overflow.
+
+Detailed Description of the Fix:
+
+To fix the vulnerability, the conditional block in the `strcpy_url` function needs to be modified. 
+
+In the original code, line 57 checks if the current character in the URL is a printable character (ISPRINT). If it's not, the character is URL-encoded. However, this check is incorrect because it does not properly handle characters with ASCII value greater than or equal to 0x80. 
+
+The fix involves replacing the check for ISPRINT with a new check that compares the current character with 0x80. If the character is greater than or equal to 0x80, it is URL-encoded using the `snprintf` function with the format "%%%02x". This format converts the character into a URL-encoded representation with a leading '%' followed by two hexadecimal digits.
+
+With this fix, the `strcpy_url` function will properly URL-encode only characters with ASCII value greater than or equal to 0x80, preventing buffer overflow and ensuring the safety of the string copy operation.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to a potential out-of-bounds memory access. Specifically, in the function `show_existing_frame_reset`, there is a line that attempts to access the `frame_bufs` array using the index `existing_frame_idx`. However, there is no validation performed on the index, which could result in accessing an invalid or out-of-bounds memory location.
+
+Summary of the Fix:
+The fix involves changing the line that accesses `frame_bufs` array with the index `existing_frame_idx`. Instead of using `frame_bufs[cm->ref_frame_map[existing_frame_idx]]`, the fix updates it to use `frame_bufs[cm->next_ref_frame_map[existing_frame_idx]]`.
+
+Detailed Description of the Fix:
+The fix addresses the vulnerability by ensuring that the correct index is used to access the `frame_bufs` array. In the original code, the index `existing_frame_idx` is used with `ref_frame_map`. However, the fix updates it to use `next_ref_frame_map` instead. This change ensures that the index points to a valid location within the `frame_bufs` array, preventing potential out-of-bounds access.
+
+By using `next_ref_frame_map`, the fix guarantees that the adapted CDFs are loaded correctly from the `frame_bufs` array. This change makes the code safer and eliminates the risk of accessing invalid or uninitialized memory.
+
+Overall, the fix ensures that the frame context is set up properly using the `next_ref_frame_map`, preventing potential vulnerabilities arising from out-of-bounds memory access.

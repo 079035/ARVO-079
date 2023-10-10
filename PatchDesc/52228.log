@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability addressed in this patch is a potential segfault in the `objdump.c` file of the binutils project. Specifically, the issue lies in the `load_specific_debug_section` function.
+
+Summary of the fix:
+The fix ensures that the error return from `bfd_canonicalize_reloc` is properly handled.
+
+Detailed description of the fix:
+1. Previously, in the `load_specific_debug_section` function, after calling `bfd_canonicalize_reloc`, the return value of `reloc_count` was checked against 0 to determine if any relocations were found. However, this check was incorrect because `bfd_canonicalize_reloc` returns -1L on errors, not 0.
+2. In the fixed code, the condition for checking `reloc_count` has been changed to `if (reloc_count <= 0)` to properly handle the error case as well.
+3. In the event of an error, the `relocs` array, which was previously allocated, is freed to avoid memory leaks.
+4. This fix ensures that potential errors in the `bfd_canonicalize_reloc` function are correctly handled, preventing a segfault that could occur due to accessing the `relocs` array without proper initialization.
+
+Overall, this patch addresses the vulnerability by correcting the handling of the error return from `bfd_canonicalize_reloc`, preventing potential segfaults in the `objdump` tool.

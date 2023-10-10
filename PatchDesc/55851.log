@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the given diff file is an ASN.1 encoding error in the `encode_mse_cdata` function in the `sm-eac.c` file. Specifically, the "Cryptographic mechanism reference" field is not marked as optional in the ASN.1 definition, causing an encoding error when this field is not present.
+
+Summary of the fix:
+The fix marks the "Cryptographic mechanism reference" field as optional in the ASN.1 definition, allowing the code to handle cases where this field is not present.
+
+Detailed description of the fix:
+1. In the `encode_mse_cdata` function, the `capdu_eac_mse` array defines the ASN.1 entries for the MSE:Set AT command data.
+2. The vulnerability is addressed by modifying the first entry in `capdu_eac_mse` for the "Cryptographic mechanism reference" field.
+3. In the original code, this field is defined without the `SC_ASN1_OPTIONAL` flag, indicating that it is a mandatory field.
+4. The fix adds the `SC_ASN1_OPTIONAL` flag to the definition of the "Cryptographic mechanism reference" field, making it optional.
+5. This allows the code to handle cases where this field is not present during encoding, preventing an encoding error.
+6. The fix also includes necessary modifications to the subsequent `sc_format_asn1_entry` calls to ensure the correct encoding of other fields.
+7. The rest of the code remains unchanged and is responsible for encoding other fields, appending the encoded data to `cdata`, and returning the length of the encoded data.

@@ -1,0 +1,9 @@
+Vulnerability: The vulnerability that could be patched in the provided diff file is a potential memory corruption issue.
+
+Summary of the fix: The fix disables the AddressSanitizer (ASAN) during the conservative garbage collection (GC) stack scan in order to avoid the memory corruption issue.
+
+Detailed description of the fix: The fix can be found in the `gather_conservative_roots` function of the `Heap.cpp` file. The `gather_conservative_roots` function is responsible for gathering the roots of the garbage collector. In this particular fix, the `__attribute__((no_sanitize("address")))` attribute is added before the function declaration. This attribute disables the AddressSanitizer during the execution of this function.
+
+The AddressSanitizer is a tool used for detecting memory corruption bugs such as buffer overflows, use-after-free, and other memory-related errors. By disabling ASAN during the conservative GC stack scan, the code enables the JS fuzzer to survive garbage collection. This allows the fuzzer to find more interesting bugs.
+
+The fix was implemented in response to a bug report from oss-fuzz (https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=29266). By disabling ASAN during the conservative GC stack scan, the code is expected to avoid potential memory corruption issues that could be detected by ASAN.

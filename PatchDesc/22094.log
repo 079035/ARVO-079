@@ -1,0 +1,17 @@
+The vulnerability that this patch is addressing is related to the color conversion input in the libheif library. Specifically, it checks the size of the alpha plane in the input image to ensure it matches the full image resolution. If the dimensions do not match, the function returns nullptr, indicating an invalid input image.
+
+Summary of the fix:
+The fix ensures that the alpha image has the correct size by checking its dimensions against the width and height of the input image. If the dimensions do not match, nullptr is returned.
+
+Detailed description of the fix:
+1. The fix first retrieves the width and height of the input image using the `get_width()` function.
+2. It checks if the input image has an alpha channel using `has_channel(heif_channel_Alpha)`.
+3. If an alpha channel exists, the fix compares the width and height of the alpha channel with the width and height of the image. If they do not match, `nullptr` is returned.
+4. The fix then continues with the color conversion process, preparing the conversion pipeline and constructing the color states.
+5. The fix determines whether the output image should include an alpha channel based on the target chroma format and the input image's alpha channel presence.
+6. If `output_bpp` is provided (not equal to 0), the fix updates the bits per pixel value in the output state accordingly.
+7. The fix handles specific cases for interleaved RGB formats and interleaved RRGGBB formats, setting the appropriate bits per pixel values.
+8. The fix constructs the color conversion pipeline using the input and output states.
+9. Finally, the fix calls the `convert_image()` function of the pipeline to perform the color conversion and returns the converted image.
+
+By checking and validating the dimensions of the alpha plane in the input image, the fix ensures that only valid input is processed, preventing potential crashes or incorrect color conversions caused by mismatched dimensions.

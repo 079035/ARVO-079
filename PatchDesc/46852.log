@@ -1,0 +1,14 @@
+Vulnerability: The vulnerability patched in the given diff file is accessing the data length before accessing the buffer.
+
+Summary of the fix: The fix addresses an unknown read vulnerability in the function `sc_pkcs15_decode_pubkey_ec()` in the file `pkcs15-pubkey.c`. The fix ensures that the buffer is not accessed before checking the length of the data.
+
+Detailed description of the fix: In the original code, the length of the `ecpoint_data` was not checked before accessing the data. The fix in the diff file adds a check for the length of `ecpoint_data` before accessing it with the following code: 
+
+```
+if (ecpoint_len == 0 || *ecpoint_data != 0x04)
+    LOG_TEST_RET(ctx, SC_ERROR_NOT_SUPPORTED, "Supported only uncompressed EC pointQ value");
+```
+
+This check ensures that the length of `ecpoint_data` is not zero before accessing it. If the length is zero, or if the value pointed to by `ecpoint_data` is not equal to `0x04`, an error is logged and the function returns with an error code.
+
+This fix eliminates the possibility of accessing the buffer without checking its length first, thereby addressing the vulnerability.

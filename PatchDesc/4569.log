@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that is being patched in this diff file is a potential memory leak. 
+
+Summary of the fix:
+The fix involves deleting the old array dimensions before assigning new array dimensions to the `node` variable. 
+
+Detailed description of the fix:
+1. In the original code, the `oldArrayDimensions` are assigned the value of `node->arrayDimensions` before assigning new dimensions to `node`. However, there is no deletion or freeing of memory for the old array dimensions.
+2. The fix includes adding a new variable `oldArrayDimensionsSize` to store the size of the old array dimensions.
+3. The function `UA_Array_delete()` is used to delete the old array dimensions and free the memory.
+4. Finally, the `node->arrayDimensions` is assigned the new array dimensions, and the `node->arrayDimensionsSize` is updated to `arrayDimensionsSize`.
+5. The fix ensures that the old array dimensions are properly freed, preventing any memory leaks.

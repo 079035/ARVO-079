@@ -1,0 +1,28 @@
+Vulnerability:
+This patch fixes an oss-fuzz issue in the session cleanup functionality of the `ua_session_manager.c` file. 
+
+Summary of the fix:
+The fix involves detaching the session from the secure channel and deactivating the session. It also adds a delayed callback to remove the session when the currently scheduled jobs have completed.
+
+Detailed description of the fix:
+1. The first change in the fix is the addition of the following line:
+   ```c
+   UA_Session_detachFromSecureChannel(&sentry->session);
+   ```
+   This line detaches the session from the SecureChannel, ensuring that the session is no longer associated with any secure communication. This helps in cleanup and prevents potential vulnerabilities that could arise from an active session still being attached to a secure channel.
+
+2. The next change is in the following line:
+   ```c
+   sentry->session.activated = false;
+   ```
+   This line deactivates the session by setting its "activated" flag to false. Deactivating the session prevents any further processing or communication associated with the session.
+
+3. A delayed callback is added to remove the session when the currently scheduled jobs have completed. This is done using the `UA_Server_delayedCallback` function. The specific function that will be called is `removeSessionCallback`.
+
+4. The final change in the fix is in the return statement:
+   ```c
+   return UA_STATUSCODE_GOOD;
+   ```
+   This line indicates that the removal of the session was successful and returns the `UA_STATUSCODE_GOOD` status.
+
+These changes ensure that the session is properly detached from the SecureChannel, deactivated, and queued for removal based on the current scheduled jobs. This patch addresses the oss-fuzz issue related to session cleanup in the `ua_session_manager.c` file.

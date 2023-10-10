@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability patched in this diff file is the possibility to read off the end of an invalid DNS response. This vulnerability can occur when parsing a DNS response in the `g_resolver_records_from_res_query` function of the `gthreadedresolver.c` file.
+
+Summary of the fix:
+The fix checks the length of the DNS response before parsing it. If the length is less than the size of the `HEADER` struct, indicating a malformed DNS packet, an appropriate error message is set and the function returns NULL.
+
+Detailed description of the fix:
+1. A variable `len_unsigned` of type `gsize` is introduced to hold the unsigned length of the DNS response.
+2. The value of `len_unsigned` is assigned the value of `len`, casted to `gsize`.
+3. An if statement is added to check if `len_unsigned` is less than the size of the `HEADER` struct. If it is, meaning the DNS packet is malformed, an error message is set using `g_set_error` and the function returns NULL.
+4. The parsing of the DNS response continues only if the DNS packet is valid, i.e., its length is greater than or equal to the size of the `HEADER` struct.
+5. Other parts of the code that rely on the assumption that `len` is non-negative are updated to use `len_unsigned` instead.
+6. The fix ensures that if the DNS response is empty or the requested DNS record type is not found, the appropriate error message is set and NULL is returned.

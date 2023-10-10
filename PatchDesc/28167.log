@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability in the given diff file is that it does not validate the compression method and filter method when processing the IHDR chunk of a PNG file. This means that the code is vulnerable to loading PNG files with invalid compression and filter methods, leading to potential parsing errors or security issues.
+
+Summary of the Fix:
+The fix in the given diff file is to add two new functions `is_valid_compression_method()` and `is_valid_filter_method()` to validate the compression method and filter method, respectively. These functions check if the compression method is equal to 0 and if the filter method is less than or equal to 4. If the compression method or filter method is found to be invalid, an error message is printed and the loading process is aborted.
+
+Detailed Description of the Fix:
+1. Two new helper functions `is_valid_compression_method()` and `is_valid_filter_method()` are added to the `PNGLoader.cpp` file.
+2. The `is_valid_compression_method()` function checks if the given compression method is equal to 0. If it is equal to 0, it returns `true`, indicating that the compression method is valid. If it is not equal to 0, an error message is printed and `false` is returned.
+3. The `is_valid_filter_method()` function checks if the given filter method is less than or equal to 4. If it is less than or equal to 4, it returns `true`, indicating that the filter method is valid. If it is greater than 4, an error message is printed and `false` is returned.
+4. In the `process_IHDR()` function, the validity of the compression method and filter method is checked using the new helper functions.
+5. If either the compression method or the filter method is found to be invalid, an appropriate error message is printed indicating the specific invalid method. The loading process is then aborted by returning `false`.
+6. By validating the compression method and filter method, the code ensures that only PNG files with valid compression and filter methods are processed, rejecting files with invalid methods and potentially preventing parsing errors or security vulnerabilities.
+
+The fix ensures that the code processes only valid PNG files, rejecting PNG files with invalid compression and filter methods at the IHDR chunk parsing stage. This improves the overall security and reliability of the PNG loading functionality in the LibGfx library.

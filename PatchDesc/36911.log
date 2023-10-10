@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability in this code is a potential memory leak. If the allocation for table sorting fails, the code does not properly free the previously allocated memory before returning, leading to a memory leak.
+
+Summary of the fix:
+The fix addresses the issue by adding a check for an error in the sorting of table entries. If an error is detected, the previously allocated memory is freed, and the function returns early.
+
+Detailed description of the fix:
+1. In the "hb-face.cc" file, the function `_hb_face_builder_data_reference_blob` is modified.
+2. The code now checks if an error occurred during the sorting of table entries by using the `in_error()` function on the `sorted_entries` vector.
+3. If an error is detected, the previously allocated memory `buf` is freed using `hb_free` and the function returns `nullptr`.
+4. The fix ensures that the memory allocated for `buf` is properly freed in case of an error, preventing a potential memory leak.

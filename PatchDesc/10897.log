@@ -1,0 +1,18 @@
+1. Vulnerability:
+The vulnerability patched in this diff file is a multiplication overflow in the `sanitize` function of the `StateTable` struct.
+
+2. Summary of the Fix:
+The fix addresses an overflow issue by adding a check for multiplication overflow before performing the multiplication operation.
+
+3. Detailed Description of the Fix:
+In the `sanitize` function, there is a section of code where a multiplication is performed between `num_classes` and `states[0].static_size`. The multiplication result is then used as a parameter in subsequent checks. However, the patch adds an overflow check using the function `hb_unsigned_mul_overflows` before performing the multiplication.
+
+The added code is as follows:
+```
+if (unlikely (hb_unsigned_mul_overflows (num_classes, states[0].static_size)))
+  return_trace (false);
+```
+
+This check ensures that the multiplication does not result in an overflow. If an overflow is detected, the function returns `false` indicating the failure of the sanitation process. This prevents any potential issues that could arise from an overflow in the subsequent checks and calculations.
+
+By adding this overflow check, the patch ensures that the code handles the multiplication operation safely, mitigating the vulnerability of a potential overflow.

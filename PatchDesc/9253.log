@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is a null pointer dereference.
+
+Summary of the fix:
+
+The fix addresses the null pointer dereference vulnerability in the code.
+
+Detailed description of the fix:
+
+In the line `av1_zero_above_context(cm, tile_info.mi_col_start, tile_info.mi_col_end, tile_row);`, the `av1_zero_above_context` function is called with the `cm` argument as the first parameter. However, in the code before the fix, `cm` is used as the first parameter without being dereferenced, which could lead to a null pointer dereference.
+
+In the fix, the `td->xd` structure is added as the second parameter of the `av1_zero_above_context` function, ensuring that a valid pointer is passed.
+
+This fix prevents the null pointer dereference vulnerability by passing a valid pointer as an argument to the `av1_zero_above_context` function.

@@ -1,0 +1,3 @@
+Vulnerability: Out-of-bounds read
+Summary of fix: This patch fixes an out-of-bounds read vulnerability in the `libFLAC/bitreader.c` file.
+Detailed description of fix: In the original code, there was a risk of performing an out-of-bounds read due to a wrap-around issue. The fix added a check to prevent the wrap-around and out-of-bounds read from occurring. If the condition `br->consumed_words > br->crc16_offset` is true, the code proceeds to perform the necessary calculations. Otherwise, it skips the calculation and does not read beyond the bounds of the buffer, thereby fixing the out-of-bounds read vulnerability.

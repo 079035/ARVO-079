@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability addressed in this patch is a potential buffer overflow in the `uncompressed_fp_dng_load_raw` function in the file `fp_dng.cpp`. 
+
+Summary of the fix:
+The fix adds a check for the validity of `bytesps` before allocating memory. If `bytesps` is less than 1 or greater than 4, an exception is thrown, preventing a potential buffer overflow.
+
+Detailed description of the fix:
+1. The patch adds the following code at line 23:
+```c
+if(bytesps < 1 || bytesps > 4)
+    throw LIBRAW_EXCEPTION_DECODE_RAW;
+```
+This code checks if `bytesps`, the number of bytes per sample, is less than 1 or greater than 4.
+If `bytesps` is not within the valid range, it throws an exception, `LIBRAW_EXCEPTION_DECODE_RAW`, which indicates a decoding error occurred while reading the RAW data.
+
+2. Before the fix, `bytesps` was calculated as `(ifd->bps + 7) >> 3`.
+The expression `(ifd->bps + 7)` rounds up `ifd->bps` to the nearest multiple of 8, and `>> 3` is a bitwise right shift by 3, which is equivalent to dividing by 8.
+This calculation ensures that `bytesps` is the number of bytes required to store a sample based on the number of bits per sample (`ifd->bps`).
+
+3. By checking if `bytesps` is within the valid range of 1 to 4, the fix prevents potential buffer overflow issues in the subsequent code that relies on the correct number of bytes for each sample.
+
+4. If the check fails and an exception is thrown, the function `uncompressed_fp_dng_load_raw` will not proceed further, and the decoding process will be terminated.

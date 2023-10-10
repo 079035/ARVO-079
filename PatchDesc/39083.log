@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability patched in this diff file is a null-dereference write in the function `MqttProps_Free` in the file `mqtt_client.c`. 
+
+Summary of the Fix:
+The fix addresses the null-dereference write by adding parentheses to correctly evaluate the conditions in the if statement.
+
+Detailed Description of the Fix:
+In the original code, the if statement `(wait_type == MQTT_PACKET_TYPE_ANY || wait_type == packet_type || MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)) && (wait_packet_id == 0 || wait_packet_id == packet_id)` tests if certain conditions are met. However, due to a missing pair of parentheses, the conditions are not correctly evaluated. The fix adds parentheses to correctly evaluate the conditions and fix the null-dereference write vulnerability. With the fix, the if statement becomes `((wait_type == MQTT_PACKET_TYPE_ANY || wait_type == packet_type || MqttIsPubRespPacket(packet_type)) && MqttIsPubRespPacket(wait_type)) && (wait_packet_id == 0 || wait_packet_id == packet_id)`.

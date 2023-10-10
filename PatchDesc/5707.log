@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in this code is a potential buffer overflow. In the function `ReadWBMPImage`, there is a loop that reads pixel data from the input image file and sets the pixel index in the image data. However, there is no check on the size of the image data being read, which could lead to writing beyond the allocated memory for the image.
+
+Summary of the fix:
+The fix for this vulnerability involves adding a check to ensure that the read operation does not exceed the allocated memory for the image.
+
+Detailed description of the fix:
+In the `ReadWBMPImage` function, before the loop that reads pixel data, a check is added to ensure that the number of rows and columns of the image have valid positive values. If either the rows or columns is zero, it throws a `CorruptImageError` exception.
+
+Inside the loop, a check is added to ensure that the byte variable, which stores the read byte from the image file, is not equal to `EOF` before proceeding to set the pixel index. If the byte is equal to `EOF`, it throws a `CorruptImageError` exception.
+
+These checks prevent out-of-bounds reads and writes and ensure that the image data is read within the allocated memory bounds. The fix ensures the code handles corrupt or incomplete WBMP files gracefully by throwing appropriate exceptions.

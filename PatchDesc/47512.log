@@ -1,0 +1,5 @@
+Vulnerability: In the given diff file, the vulnerability being patched is a memory leak in the function `sc_pkcs15_card_clear`.
+
+Summary of the Fix: The fix is to add a new function call `sc_pkcs15_free_app(p15card)` to release the memory allocated for the `p15card` structure.
+
+Detailed Description of the Fix: In the original code, when clearing the `p15card`, various memory allocations are freed appropriately, but the memory allocated for the `p15card` structure itself is not released. This leads to a memory leak. The fix, as shown in the diff, adds a new function call `sc_pkcs15_free_app(p15card)` at the end of the `sc_pkcs15_card_clear` function. This function is responsible for freeing the memory allocated for the `p15card` structure, ensuring that there are no memory leaks.

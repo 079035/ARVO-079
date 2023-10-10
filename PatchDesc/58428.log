@@ -1,0 +1,8 @@
+Vulnerability:
+In the given diff file, the vulnerability being patched is that in the function `get_contour_points` of the `SimpleGlyph` struct, the variable `contour_point_vector_t` is resized without initializing the newly allocated memory. This can lead to uninitialized memory being used, causing undefined behavior and potential security issues.
+
+Summary of the fix:
+The patch fixes the vulnerability by initializing the newly allocated memory in the `contour_point_vector_t` variable in the function `get_contour_points`.
+
+Detailed description of the fix:
+The function `get_contour_points` allocates memory for `contour_point_vector_t` using the `alloc` function. The patch then modifies the line `points_.length = num_points;` to `if (!points_.resize(num_points)) return false;` in order to properly initialize the newly allocated memory. This ensures that the `contour_point_vector_t` variable is resized and initialized correctly, avoiding potential security issues due to uninitialized memory usage.

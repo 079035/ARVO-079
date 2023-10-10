@@ -1,0 +1,11 @@
+Vulnerability Description:
+The vulnerability in the given diff file is a missing error handling for a failed memory allocation. This vulnerability can lead to a Denial of Service (DoS) attack by causing the program to crash or become unresponsive.
+
+Summary of Fix:
+The fix for this vulnerability is to check the return value of the memory allocation functions and handle any failures appropriately. In this case, if the memory allocation fails, the function should return and destroy the image list.
+
+Detailed Description of Fix:
+1. The function `ReadPCDImage` allocates memory for the `header` variable using `AcquireQuantumMemory`. It is important to check the return value of this allocation.
+2. If the memory allocation fails (`header` is `NULL`), the function should throw a `ReaderException` with the error message "MemoryAllocationFailed" using `ThrowReaderException(ResourceLimitError, "MemoryAllocationFailed")`.
+3. After checking `header` and before returning, the function should free the allocated memory using `RelinquishMagickMemory(header)`.
+4. This fix ensures that if the memory allocation for `header` fails, the function will exit gracefully without causing a crash or DoS condition.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability fixed in this code patch is a format string issue in the `ucl_inherit_handler` function. In the original code, there was a format string that was intended to print a non-null-terminated string, but two characters in the format string were swapped, leading to potential undefined behavior and security vulnerabilities.
+
+Summary of the fix:
+The fix corrects the format string in the `ucl_inherit_handler` function to match the intended output for non-null-terminated strings.
+
+Detailed description of the fix:
+In the original code, the format string `"Unable to find inherited object %*.s"` was used to print a non-null-terminated string. However, the `%*.s` conversion specifier is incorrect for this purpose because it expects a field width argument before the `*`. This resulted in incorrect output and potential security vulnerabilities.
+
+The fix modifies the format string to `"Unable to find inherited object %.*s"`, which correctly uses the `%.*s` conversion specifier for printing a non-null-terminated string. The `*` character represents the field width argument, and `.` represents the precision argument. This ensures that the non-null-terminated string is printed correctly without any swapping of characters.
+
+This fix resolves the vulnerability and ensures that the `ucl_inherit_handler` function works as intended when printing non-null-terminated strings.

@@ -1,0 +1,14 @@
+Vulnerability:
+This code patch fixes an ASAN heap-buffer-overflow vulnerability when reading the chunk offset in a frame. 
+
+Summary of the fix:
+The fix addresses the issue by checking if the offset being read is outside the frame boundary before attempting to read it. 
+
+Detailed description of the fix:
+Previously, the code directly checked whether the calculated offset was less than zero or greater than the frame length to determine if it was outside the frame boundary. This check was not accurate, as it did not take into account the extended header length. The fix modifies the condition to check if the offset position plus the extended header length is greater than the frame length, ensuring that the offset is within the frame boundary.
+
+Additionally, the check for *off_cbytes (the compressed data size) is modified to include the offset position to determine if it is outside the frame boundary. If the compressed data size is less than zero or the offset position plus the compressed data size is greater than the frame length, an error is returned. This ensures that the compressed data size is within the frame boundary.
+
+The code patch also adds a check for the trailer offset and ensures that it is within the frame boundary. If the trailer offset is less than the extended header length or the trailer offset plus the minimum trailer length is greater than the frame length, an error is returned.
+
+These modifications prevent accessing memory outside the frame boundary, fixing the ASAN heap-buffer-overflow vulnerability.

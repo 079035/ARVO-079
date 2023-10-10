@@ -1,0 +1,93 @@
+{
+    "fix": "git://w1.fi/srv/git/hostap.gitbc4d7dfc5a8992d83dcf074b25eccd7ec2ace89f",
+    "verify": "0",
+    "localId": 15014,
+    "project": "hostap",
+    "fuzzer": "afl",
+    "sanitizer": "asan",
+    "crash_type": "UNKNOWN READ",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 15014,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1559111391,
+                "content": "Detailed report: https://oss-fuzz.com/testcase?key=5666753884979200\n\nProject: hostap\nFuzzer: afl_hostap_ap-mgmt-fuzzer\nFuzz target binary: ap-mgmt-fuzzer\nJob Type: afl_asan_hostap\nPlatform Id: linux\n\nCrash Type: UNKNOWN READ\nCrash Address: 0x7f6600000018\nCrash State:\n  hostapd_is_dfs_required\n  hostapd_own_capab_info\n  hostapd_gen_probe_resp\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=afl_asan_hostap&range=201905280315:201905290308\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5666753884979200\n\nIssue filed automatically.\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for instructions to reproduce this bug locally.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.\n\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 15014,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1559112101,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "OS-Linux"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 15014,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1559311740,
+                "content": "ClusterFuzz has detected this issue as fixed in range 201905290308:201905310318.\n\nDetailed report: https://oss-fuzz.com/testcase?key=5666753884979200\n\nProject: hostap\nFuzzer: afl_hostap_ap-mgmt-fuzzer\nFuzz target binary: ap-mgmt-fuzzer\nJob Type: afl_asan_hostap\nPlatform Id: linux\n\nCrash Type: UNKNOWN READ\nCrash Address: 0x7f6600000018\nCrash State:\n  hostapd_is_dfs_required\n  hostapd_own_capab_info\n  hostapd_gen_probe_resp\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=afl_asan_hostap&range=201905280315:201905290308\nFixed: https://oss-fuzz.com/revisions?job=afl_asan_hostap&range=201905290308:201905310318\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5666753884979200\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for instructions to reproduce this bug locally.\n\nIf you suspect that the result above is incorrect, try re-doing that job on the test case report page."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 15014,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1559312295,
+                "content": "ClusterFuzz testcase 5666753884979200 is verified as fixed, so closing issue as verified.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 15014,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "4164592774",
+                    "displayName": "sheriffbot@chromium.org"
+                },
+                "timestamp": 1561908280,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "bc4d7dfc5a8992d83dcf074b25eccd7ec2ace89f",
+    "repo_addr": "git://w1.fi/srv/git/hostap.git"
+}

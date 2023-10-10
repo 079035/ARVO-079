@@ -1,0 +1,12 @@
+Vulnerability:
+There was a heap buffer overflow vulnerability found in the code.
+
+Summary of the fix:
+The fix involves adding a check for the ligature count to prevent it from going beyond the length of the LigatureArray.
+
+Detailed description of the fix:
+The vulnerable code is in the `LigatureArray::subset` function. The function iterates over a coverage range and performs certain operations for each glyph in the coverage. However, there is no check to ensure that the ligature count does not go beyond the length of the LigatureArray.
+
+In the fix, a check is added to verify if the ligature count is greater than or equal to the length of the LigatureArray. If it is, the loop is broken and the function exits. This prevents the heap buffer overflow by ensuring that the ligature count stays within the valid range of the LigatureArray.
+
+By adding this check, the fix ensures that the code does not attempt to access memory beyond the allocated buffer, thereby eliminating the heap buffer overflow vulnerability.

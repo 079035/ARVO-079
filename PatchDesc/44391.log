@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability that is patched in this diff file is a potential memory leak issue. 
+
+Summary of the fix:
+
+The fix adds a return statement that returns NULL when an exception occurs during the initialization of the local context. This ensures that the memory allocated for the configuration format struct (`flb_cf`) is properly freed before returning from the function, avoiding a memory leak.
+
+Detailed description of the fix:
+
+In the previous implementation, if an exception occurred during the `local_init` function call, the `flb_cf_destroy` function was called to free the memory allocated for the `cf` struct. However, if the `cf` struct was created within the function (i.e., `created` variable is true), the `flb_cf_destroy` call was skipped, resulting in a memory leak.
+
+The fix addresses this by introducing a return statement that returns NULL after calling `flb_cf_destroy` when an exception occurs during the `local_init` function call. This ensures that the memory is properly freed before returning from the function. By returning NULL, the caller of the `flb_cf_fluentbit_create` function can detect the failure and handle it accordingly.
+
+Overall, the fix improves the memory management in the function by handling potential exceptions and preventing memory leaks.

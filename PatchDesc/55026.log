@@ -1,0 +1,13 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is an out-of-array access issue. The code does not allocate enough memory for bink, which supports 16x16 blocks in chroma planes. This vulnerability can lead to a buffer overflow and potentially allow an attacker to execute arbitrary code or crash the program.
+
+Summary of the fix:
+
+The fix is to use 32-pixel alignment for bink in the avcodec_align_dimensions2 function. This ensures that enough memory is allocated for bink, preventing the out-of-array access issue.
+
+Detailed description of the fix:
+
+The code checks the pixel format and sets the alignment values for width and height based on the format. However, for certain formats, specifically those used by binkvideo (AV_CODEC_ID_BINKVIDEO), the alignment needs to be 32*2 pixels instead of the default value. The fix modifies the alignment values for AV_CODEC_ID_BINKVIDEO to 16*2, allocating enough memory for bink.
+
+This fix ensures that the memory allocation is aligned properly for bink, avoiding the out-of-array access vulnerability. The updated code properly accounts for the specific requirements of the AV_CODEC_ID_BINKVIDEO format, mitigating the risk of buffer overflows and potential security vulnerabilities.

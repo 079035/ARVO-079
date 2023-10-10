@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is that the function `dissect_gsmrlp` reads beyond the captured length when computing the FCS (Frame Check Sequence).
+
+Summary of Fix:
+The fix ensures that the function `dissect_gsmrlp` does not read beyond the captured length by using the `tvb_ensure_bytes_exist` function to ensure that the necessary bytes exist before computing the FCS.
+
+Detailed Description of Fix:
+In the original code, the FCS computation is performed on the `tvb` (tv buffer) using the function `rlp_fcs_compute`. However, before this computation, no check is made to ensure that the necessary bytes exist. This can lead to the function reading beyond the captured length of the `tvb`, which can cause undefined behavior and potential security issues.
+
+The fix adds a check using the `tvb_ensure_bytes_exist` function. This function ensures that the specified range of bytes exists in the `tvb` before performing any operations on it. In this case, the check is performed to ensure that the FCS computation does not read beyond the captured length minus 3 (the size of the FCS) bytes. 
+
+By adding this check, the fix ensures that the FCS computation is performed only on the valid bytes of the `tvb`, preventing any potential security issues that could arise from reading beyond the captured length.

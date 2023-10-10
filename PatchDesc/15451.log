@@ -1,0 +1,30 @@
+Vulnerability:
+The vulnerability fixed by this patch is a parsing issue in the X.509v3 BasicConstraints extension. Specifically, the code does not properly handle the optional pathLenConstraint after cA. It incorrectly compares the position after cA to the end of the buffer, instead of comparing it to the end of the SEQUENCE, to determine whether the optional pathLenConstraint is present. Additionally, when parsing pathLenConstraint, the length of the remaining buffer is calculated incorrectly by not subtracting the length of the header fields needed for cA. This could result in reading a couple of octets beyond the end of the buffer before rejecting the ASN.1 data as invalid.
+
+Summary of the fix:
+The fix corrects the parsing of X.509v3 BasicConstraints extension. It properly compares the position after cA to the end of the SEQUENCE to determine the presence of the optional pathLenConstraint. It also correctly calculates the length of the remaining buffer by subtracting the length of the header fields needed for cA.
+
+Detailed description of the fix:
+1. The code now initializes the `end_seq` variable to the position after the SEQUENCE header.
+```
+const u8 *end_seq = hdr.payload + hdr.length;
+```
+2. Instead of comparing the length of the payload to the end of the available buffer, the code now compares the position to the end_seq.
+```
+pos = hdr.payload + hdr.length;
+if (pos >= end_seq) {
+    // No optional pathLenConstraint
+}
+```
+3. When parsing pathLenConstraint, the code no longer uses the original buffer length, but instead uses the remaining length until the end of the SEQUENCE.
+```
+if (asn1_get_next(pos, end_seq - pos, &hdr) < 0 ||
+    hdr.class != ASN1_CLASS_UNIVERSAL) {
+    // Failed to parse BasicConstraints
+}
+```
+4. The fix ensures that the correct pathLenConstraint value is assigned to `cert->path_len_constraint` and sets the `cert->extensions_present` flag appropriately.
+```
+cert->path_len_constraint = value;
+cert->extensions_present |= X509_EXT_PATH_LEN_CONSTRAINT;
+```

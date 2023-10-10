@@ -1,0 +1,16 @@
+Vulnerability: The code in the diff file has a bug in the `allocSparseCanvas` function of the `TileComponent` class. 
+
+Summary of the fix: The bug is fixed by changing the code from using the full code block grid to using the region of interest (ROI) grid.
+
+Detailed description of the fix:
+1. Previously, the code was finding the outside bounds of all relevant code blocks using the full code block grid. This is not correct because it should use the ROI grid instead. The fix replaces the usage of `cblk_grid` with `roi_grid` in the loop conditions and calculations to ensure the correct selection of code block bounds.
+
+2. The original code had a line where `temp` (the temporary rect32 variable) was grown using `growIPL` with a value of `2 * (1 << blockSizeExp)`. This was incorrect because it should be grown with a fixed value of `8`. The fix replaces the inaccurate growth calculation with the correct value.
+
+3. The code then creates a new `SparseCanvas` object called `sa` using the corrected `temp` rect32 with the fixed value.
+
+4. Finally, the code loops through the resolutions, bands, and precincts, using the correct `roi_grid` instead of `cblk_grid` to allocate the sparse blocks in the `sa` object.
+
+5. The fix ensures that the `sa_` member variable is properly updated with the new `sa` object.
+
+These changes fix the bug in the code and ensure that the sparse canvas is allocated correctly using the ROI grid instead of the full code block grid.

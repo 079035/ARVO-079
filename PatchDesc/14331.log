@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential buffer overflow in the RAR5 reader in the libarchive library. Specifically, the maximum owner name length is not properly checked, which could result in writing beyond the bounds of the `namebuf` array.
+
+Summary of the Fix:
+The fix limits the `name_len` variable to be at most `OWNER_MAXNAMELEN - 1` instead of `OWNER_MAXNAMELEN` to prevent buffer overflow. This ensures that the maximum amount of data copied into `namebuf` will always fit within its bounds.
+
+Detailed Description of the Fix:
+In the original code, `name_len` is set to `OWNER_MAXNAMELEN` if the `name_size` exceeds this value. This means that if `name_size` is equal to `OWNER_MAXNAMELEN`, `name_len` will be equal to `OWNER_MAXNAMELEN`, and copying data into `namebuf` will write beyond its bounds, resulting in a buffer overflow.
+
+To fix this issue, the fix modifies the assignment of `name_len` in the if-statement to be `OWNER_MAXNAMELEN - 1` if `name_size` is greater than or equal to `OWNER_MAXNAMELEN`. This ensures that even if `name_size` is equal to `OWNER_MAXNAMELEN`, `name_len` will be set to `OWNER_MAXNAMELEN - 1`, which is within the bounds of `namebuf`.

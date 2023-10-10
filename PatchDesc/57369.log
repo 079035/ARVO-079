@@ -1,0 +1,25 @@
+Vulnerability:
+
+The vulnerability in the given code is a heap-buffer-overflow. It occurs at line 8 in the function `ndpi_is_valid_vxlan` in the file `reader_util.c`. The `if` condition at line 8 checks if the size of the `header` is less than the sum of `ip_offset`, `ip_len`, and the size of the structures `ndpi_udphdr` and `ndpi_vxlanhdr`. If the condition is true, a heap-buffer-overflow occurs, which can lead to memory corruption and potentially allow an attacker to execute arbitrary code.
+
+Fix Summary:
+
+The fix in the patch increases the size check in the `if` condition at line 8. It adds the size of the structure `ndpi_udphdr` to the existing check to ensure that the heap-buffer does not overflow. 
+
+Detailed Fix Description:
+
+In the function `ndpi_is_valid_vxlan`, the existing `if` condition at line 8 is modified in the fix to include the size of the structure `ndpi_udphdr`. The modified `if` condition now checks if the size of the `header` is less than the sum of `ip_offset`, `ip_len`, the size of the structure `ndpi_udphdr`, and the size of the structure `ndpi_vxlanhdr`. This ensures that the buffer length is large enough to accommodate the additional structure. By including the correct size, the fix prevents the heap-buffer-overflow vulnerability from occurring.
+
+Before the fix:
+```c
+if(header->caplen < ip_offset + ip_len + sizeof(struct ndpi_vxlanhdr)) {
+   return false;
+}
+```
+
+After the fix:
+```c
+if(header->caplen < ip_offset + ip_len + sizeof(struct ndpi_udphdr) + sizeof(struct ndpi_vxlanhdr)) {
+   return false;
+}
+```

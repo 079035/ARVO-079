@@ -1,0 +1,10 @@
+Vulnerability:
+Use after free vulnerability.
+
+Summary of the Fix:
+The fix resolves the use after free vulnerability by ensuring that the `core` pointer is assigned to a local variable before calling `tasks_lock_enter()` and `tasks_lock_leave()` functions.
+
+Detailed Description of the Fix:
+In the original code, there is a use after free vulnerability. After checking if the `task` pointer is not null, the code assigns the `core` member of the `task` structure to the `core` variable. Then, it calls `tasks_lock_enter()` and `tasks_lock_leave()` functions with the `core` variable as an argument. However, the `task_free()` function is called before `tasks_lock_leave()`. If the `task->refcount` is less than or equal to 0, `task_free()` will free the memory occupied by the `task` structure, making the `core` pointer no longer valid. Then, calling `tasks_lock_leave()` with the invalid `core` pointer results in undefined behavior.
+
+To fix the vulnerability, the code was modified. Before calling `tasks_lock_enter()`, a local variable `core` is assigned the value of `task->core`. This ensures that the `core` pointer is valid even after `task_free()` is called. Then, both `tasks_lock_enter()` and `tasks_lock_leave()` functions are called with the `core` variable. This ensures that the `core` pointer is always valid when accessing it in the functions.

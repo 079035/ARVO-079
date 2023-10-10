@@ -1,0 +1,11 @@
+Vulnerability: Use-after-free
+
+Summary of fix: The fix addresses a use-after-free vulnerability in the function `xmlTextReaderFreeNodeList` in the xmlreader.c file.
+
+Detailed description of fix: The vulnerability was caused by the order of freeing entities and entity references in the `xmlTextReaderFreeNodeList` function. The previous code freed entities before freeing entity references, leading to a use-after-free read. The fix rearranges the order of freeing entities and entity references to avoid the use-after-free vulnerability.
+
+The fix introduces the following changes:
+- The fix adds a check to skip freeing entities if they are encountered while traversing the XML tree.
+- The fix also moves the check for `XML_ENTITY_REF_NODE` before the check for `XML_DTD_NODE` to ensure proper ordering of freeing entity references.
+
+These changes ensure that entities and entity references are freed in the correct order, eliminating the use-after-free vulnerability.

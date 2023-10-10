@@ -1,0 +1,22 @@
+Vulnerability:
+Heap Overflow in BMP RLE.
+
+Summary of the Fix:
+The fix addresses a heap overflow vulnerability in the BMP RLE decompression algorithm in LibGfx.
+
+Detailed Description of the Fix:
+1. The fix begins by correcting the calculation of `buffer_size` in the `uncompress_bmp_rle_data` function. The previous calculation did not take into account the size of the RLE data offset, which resulted in a potential heap overflow. The fix subtracts the RLE data offset from the total file size to calculate the correct `buffer_size`.
+
+2. The fix then adds a check to ensure that the calculated `buffer_size` does not exceed a certain threshold (300 MB) to prevent potential malicious inputs from causing excessive memory allocation.
+
+3. The fix introduces separate lambdas (`get_buffer_index`, `set_byte`, and `read_byte`) to perform compression-dependent actions. Previously, these actions were being performed inside a set of conditional statements, resulting in repeated checks and reducing code readability. The use of lambdas improves code organization and simplifies the main loop logic.
+
+4. The fix updates the logic for the `set_byte` lambda to correctly handle setting the pixel color in the output buffer based on the compression type. The previous logic had issues with handling RLE4 compression. The fix now correctly sets the byte values for RLE4 compression and handles the case where the second nibble needs to be set.
+
+5. The fix also updates the `read_byte` lambda to correctly read bytes from the `Streamer` object based on the compression type. Previously, the logic for reading bytes was not correctly aligned with the compression type, potentially leading to misreading data and corruption.
+
+6. The fix adds additional error checking throughout the main loop to catch any potential issues with reading or setting bytes. If any errors occur, the function returns false, indicating a problem with the RLE data.
+
+7. Finally, the fix adds an assertion at the end of the function to ensure that the main loop terminates correctly. The assertion is never reached and serves as a safety net in case any unexpected conditions occur during the decompression process.
+
+Overall, the fix addresses the heap overflow vulnerability by correcting the buffer size calculation, improving the compression-dependent actions, and adding error checking to handle potential issues during the decompression process.

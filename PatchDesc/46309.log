@@ -1,0 +1,21 @@
+Vulnerability:
+The vulnerability patched in this code is a potential overflow in the `CheckFile` core reading function in the OpenEXRUtil library. 
+
+Summary of the Fix:
+The fix addresses the potential overflow issue by checking if the offset and size parameters exceed the maximum allowed value of `md->bytes` before performing the read operation.
+
+Detailed Description of the Fix:
+1. In the `memstream_read` function, the fix is implemented in the following line:
+   ```cpp
+   if (offset > md->bytes || sz > md->bytes || offset+sz > md->bytes)
+   ```
+
+2. Previously, the condition `(offset + sz) > md->bytes` was used to check if the sum of `offset` and `sz` exceeds the value of `md->bytes`.
+
+3. The fix modifies the condition to `(offset > md->bytes || sz > md->bytes || offset+sz > md->bytes)` which covers all possible scenarios where an overflow can occur.
+
+4. The fixed condition checks whether `offset` is greater than `md->bytes`, whether `sz` is greater than `md->bytes`, or whether the sum of `offset` and `sz` is greater than `md->bytes`.
+
+5. If any of these conditions are true, the value of `left` is set to 0, indicating that the read operation should not be performed.
+
+6. This fix ensures that the function handles potential overflows correctly and avoids reading beyond the allowed memory range.

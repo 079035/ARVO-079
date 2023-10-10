@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given diff file is that the `destroy_all()` function in the `UniformBumpAllocator` class does not correctly calculate the `end_offset` for destroying objects. This can lead to attempting to delete a nonexistent object under certain input sizes.
+
+Summary of the Fix:
+The fix addresses the issue by taking the bump-allocated chunk header into account when calculating the `end_offset` in the `destroy_all()` function of the `UniformBumpAllocator` class.
+
+Detailed Description of the Fix:
+1. Previously, the code allowed the `end_offset` to be larger than the chunk itself. This could cause the logic to attempt to delete a nonexistent object.
+2. The fix modifies the calculation of the `end_offset` by subtracting the size of the `typename Allocator::ChunkHeader` from the `base_ptr + this->m_chunk_size - chunk`.
+3. This ensures that the `end_offset` is correctly calculated and does not exceed the size of the chunk.
+4. By considering the bump-allocated chunk header, the code ensures that objects within the allocated chunk are properly destroyed without attempting to delete nonexistent objects.
+5. The fix resolves the vulnerability and prevents potential issues when deallocating and destroying objects in the `UniformBumpAllocator` class.

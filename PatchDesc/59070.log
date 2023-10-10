@@ -1,0 +1,25 @@
+Vulnerability:
+The vulnerability patched in this diff file is an out-of-bounds read issue. 
+
+Summary of the fix:
+The fix involves correctly handling the length calculation for the suffix string.
+
+Detailed description of the fix:
+1. In the original code, the length calculation for the suffix string had an incorrect condition. It used `len > (*size - 3)` as the boundary check, which did not correctly handle the case when the length exceeded 128 (128 + 1 for null-terminator).
+   - The condition should be `len >= (*size - 3)`, so that the loop termination occurs when the length reaches `(*size - 3)`.
+
+2. In the fixed code, after the loop terminates, an extra byte is accounted for in the length calculation to accommodate the null-terminator. This corrects the potential out-of-bounds read issue by ensuring that the allocated buffer has enough space for the string.
+
+3. The `memset` call after `char* suffix` declaration initializes the `suffix` buffer to null characters.
+
+4. The code then copies the characters from `curin` into `suffix` until a null character is encountered or the maximum length is reached. 
+
+5. After the loop, the `len` variable is incremented by 1 to account for the null-terminator. 
+
+6. The `len` value is then used to allocate memory for the `mem` buffer. If the allocation fails, an `EXR_ERR_OUT_OF_MEMORY` error is returned.
+
+7. The `memcpy` call copies the contents of `suffix` into `mem`.
+
+8. Finally, the `out->_suffix` and `out->_stringStatic` variables are updated with the appropriate values.
+
+The fix ensures that the length and allocation of the suffix string are correctly handled, preventing any potential out-of-bounds read issues caused by incorrect length calculations.

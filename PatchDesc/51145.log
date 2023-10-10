@@ -1,0 +1,21 @@
+Vulnerability: The vulnerability in the provided code is that the black point detection is not handled correctly when using a matrix-shaper with inverted curves. This can lead to incorrect black point values being assigned.
+
+Summary of the Fix: The fix addresses the bug in the black point detection for matrix-shaper with inverted curves. It ensures that the black point is correctly detected and handled in this case.
+
+Detailed Description of the Fix: 
+1. The code first checks if the profile supports input direction for the given intent. If not, it assumes black point 0 and returns false.
+2. Then, it creates a formatter with the appropriate number of channels and no floating point values.
+3. Next, it tries to get the black colorant by using the `_cmsEndPointsBySpace` function.
+4. If the black colorant cannot be obtained or the number of channels does not match the expected format, the black point is set to 0 and the function returns false.
+5. If the above checks pass, it creates a Lab profile (`hLab`) to be used as the output space. If the creation fails, the black point is set to 0 and the function returns false.
+6. A transform (`xform`) is created using the input profile, the formatter, the Lab profile, and the specified intent. Flags for optimization and caching are disabled.
+7. If the transform creation fails, the black point is set to 0 and the function returns false.
+8. The black color is then converted to Lab color using the `cmsDoTransform` function.
+9. The Lab color is forced to be neutral by setting `Lab.a` and `Lab.b` to 0.
+10. An additional check is added to ensure the L* value is within the valid range of 0 to 50. If it is outside this range, it is set to 0.
+11. The transform is deleted to free up resources.
+12. The Lab color is then converted back to XYZ color using the `cmsLab2XYZ` function.
+13. Finally, if `BlackPoint` is not NULL, it is assigned the calculated black XYZ values.
+14. The function returns true to indicate a successful black point detection.
+
+Overall, the fix ensures that the black point is correctly detected for matrix-shaper with inverted curves by properly handling the conversion between color spaces and checking for inconsistent and out-of-range values.

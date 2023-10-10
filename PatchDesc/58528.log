@@ -1,0 +1,12 @@
+Vulnerability: Index Out of Bounds
+Summary of the Fix: The fix adds a missing check to ensure that the value of `nb_refs` stays within the bounds defined by `HEVC_MAX_REFS`.
+Detailed Description of the Fix:
+1. The vulnerability occurs in the `ff_hevc_slice_rpl` function in the file `libavcodec/hevc_refs.c`.
+2. In the code, there is a loop that concatenates candidate lists for the current frame. The loop iterates until the `rpl_tmp` structure reaches the desired number of references. 
+3. Inside the loop, there is a condition that checks if the `pps_curr_pic_ref_enabled_flag` is true, and if so, an additional reference is added to the `rpl_tmp` structure.
+4. However, the condition does not check if the number of references (`nb_refs`) in the `rpl_tmp` structure has already reached the maximum limit defined by `HEVC_MAX_REFS`.
+5. Without this check, it is possible to exceed the maximum limit of references, leading to an index out of bounds error.
+6. The fix adds a check (`rpl_tmp.nb_refs < HEVC_MAX_REFS`) to ensure that the number of references does not exceed the maximum limit before adding the additional reference.
+7. This prevents the index out of bounds error and ensures that the `nb_refs` stays within the bounds defined by `HEVC_MAX_REFS`.
+8. The fix also includes an additional condition (`&& rpl_tmp.nb_refs < HEVC_MAX_REFS`) to make sure that the `pps_curr_pic_ref_enabled_flag` is true and there is still room to add another reference before adding it to the `rpl_tmp` structure.
+9. The code has been updated to perform the reference reordering and adjustment based on the modified `rpl_tmp` structure, ensuring correctness and stability.

@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability being patched in this diff file is a buffer overread in the function `htmlParseScript`. 
+
+Summary of the Fix:
+The fix addresses the buffer overread issue by properly handling the input and adding necessary checks and conditional statements.
+
+Detailed Description of the Fix:
+1. The code now checks if the next character after "/" is the end tag for the current tag. If it is, the loop is broken and the subsequent code is not executed. This prevents reading beyond the bounds of the `buf` array and avoids the buffer overread vulnerability.
+
+2. In cases where the recovery mode is enabled (indicated by `ctxt->recovery == 1`), the code checks if the end tag matches the current tag. If it does, the loop is broken. Otherwise, an error message is printed using `htmlParseErr`.
+
+3. In cases where the recovery mode is disabled, the code checks if the next character after "/" is an uppercase or lowercase alphabet. If it is, the loop is broken. This condition helps avoid unnecessary processing and ensures that only valid tags are considered.
+
+4. The code continues to copy characters to the `buf` array if the current character is a valid character (checked using `IS_CHAR(cur)`). If the character is not valid, an error message is printed using `htmlParseErrInt`.
+
+5. After copying characters to the `buf` array, if it exceeds the size of `HTML_PARSER_BIG_BUFFER_SIZE`, the current content is processed based on the SAX callbacks provided (`ctxt->sax->cdataBlock` or `ctxt->sax->characters`).
+
+6. The code grows the buffer using `GROW` and moves to the next character using `NEXTL` after each iteration of the loop.
+
+7. After the loop ends, if there are still characters in the `buf` array (indicated by `nbchar != 0`), and if SAX callbacks are available, the remaining content is processed similar to step 5.
+
+Overall, the fix addresses the vulnerability by adding proper checks and conditions to prevent buffer overread and ensures that invalid characters are handled correctly.

@@ -1,0 +1,82 @@
+{
+    "fix": "https://github.com/OpenSC/OpenSC/commit/6dd0ea8999a0251b018b7a1be8cc088eeeb5f513",
+    "verify": "0",
+    "localId": 47512,
+    "project": "opensc",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Stack-buffer-overflow READ 1",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "localId": 47512,
+                "descriptionNum": 1,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=6099859930742784\n\nProject: opensc\nFuzzing Engine: libFuzzer\nFuzz Target: fuzz_card\nJob Type: libfuzzer_asan_opensc\nPlatform Id: linux\n\nCrash Type: Stack-buffer-overflow READ 1\nCrash Address: 0x7fcb9a1921b0\nCrash State:\n  cardos_list_files\n  sc_list_files\n  fuzz_card.c\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_opensc&range=202204120606:202204130607\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6099859930742784\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "timestamp": 1652847686
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-08-16"
+                    }
+                ],
+                "localId": 47512,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot",
+                    "userId": "1950284618"
+                },
+                "sequenceNum": 1,
+                "timestamp": 1652900478
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "oldValue": "New",
+                        "newOrDeltaValue": "Verified"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ],
+                "localId": 47512,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "ClusterFuzz testcase 6099859930742784 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_opensc&range=202205240601:202205250610\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 2,
+                "timestamp": 1653490512
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ],
+                "localId": 47512,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot",
+                    "userId": "1950284618"
+                },
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "sequenceNum": 3,
+                "timestamp": 1653504241
+            }
+        ]
+    },
+    "fix_commit": "6dd0ea8999a0251b018b7a1be8cc088eeeb5f513",
+    "repo_addr": "https://github.com/OpenSC/OpenSC"
+}

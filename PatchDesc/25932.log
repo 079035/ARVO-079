@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to the decoding of B slice video frames in the openh264 library. When an error occurs during the decoding of a B slice, the decoder was not properly resetting the reordering picture buffers and reference pictures. This could lead to incorrect decoding and potentially cause errors in the output video.
+
+Summary of the fix:
+The fix in this patch addresses the issue by resetting the reordering picture buffers and reference pictures when an error occurs during the decoding of a B slice.
+
+Detailed description of the fix:
+In the code, after checking for decoding errors, the fix identifies if the error is related to B slice decoding. If the error is indeed related to B slice decoding, the fix calls the function `ResetReorderingPictureBuffers` to reset the reordering picture buffers and `WelsResetRefPic` to reset the reference pictures. This ensures that the subsequent decoding of B slices starts fresh and avoids potential errors introduced by the previous erroneous decoding.
+
+By resetting the reordering picture buffers and reference pictures, the fix ensures that any potential errors caused by the incorrect decoding of B slices are mitigated, leading to improved decoding performance and reduced error propagation in the output video.

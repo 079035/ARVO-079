@@ -1,0 +1,23 @@
+Vulnerability:
+
+There were two bugs that were fixed in this commit:
+
+1. The variable `end_offset` was not correctly considering the alignment that might have been introduced while computing `base_ptr`. This means that in some cases, the `end_offset` value could be incorrect.
+
+2. Even if the `end_offset` was computed correctly, it was considering the offset of the first byte outside the current chunk. However, this could be in the middle of a hypothetical object. As a result, the loop would iterate once too often if the last few bytes of the chunk were unused.
+
+The vulnerability was found by OSS Fuzz and was a long-standing issue.
+
+Fix summary:
+
+The fix addresses the two bugs mentioned above, ensuring that the `end_offset` is computed correctly and accounts for the alignment and the possibility of the last byte being in the middle of an object. This prevents the loop from iterating one extra time when the last few bytes of the chunk are unused.
+
+Detailed fix description:
+
+To fix the first bug, the calculation of `end_offset` was modified. Previously, it was calculated as `this->m_chunk_size - sizeof(typename Allocator::ChunkHeader)`. The fix computes the offset of the first byte *after* the chunk by adding `base_ptr` to `this->m_chunk_size - chunk`. This ensures that the alignment of `base_ptr` is correctly taken into account.
+
+To fix the second bug, the fix modifies the calculation of `end_offset`. After computing the offset of the first byte after the chunk, it then computes the offset of the first byte after the last valid object. To do this, `end_offset` is divided by the size of `T` (the object type) and then multiplied by the size of `T`. This ensures that the offset is aligned to the nearest object boundary.
+
+The loop that iterates over the chunk now uses the condition `base_ptr - chunk < end_offset` to ensure that it only iterates up to the correct offset, preventing the extra iteration when the last few bytes of the chunk are unused.
+
+Overall, these fixes ensure that the BumpAllocator iteration is correct even when the last object doesn't align. This fix resolves the long-standing vulnerability and is expected to resolve other issues related to RegexMatcher.

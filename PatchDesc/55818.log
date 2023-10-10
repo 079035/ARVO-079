@@ -1,0 +1,7 @@
+Vulnerability: Recent underflow
+
+Summary of fix: The fix addresses a recent underflow issue.
+
+Detailed description of fix: In the `setcminmax` function, there are two for loops that iterate through the input `word` to set the minimum and maximum values (`cmin` and `cmax`) based on certain conditions. However, there is an issue in the second for loop where the termination condition for decrementing `cmax` is incorrect. It currently checks for `*cmax >= 0`, which allows `cmax` to become negative and results in underflow. 
+
+To fix this issue, the termination condition for decrementing `cmax` has been changed to `*cmax > 0`, ensuring that `cmax` remains a positive value. This prevents the underflow and ensures the correct behavior of the function.

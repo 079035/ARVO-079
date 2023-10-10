@@ -1,0 +1,10 @@
+Vulnerability: Unintentional memory corruption
+
+Summary of Fix: The fix in this commit is to add the missing `CONFIG_AIRTIME_POLICY=y` flag to the build configuration of `ap-mgmt-fuzzer`, ensuring that the offset of `struct hostapd_iface::prev_wmm` matches between `libap.a` and `ap-mgmt-fuzzer.o`. This prevents memory corruption that was occurring due to a `memcpy` operation writing on top of the `ctx.hapd.iface` pointer.
+
+Detailed Description of Fix: 
+1. The vulnerability in the code was related to a mismatch in the offset of `struct hostapd_iface::prev_wmm` between `libap.a` and `ap-mgmt-fuzzer.o`. This mismatch resulted in memory corruption during fuzzing and caused failures.
+2. To fix this issue, the missing `CONFIG_AIRTIME_POLICY=y` flag was added to the build configuration of `ap-mgmt-fuzzer`. This ensures that the offset of `struct hostapd_iface::prev_wmm` is consistent between the two code components.
+3. With the fix in place, the `memcpy` operation to `ctx.iface->prev_wmm` no longer writes on top of `ctx.hapd` and its associated `iface` pointer, preventing the memory corruption issue.
+4. This fix was credited to the OSS-Fuzz project, which reported the vulnerability.
+5. The commit was authored by Jouni Malinen and the signed-off-by line confirms their approval of the fix.

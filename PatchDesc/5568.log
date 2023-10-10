@@ -1,0 +1,10 @@
+Vulnerability:
+There is a vulnerability in the code that can lead to a buffer overflow. The vulnerability exists in the function `ReadDXT3Pixels` in the `dds.c` file.
+
+Summary of the fix:
+The fix for the vulnerability is to update the conditional statement at line 77 in the `dds.c` file. The condition checks if the current pixel position is within the image boundaries before accessing it.
+
+Detailed description of the fix:
+In the code, there is a loop that iterates over the rows and columns of the image. Inside this loop, there is a conditional statement at line 77 that checks if the current pixel position (x + i, y + j) is within the image boundaries (image->columns, image->rows). However, the condition is incorrect. It checks if (x + i) is less than image->rows (the height) and (y + j) is less than image->columns (the width). This condition is incorrect because it should be checking if (x + i) is less than image->columns and (y + j) is less than image->rows.
+
+The fix updates this conditional statement to check if the current pixel position is within the image boundaries correctly. By swapping the checks, the fix ensures that the code doesn't try to access pixels outside the image boundaries, preventing the buffer overflow vulnerability.

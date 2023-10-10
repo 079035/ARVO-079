@@ -1,0 +1,18 @@
+Vulnerability:
+There is a buffer overflow vulnerability in the `_bfd_ecoff_slurp_symbolic_info` function in the `bfd/ecoff.c` file.
+
+Summary of the fix:
+The fix involves zero terminating the string sections in the `debug` structure.
+
+Detailed description of the fix:
+In the given diff file, the fix involves adding the following lines of code:
+
+```
++  /* Ensure string sections are zero terminated.  */
++  if (debug->ss)
++    debug->ss[internal_symhdr->issMax - 1] = 0;
++  if (debug->ssext)
++    debug->ssext[internal_symhdr->issExtMax - 1] = 0;
+```
+
+These lines of code ensure that the string sections `ss` and `ssext` are properly zero terminated. This prevents buffer overflows that could occur if the string sections were not properly terminated.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is a missing reference counting initialization. 
+
+Summary of the fix:
+The fix in this patch initializes the reference count for the `RArchConfig` structure by using the `r_ref` function.
+
+Detailed description of the fix:
+The code before the fix in the `r_arch_config_new` function creates a new instance of the `RArchConfig` structure using `R_NEW0` macro and assigns values to its members. However, it does not initialize the reference count for the structure.
+
+The fix in this patch adds the `r_ref` function to initialize the reference count. The `r_ref` function increments the reference count of the given object. By initializing the reference count with `r_ref(ac)`, it ensures that the reference count starts at 1.
+
+This fix ensures the proper initialization of the reference count for `RArchConfig`, which is necessary for proper memory management and preventing use-after-free vulnerabilities.

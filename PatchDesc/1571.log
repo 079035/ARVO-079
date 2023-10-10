@@ -1,0 +1,17 @@
+Vulnerability:
+This patch fixes a global-buffer-overflow error reported by AddressSanitizer (ASAN).
+The vulnerability is caused by an incorrect use of the structure macro M_NEXT_EXIST. There is a missing closing parenthesis in the M_NEXT_EXIST macro, causing the subsequent lines of code to be parsed incorrectly.
+
+Fix Summary:
+The fix involves adding the missing closing parenthesis after the line with M_NEXT_EXIST, and removing the commented out lines.
+
+Detailed Fix Description:
+In the diff file, after the line with M_NEXT_EXIST, there is a missing closing parenthesis. This causes the subsequent lines to be treated as arguments to the M_NEXT_EXIST macro, resulting in a parsing error. The fix involves adding the missing closing parenthesis after the M_NEXT_EXIST line. Additionally, the commented out lines that were not needed are removed.
+
+Fixed code snippet:
+```c
+M_NEXT_EXIST (Ext_Channel_Request_desc_t, Exist_Ext_Channel_Request_desc, 1, &hf_Ext_Channel_Request_desc_exist),
+M_TYPE       (Ext_Channel_Request_desc_t, Ext_Channel_Request_desc, Ext_Channel_Request_desc_t),
+M_UINT       (Ext_Channel_Request_desc_t, Exist_Ext_Channel_Request_desc, 1, &hf_Ext_Channel_Request_desc_exist),
+```
+After applying this fix, the code will be correctly parsed, eliminating the global-buffer-overflow vulnerability reported by ASAN.

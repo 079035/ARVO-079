@@ -1,0 +1,12 @@
+Vulnerability: Incorrect adaptation of mode/partition probability counts
+
+Summary of Fix: The fix corrects the adaptation of mode/partition probability counts in the LibVideo/VP9 decoder.
+
+Detailed Description of Fix:
+In the original code, there are incorrect calls to the `ADAPT_TREE` macro that leads to the adaptation of mode/partition probability counts being done using incorrect context values. This can result in incorrect probability values, which can affect the decoding process.
+
+The fix updates the calls to the `ADAPT_TREE` macro with correct context values. The adaptation for `intra_mode`, `uv_mode`, and `partition` is now done using the correct context values `BLOCK_SIZE_GROUPS`, `INTRA_MODES`, and `PARTITION_CONTEXTS`, respectively. This ensures that the mode/partition probability counts are adapted correctly based on the appropriate contexts.
+
+Additionally, the fix also performs some adaptations for other probability tables and counts in the code.
+
+These updates ensure that the mode/partition probability counts are correctly adapted, improving the accuracy of the LibVideo/VP9 decoder.

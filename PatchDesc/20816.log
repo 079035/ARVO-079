@@ -1,0 +1,19 @@
+Vulnerability:
+Double Free vulnerability.
+
+Summary of Fix:
+The fix prevents a double free vulnerability.
+
+Detailed Description of Fix:
+In the code snippet, there is a double free vulnerability in the function `tls_process_ske_dhe()`. The vulnerability occurs when a `DH` object is created and assigned to an `EVP_PKEY` object (`peer_tmp`), and then both objects (`dh` and `peer_tmp`) are freed. This leads to a double free vulnerability.
+
+To fix the vulnerability, the code has been modified in the following way:
+
+1. After assigning the `DH` object to the `peer_tmp` object using `EVP_PKEY_assign_DH()`, the `dh` object is set to NULL (`dh = NULL`).
+2. Instead of passing the `dh` object directly to `ssl_security()`, the DH key is obtained using `EVP_PKEY_get0_DH()` and passed as an argument to `ssl_security()`.
+
+These modifications ensure that the `dh` object is not freed twice and prevent the double free vulnerability.
+
+The fix also includes appropriate error handling using `goto err` to handle memory allocation failures and other error conditions, freeing resources (`BN_free()`, `DH_free()`, `EVP_PKEY_free()`), and returning appropriate error codes (`return 0`) in case of failure.
+
+The vulnerability was discovered and reported by Agustin Gianni of the GitHub Security Lab team.

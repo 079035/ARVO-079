@@ -1,0 +1,16 @@
+Vulnerability: Null-dereference READ
+
+Summary of the fix: Initialize the `rwords` buffer to avoid null-dereference when accessing it in the `pAMgr->compound_check` function.
+
+Detailed description of the fix: In the original code, a buffer `rwords` is used to store the result of the `pAMgr->compound_check` function. However, the buffer is not initialized before the function call. This can lead to a null-dereference when accessing the buffer in the function.
+
+To fix this vulnerability, the code initializes the `rwords` buffer by assigning an empty value to it before the `pAMgr->compound_check` function call. This ensures that the buffer is properly initialized and prevents a null-dereference.
+
+The fix can be seen in the following line of the diff:
+
+```
+-      struct hentry* rwords[100];  // buffer for COMPOUND pattern checking
++      struct hentry* rwords[100] = {};  // buffer for COMPOUND pattern checking
+```
+
+By adding `= {}` after the declaration of `rwords[100]`, the buffer is initialized with empty values, preventing a null-dereference when accessing it later in the code.

@@ -1,0 +1,50 @@
+Vulnerability:
+The vulnerability patched in this diff file is a null-dereference write in the `MqttProps_Free` function of the `wolfmqtt` library.
+
+Summary of the Fix:
+The fix addresses the null-dereference write by updating the code logic to properly check for a null value before attempting to access it.
+
+Detailed Description of the Fix:
+In the original code, there are multiple occurrences where a null check is missing before accessing a pointer. This can lead to a null-dereference write vulnerability where the program tries to write to a memory location that is null, resulting in a crash or undefined behavior.
+
+The fix in the diff file adds additional null checks to the code, specifically in the following locations:
+- In the `switch` statement, when checking the value of `mms_stat`, a null check is added before accessing the value:
+  ```
+  switch ((int)*mms_stat)
+  {
+      ...
+  }
+  ```
+
+- In the `case MQTT_MSG_WAIT` block, a null check is added before accessing the `pendResp` pointer:
+  ```
+  pendResp = NULL;
+  rc = wm_SemLock(&client->lockClient);
+  if (rc == 0) {
+      if (MqttClient_RespList_Find(client, (MqttPacketType)wait_type, 
+          wait_packet_id, &pendResp)) {
+          if (pendResp->packetDone) {
+              /* pending response is already done, so return */
+              rc = pendResp->packet_ret;
+          ...
+          }
+      }
+      wm_SemUnlock(&client->lockClient);
+  }
+  ```
+  
+- In the `case MQTT_MSG_READ_PAYLOAD` block, a null check is added before using the `MqttIsPubRespPacket` function:
+  ```
+  if ((wait_type == MQTT_PACKET_TYPE_ANY ||
+       wait_type == packet_type ||
+-      MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)) &&
+-    (wait_packet_id == 0 || wait_packet_id == packet_id))
++      (MqttIsPubRespPacket(packet_type) &&
++       MqttIsPubRespPacket(wait_type))) &&
++     (wait_packet_id == 0 || wait_packet_id == packet_id))
+  {
+      ...
+  }
+  ```
+
+These additional null checks ensure that the program does not attempt to access a null pointer and eliminates the null-dereference write vulnerability.

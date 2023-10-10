@@ -1,0 +1,19 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to a potential out-of-bounds memory access. Specifically, in the `sanitize` function of the `Lookup` struct, there is a check that verifies if the current lookup type is `TSubTable::Extension`. If this condition is true, it then checks if the number of subtables (`subtables`) is non-zero and if the sanitizer edit count (`c->get_edit_count()`) is zero. 
+
+However, there is a missing null check for the `subTable` variable before accessing its length. This means that if `subTable` is null, the condition `get_type() == TSubTable::Extension && subtables` could result in accessing memory beyond its bounds, leading to undefined behavior.
+
+Summary of the fix:
+The fix for this vulnerability is to include a null check for the `subTable` variable before accessing its length in the condition `get_type() == TSubTable::Extension && subtables`.
+
+Detailed description of the fix:
+To fix this vulnerability, the following code should be added before the existing condition:
+
+```
+if (!subTable)
+    return_trace(false);
+```
+
+This code snippet checks if `subTable` is null and returns false if it is. This prevents the subsequent code from being executed and avoids the potential out-of-bounds memory access. This fix ensures that the null check is performed before accessing the length of `subTable` and avoids undefined behavior in the case where `subTable` is null.
+
+After applying this fix, the code will be protected from the vulnerability by properly handling the null case and preventing the out-of-bounds access.

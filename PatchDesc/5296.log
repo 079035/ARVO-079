@@ -1,0 +1,26 @@
+Vulnerability:
+
+The vulnerability in the given diff file is that in the "Spline::calculateCurve()" function, the interpolated value is not properly clamped to the maximum value (std::numeric_limits<value_type>::max()) for non-floating point value types. 
+
+Summary of the fix:
+
+The fix patch adds a proper clamp to the interpolated value, ensuring that it does not exceed the maximum value for non-floating point value types.
+
+Detailed description of the fix:
+
+In the original code, the interpolated value is clamped to the minimum value (std::numeric_limits<value_type>::min()) using std::max(), but it is not clamped to the maximum value. This leaves a possibility for the interpolated value to exceed the maximum value for non-floating point value types.
+
+To fix this vulnerability, the patch modifies the code to add a clamp to the maximum value using std::min(). Now, after clamping to the minimum value, the interpolated value is further clamped to the maximum value to ensure it does not exceed the maximum allowed value.
+
+The fixed code now looks like this:
+
+```cpp
+if (!std::is_floating_point<value_type>::value) {
+    interpolated = std::max(interpolated, double(std::numeric_limits<value_type>::min()));
+    interpolated = std::min(interpolated, double(std::numeric_limits<value_type>::max()));
+}
+
+curve[x] = interpolated;
+```
+
+With this fix, the interpolated value is properly clamped both to the minimum and maximum values, preventing it from exceeding the allowed range for non-floating point value types.

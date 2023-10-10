@@ -1,0 +1,15 @@
+Vulnerability:
+In the given code, there is a vulnerability related to an unchecked array index used to set the operand type in the printSVERegOp function.
+
+Summary of the Fix:
+The fix for this vulnerability involves setting the operand type and register value in the instruction detail structure for the ARM64 architecture.
+
+Detailed Description of the Fix:
+1. In the given code, the vulnerability is present in the printSVERegOp function.
+2. The function initializes the variable "Reg" with the value of the register obtained from the MCInst.
+3. The fix involves adding code to set the operand type and register value in the MI->flat_insn->detail->arm64.operands array, which is a part of the MCInst structure.
+4. The operand type is set as ARM64_OP_REG, indicating that the operand is a register.
+5. The register value is set as "Reg", obtained from the MCInst.
+6. The op_count is incremented to reflect the addition of a new operand.
+7. The fix ensures that the operand type and value are properly set in the instruction detail structure for the ARM64 architecture.
+8. This fix mitigates the vulnerability by correctly assigning the operand type and register value, preventing any potential misuse or undefined behavior.

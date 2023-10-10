@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability that this patch fixes is a heap overflow in the `flb_signv4_uri_normalize_path` function.
+
+Summary of Fix:
+The fix involves properly handling the length of the output string `out` and adding a null terminator at the end.
+
+Detailed Description of Fix:
+1. The patch modifies the memory allocation for the `out` string by increasing its size by 1 (`len + 1`). This ensures that the buffer is large enough to accommodate the null terminator that will be added later.
+2. The patch adds a null terminator to the `out` string by assigning `'\0'` to `out[len]`. This ensures that the string is properly terminated, preventing any potential heap overflow.
+3. The patch also updates the logic for handling the trailing slash (`end_slash`) to correctly check if a slash should be added to the end of the normalized URI.
+4. Additionally, the patch contains some code clean-up by removing unnecessary freeing of split entries (`flb_utils_split_free_entry`). This does not directly affect the vulnerability but improves the code readability and performance.
+
+Overall, the fix addresses the heap overflow vulnerability by correctly handling the length of the output string and properly terminating it with a null character.

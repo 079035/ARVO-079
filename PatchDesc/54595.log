@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability that is patched in this diff file is a possible buffer overflow. The function `get_utf_8_string` is responsible for generating a UTF-8 string from the provided input. However, the length of the input is not being properly checked, potentially leading to an overflow.
+
+Summary of the fix:
+The fix adds a bounds check to the `get_utf_8_string` function. It now checks not only the length of the input but also the current buffer position, ensuring that the function does not read beyond the boundaries of the input.
+
+Detailed description of the fix:
+1. The fix adds the declaration of `prev` and `valid_bytes` variables just outside the while loop.
+2. Inside the while loop, the value of `prev` is set to the current value of `ptr`.
+3. The function `utf_8_validate` is called with `prev`, `length`, and the address of `ptr`. This function validates the UTF-8 sequence and returns the number of valid bytes.
+4. The value returned by `utf_8_validate` is assigned to `valid_bytes`.
+5. If `valid_bytes` is non-zero, it means that the UTF-8 sequence is valid, so the valid bytes are appended to the `str` string buffer.
+6. The length is updated by subtracting `valid_bytes` from it, and the value of `prev` is updated by adding `valid_bytes` to it.
+7. If the difference between `ptr` and `prev` (i.e., `ptr - prev`) is non-zero, it means that there are some invalid bytes present in the input, for which a replacement character is appended to the `str` string buffer.
+8. The loop continues until the length reaches zero.
+9. At the end, the `str` string buffer is finalized and returned as the resulting UTF-8 string.

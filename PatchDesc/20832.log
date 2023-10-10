@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability patched in this diff file is a buffer over-read in the dns_validchar array. 
+
+Summary of the Fix:
+The fix prevents the program from reading beyond the bounds of the dns_validchar array.
+
+Detailed Description of the Fix:
+In the original code, there is a while loop (line 92) that is intended to read the query_type from the DNS payload. However, there is no check for the end of the payload, which can lead to a buffer over-read if the payload is not null-terminated. The fix modifies the condition of the while loop (line 92) to check if the current index (x) plus 2 is less than the length of the payload. This ensures that there are at least two more bytes in the payload before attempting to read the query_type.

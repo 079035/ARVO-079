@@ -1,0 +1,21 @@
+Vulnerability:
+
+The vulnerability in the given diff file is an unsafe indexing issue in the function `apply_stch()`. Specifically, the issue occurs in the line:
+
+```
+buffer->unsafe_to_break (context, end + 1);
+```
+
+Summary of the fix:
+
+The fix addresses the unsafe indexing issue by changing the second argument of the `unsafe_to_break()` function call to `end` instead of `end + 1`.
+
+Detailed description of the fix:
+
+The `apply_stch()` function is used in shaping complex Arabic text. In the code, there is a loop that iterates through the glyph information in the buffer to determine the number of repeating tiles needed for stretching Arabic text. At the end of this loop, there is a block of code that modifies the buffer to apply the stretching and copies the glyphs accordingly.
+
+In the original code, there is an unsafe indexing issue. The `buffer->unsafe_to_break()` function call is used to mark a range of glyphs as unsafe to break between when shaping the text. However, the second argument of this function call is incorrect. It should be `end` rather than `end + 1`. This means that the range being marked as unsafe to break includes one extra glyph that should not be included.
+
+The fix corrects this issue by changing the second argument of the `unsafe_to_break()` function call to `end`. This ensures that the range of glyphs being marked as unsafe to break is correct and does not include any extra glyphs.
+
+Overall, the fix addresses the unsafe indexing issue in the code by correcting the argument of the `unsafe_to_break()` function call in the `apply_stch()` function.

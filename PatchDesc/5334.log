@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability that could be patched in this diff file is that it does not link to zlib when building.
+
+Summary of the Fix:
+The fix in this patch ensures that the code properly checks whether zlib is linked during the build process. If zlib is not linked, the code now gracefully handles the situation.
+
+Detailed Description of the Fix:
+
+1. In the file `MagickCore/blob.c`, the function `IsBlobSeekable` has been modified to include a check for the `MAGICKCORE_ZLIB_DELEGATE` preprocessor directive.
+
+2. If `MAGICKCORE_ZLIB_DELEGATE` is defined, the code proceeds to check the `gzfile` member of the `file_info` structure within the `BlobInfo` structure. If this member is not NULL, it means that zlib is linked, and the code calls the `gzseek` function to determine if the blob is seekable.
+
+3. If `MAGICKCORE_ZLIB_DELEGATE` is not defined, the code breaks out of the `case ZipStream` block and continues to the `case UndefinedStream`, returning `MagickFalse` to indicate that the blob is not seekable.
+
+4. This fix allows the code to properly handle the case when zlib is not linked during the build process, ensuring that it does not attempt to use zlib functions without the required dependency.

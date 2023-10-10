@@ -1,0 +1,34 @@
+Vulnerability:
+
+The vulnerability that is patched in this diff file is a potential memory leak. 
+
+Summary of the fix:
+
+The fix added new checks to ensure that the image memory is properly allocated and freed in case of an error.
+
+Detailed description of the fix:
+
+1. In the function `ReadTIMImage`, after `status=SetImageExtent(image,image->columns,image->rows,exception);`, the code checks if the status is `MagickFalse`, and if so, returns and destroys the image. 
+```c
+if (status == MagickFalse)
+  return(DestroyImageList(image));
+```
+
+2. After that, the code calls `ResetImagePixels` function and checks if the status is `MagickFalse`. If so, it returns and destroys the image.
+```c
+status=ResetImagePixels(image,exception);
+if (status == MagickFalse)
+  return(DestroyImageList(image));
+```
+
+3. Finally, before reading image data, the code allocates memory for `tim_pixels` and checks if allocation was successful. If not, it throws a `ResourceLimitError`. Additionally, after reading the image data, the code frees the `tim_pixels` memory using `RelinquishMagickMemory` function.
+```c
+tim_pixels=(unsigned char *) AcquireQuantumMemory(image_size,
+  sizeof(*tim_pixels));
+if (tim_pixels == (unsigned char *) NULL)
+  ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
+// ...
+tim_pixels=(unsigned char *) RelinquishMagickMemory(tim_pixels);
+```
+
+These changes ensure that the memory allocated for the image is properly managed and avoids potential memory leaks in case of failures.

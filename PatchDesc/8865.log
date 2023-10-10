@@ -1,0 +1,11 @@
+Vulnerability:
+
+This diff file fixes a vulnerability related to uninitialized variables in the EVMDisassembler.c file. 
+
+Summary of the fix:
+
+The fix initializes the "regs_read_count" and "regs_write_count" variables to 0.
+
+Description of the fix:
+
+In the original code, the "regs_read_count" and "regs_write_count" variables were not initialized, leading to potential undefined behavior. The fix initializes both variables to 0 to ensure predictable behavior and prevent any potential issues related to uninitialized data. This prevents any possible vulnerabilities or bugs that may occur due to using uninitialized values.

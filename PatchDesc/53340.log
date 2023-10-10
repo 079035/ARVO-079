@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in this code is an out-of-array access. This vulnerability occurs when the "max_matrix_channel" variable, which is read from the diff, is compared with "MAX_MATRIX_CHANNEL_MLP" instead of "std_max_matrix_channel". This can lead to a buffer overflow if "max_matrix_channel" is greater than "MAX_MATRIX_CHANNEL_MLP".
+
+Summary of the fix:
+The fix in this patch is to check the "max_matrix_channel" against "std_max_matrix_channel" instead of "MAX_MATRIX_CHANNEL_MLP".
+
+Detailed description of the fix:
+In the original code before the fix, the "max_matrix_channel" variable from the diff is compared with "MAX_MATRIX_CHANNEL_MLP" using the ">" operator. The fix replaces "MAX_MATRIX_CHANNEL_MLP" with "std_max_matrix_channel" in the comparison. "std_max_matrix_channel" is a constant value that depends on the codec being used. This ensures that "max_matrix_channel" is not greater than the allowed maximum value and prevents the out-of-array access.
+
+The fix also includes additional check for the "noise_type" variable to make sure it is 0 when the codec is AV_CODEC_ID_MLP. If "noise_type" is non-zero, an error message is printed, and AVERROR_INVALIDDATA is returned.
+
+Overall, this fix prevents potential buffer overflow by checking the "max_matrix_channel" against the correct maximum value and ensures that "noise_type" is valid for the AV_CODEC_ID_MLP codec.

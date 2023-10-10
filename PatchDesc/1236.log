@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability being patched in this diff file is a buffer overflow (read). Specifically, there is a buffer size check missing before reading values from the buffer in the function `OALMarshal_UncompressValue`.
+
+Summary of the fix:
+The fix involves adding a sanity check on the buffer size before reading values from it in the `OALMarshal_UncompressValue` function.
+
+Detailed description of the fix:
+1. The `OALMarshal_UncompressValue` function takes three parameters: `maxSize`, `bufLength`, and `buffer`. It is used to read a variable-length value from the buffer.
+2. The fix starts by adding a sanity check on `size`, which is determined based on the first byte of the buffer. If `size` is greater than the value of `*bufLength`, the function immediately returns 0 to indicate an error.
+3. By performing this check, the fix prevents the function from reading beyond the boundaries of the buffer, thereby fixing the buffer overflow vulnerability.

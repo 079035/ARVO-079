@@ -1,0 +1,14 @@
+Vulnerability:
+Double Free
+
+Summary of the fix:
+The fix prevents a double free vulnerability by setting the DH object to NULL after it has been assigned to the EVP_PKEY, making sure that it is not freed twice.
+
+Detailed description of the fix:
+In the original code, a DH object is created and assigned to the EVP_PKEY object peer_tmp. However, after assigning the DH object to peer_tmp, the DH object is not set to NULL, and is freed later in the error handling path. This creates a vulnerability where the DH object can be freed twice, leading to undefined behavior or a crash.
+
+To fix this issue, the code has been modified to set the DH object to NULL after it has been assigned to peer_tmp using the EVP_PKEY_assign_DH function. By setting the DH object to NULL, it ensures that the DH object is not freed twice, eliminating the possibility of a double free vulnerability.
+
+Additionally, the dh variable has also been set to NULL after the assignment to peer_tmp, ensuring that it is not mistakenly freed later in the code. This further avoids the potential for a double free.
+
+Overall, the fix ensures that the DH object is correctly managed and prevents any double free vulnerabilities that could have occurred in the original code.

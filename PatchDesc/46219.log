@@ -1,0 +1,12 @@
+Vulnerability:
+There is a vulnerability in the code related to the GetICCProperty function. The function does not check if the ICC property exists before attempting to access it from the image's properties. This can lead to a null pointer dereference if the ICC property does not exist.
+
+Summary of the fix:
+The fix checks for the existence of the ICC property before attempting to access it. If the ICC property does not exist, the function returns NULL.
+
+Detailed description of the fix:
+In the original code, the GetICCProperty function does not perform any check for the existence of the ICC property before accessing it. This is a vulnerability, as it can lead to a null pointer dereference if the ICC property does not exist.
+
+To fix this issue, the code has been modified to add a check for the existence of the ICC property before accessing it. The code now checks if the image's properties are not NULL, and if so, retrieves the value of the ICC property using the key. If the value is found, it is returned as the result. If the value is not found, the function returns NULL.
+
+This fix ensures that the code does not attempt to access the ICC property if it does not exist, preventing a null pointer dereference.

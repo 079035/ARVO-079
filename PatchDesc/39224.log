@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in the provided diff file is that the `Handle_Props` function is not handling the case when the `WOLFMQTT_PROPERTY_CB` macro is not defined. In this case, the `client` parameter is unused and generates a build warning.
+
+Summary of the Fix:
+The fix in the diff file resolves the build error in the `Handle_Props` function by explicitly casting the `client` parameter to `void` when the `WOLFMQTT_PROPERTY_CB` macro is not defined.
+
+Detailed Description of the Fix:
+1. The fix checks if the `WOLFMQTT_PROPERTY_CB` macro is not defined.
+2. If the macro is not defined, the `client` parameter is cast to `void` using the `(void)` syntax. This casting is done to explicitly mark the `client` parameter as unused and prevent build warnings.
+3. The indentation is adjusted for proper code formatting.
+4. The `props` variable, which represents the MQTT properties, is freed regardless of whether the `WOLFMQTT_PROPERTY_CB` macro is defined or not. This ensures that the memory used by the properties is always freed.
+
+The fixed code ensures that the `Handle_Props` function handles the case when the `WOLFMQTT_PROPERTY_CB` macro is not defined and eliminates the build error related to the unused `client` parameter.

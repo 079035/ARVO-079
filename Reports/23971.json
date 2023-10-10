@@ -1,0 +1,131 @@
+{
+    "fix": "https://github.com/unicorn-engine/unicorn/commit/96518634fbd2b405af197df15a0d787dd883afa4",
+    "verify": "0",
+    "localId": 23971,
+    "project": "unicorn",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "ubsan",
+    "crash_type": "Index-out-of-bounds",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 23971,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1594151402,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=6229542872809472\n\nProject: unicorn\nFuzzing Engine: libFuzzer\nFuzz Target: fuzz_emu_arm_arm\nJob Type: libfuzzer_ubsan_unicorn\nPlatform Id: linux\n\nCrash Type: Index-out-of-bounds\nCrash Address: \nCrash State:\n  tcg_liveness_analysis_arm\n  tcg_gen_code_arm\n  cpu_arm_gen_code_arm\n  \nSanitizer: undefined (UBSAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_ubsan_unicorn&range=202001050523:202001060519\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6229542872809472\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 23971,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1594152788,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2020-10-05"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 23971,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1601322937,
+                "content": "This bug is approaching its deadline for being fixed, and will be automatically derestricted within 7 days. If a fix is planned within 2 weeks after the deadline has passed, a grace extension can be granted.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Deadline-Approaching"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 23971,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1601927946,
+                "content": "This bug has exceeded our disclosure deadline. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit -deadline-approaching Deadline-Exceeded"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 23971,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1604940717,
+                "amendments": [
+                    {
+                        "fieldName": "Cc",
+                        "newOrDeltaValue": "sta...@stalkr.net"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 23971,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1644701465,
+                "amendments": [
+                    {
+                        "fieldName": "Cc",
+                        "newOrDeltaValue": "m...@lazym.io"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 23971,
+                "sequenceNum": 6,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1644766906,
+                "content": "ClusterFuzz testcase 6229542872809472 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_ubsan_unicorn&range=202201270610:202202130609\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "96518634fbd2b405af197df15a0d787dd883afa4",
+    "repo_addr": "https://github.com/unicorn-engine/unicorn.git"
+}

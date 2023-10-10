@@ -1,0 +1,31 @@
+Vulnerability:
+The vulnerability in this code is a potential use of uninitialized memory. Specifically, in the `allocCompositeData(CodingParams* cp)` function, there is a loop that iterates over each component (i.e., `numcomps`) and checks if the dimensions of the output component are valid. If the dimensions are valid and the component does not have data allocated, the code attempts to allocate the pixel data using the `GrkImage::allocData(destComp,true)` function.
+
+However, it is not guaranteed that the `allocData` function correctly initializes the allocated memory. Therefore, if the component data was not previously allocated and the allocation is successful, the pixel data may contain uninitialized values.
+
+Fix Summary:
+The fix for this vulnerability is to modify the line `if(!GrkImage::allocData(destComp))` to `if(!GrkImage::allocData(destComp, true))`. This change adds an additional argument `true` to the `allocData` function, which indicates that the allocated memory should be zeroed out to ensure all pixels are initialized.
+
+Detailed Fix Description:
+To address the vulnerability, the `allocData` function should be modified to zero out the allocated memory if the `zeroOut` flag is set to `true`. This ensures that all pixels in the image data are properly initialized.
+
+The modified `allocData` function should look like this:
+
+```cpp
+bool GrkImage::allocData(grk_img_comp *comp, bool zeroOut){
+    if(!comp)
+        return false;
+ 
+    const size_t dataSize = static_cast<size_t>(comp->w) * comp->h * sizeof(uint32_t);
+    comp->data = new uint32_t[dataSize];
+ 
+    if(zeroOut)
+        memset(comp->data, 0, dataSize);
+ 
+    return true;
+}
+```
+
+In this updated function, the `zeroOut` flag is used to determine whether the allocated memory should be zeroed out or not. If `zeroOut` is `true`, the `memset` function is called to set all bytes in the allocated memory to zero.
+
+With this fix, when the `allocData` function is called in the `allocCompositeData` function, it will correctly initialize the allocated memory, preventing the use of uninitialized pixels later in the code.

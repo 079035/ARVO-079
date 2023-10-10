@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability patched in this diff file is a double free of the `node id`. This vulnerability was reported on the Chromium project's bug tracker (https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=4296) and credit is given to oss-fuzz for discovering it.
+
+Summary of the fix:
+The fix ensures that the `node id` is copied before assigning it to `dst->content.encoded.typeId`.
+
+Detailed description of the fix:
+The fix involves making a copy of the `typeId` before assigning it to `dst->content.encoded.typeId`. In the vulnerable code, `*typeId` is directly assigned to `dst->content.encoded.typeId`, which can cause a double free vulnerability if `typeId` is freed before `dst->content.encoded.typeId`. The fix uses the `UA_NodeId_copy()` function to make a copy of `typeId` and assigns the copied value to `dst->content.encoded.typeId`. This way, the memory allocated for `typeId` is not freed twice, preventing the double free vulnerability.

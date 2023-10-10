@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential segfault in the `filter_symbols` function in `nm.c` when accessing a symbol name.
+
+Summary of the fix:
+The fix involves adding two sanity checks in the `_bfd_ecoff_slurp_symbol_table` function in `ecoff.c`. The first check is for the `issBase` field of `fdr_ptr`, and the second check tightens the `sym.iss` check.
+
+Detailed description of the fix:
+1. In the `_bfd_ecoff_slurp_symbol_table` function, a sanity check is added for `fdr_ptr->issBase` to ensure that its value is within the valid range.
+2. Another sanity check is added for `sym.iss` to ensure that its value is within the valid range specified by `symhdr->issExtMax`.
+3. If either of these sanity checks fails, the function returns false and sets the error to `bfd_error_bad_value`.
+4. The fix also includes minor changes to update the symbol count and provide a warning message if there is a discrepancy between `isymMax` and `ifdMax` values in the `symbolic_header`, indicating fewer symbols than expected.
+5. After the necessary checks and updates, the function assigns the symbol name to `internal_ptr->symbol.name` and other symbol information to `internal_ptr->symbol`, `internal_ptr->fdr`, `internal_ptr->local`, and `internal_ptr->native` variables.
+6. The function then updates the `canonical_symbols` field of `ecoff_data` with the `internal` array and returns true to indicate success.
+
+This fix ensures that the symbol table is read correctly, without accessing invalid memory locations, preventing potential segfaults.

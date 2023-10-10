@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability that could be patched in this diff file is an incorrect function call in the `reorder_marks_arabic` function. The incorrect function call is `buffer->merge_out_clusters(start, j)`.
+
+Summary of the fix:
+The fix involves replacing the incorrect function call `buffer->merge_out_clusters(start, j)` with the correct function call `buffer->merge_clusters(start, j)`.
+
+Detailed description of the fix:
+1. Previously, the code called `buffer->merge_out_clusters(start, j)` to merge clusters in the buffer. However, this is an incorrect function call.
+2. The fix replaces the incorrect function call with the correct function call `buffer->merge_clusters(start, j)` to merge clusters in the buffer.
+3. Additionally, the code uses the `memmove` function to move the glyph information between different positions in the buffer to correctly reorder the clusters.
+4. After the fix, the clusters are correctly merged and reordered, ensuring that the function operates as intended.

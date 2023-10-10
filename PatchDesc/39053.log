@@ -1,0 +1,7 @@
+Vulnerability: Null-dereference WRITE in MqttProps_Free
+
+Summary of fix: The fix addresses a null-dereference write vulnerability in the function `MqttProps_Free` in the `mqtt_client.c` file of the WolfMQTT library.
+
+Detailed description of fix: In the fix, the code in the `MqttClient_WaitType` function has been modified to properly handle the comparison of `wait_type` and `packet_type` in the `if` condition. The vulnerability was caused by the incorrect nesting of parentheses, resulting in a logical error. Previously, the condition `MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)` would always evaluate to true, which could lead to a null pointer dereference if the conditions `wait_packet_id == 0` and `wait_packet_id == packet_id` were also met.
+
+The fix reorganizes the condition to correctly compare `MqttIsPubRespPacket(packet_type) && MqttIsPubRespPacket(wait_type)` with the other conditions, ensuring that the null-dereference write vulnerability is addressed.

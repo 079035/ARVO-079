@@ -1,0 +1,23 @@
+Vulnerability:
+
+The vulnerability in the given diff file is related to the size of the SNI (Server Name Indication) hostname buffer in the SSL protocol. Previously, the size of the buffer was set to 64 bytes, which resulted in failed application matches due to truncation. According to RFC 4366, SNI host names can be up to 255 bytes, so the buffer length needs to be increased to accommodate longer SNI host names.
+
+Summary of the fix:
+
+The fix increases the SNI hostname buffer length to 256 bytes to align with the RFC 4366 specification.
+
+Detailed description of the fix:
+
+1. In the diff file, locate the following line:
+   ```
+   char client_requested_server_name[64],
+   ```
+
+2. Change the number 64 to 256 in order to increase the buffer size:
+   ```
+   char client_requested_server_name[256], /* SNI hostname length: RFC 4366 */
+   ```
+
+3. Save the changes.
+
+4. Recompile and deploy the updated code. The SNI hostname buffer is now able to handle hostnames with a maximum length of 255 bytes, as specified by RFC 4366. This ensures that the buffer will not truncate SNI hostnames, allowing for successful application matches.

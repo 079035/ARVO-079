@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in the given diff file is that there is no check for the size of the allocated memory when loading a Kodak thumbnail. This can lead to a buffer overflow if the estimated data size is too small.
+
+Summary of fix:
+The fix prevents the allocation of too small memory by checking the estimated data size before allocating memory for the Kodak thumbnail.
+
+Detailed description of fix:
+1. The code now checks the estimated data size of the thumbnail using the formulas T.theight * T.twidth / 3 and INT64(T.theight) * INT64(T.twidth) before allocating memory for the thumbnail.
+2. If ID.toffset is less than 0, an exception LIBRAW_EXCEPTION_IO_CORRUPT is thrown, indicating that the input data is corrupt.
+3. If ID.toffset + est_datasize is greater than ID.input->size() + THUMB_READ_BEYOND, an exception LIBRAW_EXCEPTION_IO_EOF is thrown, indicating that the input data exceeds the expected size.
+4. If INT64(T.theight) * INT64(T.twidth) is greater than 1024ULL * 1024ULL * LIBRAW_MAX_THUMBNAIL_MB, an exception LIBRAW_EXCEPTION_IO_CORRUPT is thrown, indicating that the thumbnail size exceeds the maximum allowed size.
+5. If INT64(T.theight) * INT64(T.twidth) is less than 64ULL, an exception LIBRAW_EXCEPTION_IO_CORRUPT is thrown, indicating that the thumbnail size is too small.
+6. If T.twidth is less than 16, T.twidth is greater than 8192, T.theight is less than 16, or T.theight is greater than 8192, an exception LIBRAW_EXCEPTION_IO_CORRUPT is thrown, indicating that the thumbnail dimensions are invalid.

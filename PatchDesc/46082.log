@@ -1,0 +1,17 @@
+Vulnerability: Possible failure to handle cases where `flb_sds_create_len` fails
+
+Summary of Fix: The fix in this commit handles the error case where `flb_sds_create_len` fails. If `flb_sds_create_len` returns a `NULL` value, the function returns `-1` to indicate an error.
+
+Detailed Description of Fix:
+- The code in the diff file is from the file `flb_ra_key.c`.
+- The function `msgpack_object_to_ra_value` is responsible for mapping a `msgpack_object` to a `flb_ra_value` representation.
+- In the last `else if` block, when the `msgpack_object` type is `MSGPACK_OBJECT_STR`, the code calls the function `flb_sds_create_len` to create a string value. However, it does not handle cases where `flb_sds_create_len` fails and returns `NULL`.
+- To fix this vulnerability, the code in the diff file adds an error handling block after calling `flb_sds_create_len`:
+  ```c
+  if (result->val.string == NULL) {
+      return -1;
+  }
+  ```
+  If `flb_sds_create_len` returns `NULL`, indicating a failure, the function immediately returns `-1` to indicate an error.
+- This fix ensures that the code properly handles the error case where the creation of a string value fails.
+- The fix is in commit `80d028109d3a55792f3bcfcb799292891409bdab`.

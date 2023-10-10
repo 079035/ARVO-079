@@ -1,0 +1,26 @@
+Vulnerability:
+Null-dereference WRITE in MqttProps_Free
+
+Summary of the fix:
+The fix in this code is to correct the conditional statement that checks if the packet types match. The original code incorrectly checked for a specific packet type, but it should have checked if both the current packet type and the expected packet type are publish responses. This fix ensures that the correct packet object is used when handling a matching packet.
+
+Detailed description of the fix:
+In the original code, the conditional statement that checks if the packet types match is as follows:
+```cpp
+(wait_type == MQTT_PACKET_TYPE_ANY ||
+ wait_type == packet_type ||
+ MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)) &&
+(wait_packet_id == 0 || wait_packet_id == packet_id)
+```
+This condition incorrectly checks if the `wait_type` is equal to the `packet_type`, but it should have checked if both the `packet_type` and `wait_type` are publish responses i.e., `(MqttIsPubRespPacket(packet_type) && MqttIsPubRespPacket(wait_type))`.
+
+The fixed code:
+```cpp
+(wait_type == MQTT_PACKET_TYPE_ANY ||
+ wait_type == packet_type ||
+ (MqttIsPubRespPacket(packet_type) &&
+  MqttIsPubRespPacket(wait_type))) &&
+(wait_packet_id == 0 || wait_packet_id == packet_id)
+```
+
+This fixed conditional statement ensures that the correct packet object `use_packet_obj` is used when handling a matching packet.

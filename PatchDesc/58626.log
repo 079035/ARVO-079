@@ -1,0 +1,13 @@
+Vulnerability Description:
+The vulnerability fixed in this code is a null pointer dereference issue. It was reported that the code was not checking for null before dereferencing a pointer, which could lead to a crash or undefined behavior.
+
+Summary of Fix:
+The fix in this code addresses the null check issue by adding a null check before accessing the pointer.
+
+Detailed Fix Description:
+To fix the null check issue, the code was modified in the following way:
+- In the `accelerator_t` struct, the null check condition was changed from `if (likely (table))` to `if (likely (table.get_blob ()))`. This ensures that the null check is performed on the correct object and avoids dereferencing a null pointer.
+- The `table` object is a `hb_blob_ptr_t` which holds a pointer to the GDEF table. By invoking the `get_blob()` function on the `table` object, the fix checks if the underlying pointer is null before proceeding with the dereference.
+- If the null check condition is false, the `glyph_props` cache is not updated, preventing a potential null pointer dereference.
+
+By making these changes, the fix ensures that the null check is performed correctly before accessing the pointer, preventing any potential crashes or undefined behavior.

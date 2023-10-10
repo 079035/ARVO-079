@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability addressed in this diff file is with the `flb_fuzz_get_probability` function in the `flb_mem.h` file. The function is used to determine the probability of allocating memory based on a given value. However, there is a chance of a fuzzer malloc failure due to the way the `flb_malloc_p` variable is incremented and updated.
+
+Summary of Fix:
+The fix aims to decrease the chance of fuzzer malloc failure by adjusting the modulo value used to update the `flb_malloc_p` variable.
+
+Detailed Description of Fix:
+1. Previously, the `flb_malloc_p` variable was incremented by 1 each time the `flb_fuzz_get_probability` function was called: `flb_malloc_p += 1;`.
+2. The `flb_malloc_p` variable was then updated by taking its modulo 1500 value: `flb_malloc_p = flb_malloc_p % 1500;`.
+3. In the fix, the modulo value has been increased to 2500: `flb_malloc_p = flb_malloc_p % 2500;`.
+4. By increasing the modulo value, the function decreases the chance of fuzzer malloc failure. This means that the probability of allocating memory will be more evenly distributed and less likely to result in a failure.
+5. The fix ensures that the `flb_fuzz_get_probability` function works more reliably in allocating memory and reduces the likelihood of fuzzer malloc failure. This improves the stability and robustness of the code.

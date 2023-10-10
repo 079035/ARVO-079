@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to the removal of invalid glyphs from the glyphset. There is a function named "_remove_invalid_gids" added, which checks if a glyph's ID is greater than or equal to the number of glyphs and removes it from the glyphset.
+
+Fix Summary:
+The fix removes the invalid glyphs from the glyphset to retain. It ensures that only valid glyph IDs are retained in the set.
+
+Fix Description:
+The fix involves adding a new function named "_remove_invalid_gids". This function takes a set of glyphs and the number of glyphs as input parameters. It then iterates through all the glyphs in the set using the "next" function. For each glyph, it checks if the glyph's ID is greater than or equal to the number of glyphs. If it is, the glyph is removed from the set using the "del" function.
+
+After removing the invalid glyphs, the glyphset is updated to contain only the valid glyph IDs. This ensures that the subset of glyphs being retained is consistent and does not include any invalid glyphs.
+
+Note: The fix also includes some other changes in the code, such as the addition of the "_remove_invalid_gids" function and the modification of the existing code to call this function. However, the main focus of the fix is the removal of invalid glyphs from the glyphset.

@@ -1,0 +1,46 @@
+Vulnerability:
+There is a vulnerability related to a potential integer overflow in the code. Specifically, the vulnerability occurs when calculating the offset and size of the MakerNote tags. If the values calculated exceed the maximum size of a JPEG segment (64 kb), the code breaks and does not properly handle the data.
+
+Summary of the fix:
+The fix involves adding checks for the bufsize before performing the integer overflow checks. By doing this, the code ensures that the buffer size is checked before attempting to calculate offsets and sizes, preventing potential overflows.
+
+Detailed description of the fix:
+1. The fix begins by adding the following check before performing any calculations:
+   ```
+   if (ofs + 12 > buf_size) {
+       exif_log (md->log, EXIF_LOG_CODE_CORRUPT_DATA,
+                                 "ExifMnoteApplet", "Tag size overflow detected (%u vs size %u)", ofs + 12, buf_size);
+       break;
+   }
+   ```
+   This check ensures that the offset (`ofs`) plus the constant value `12` does not exceed the `buf_size`. If it does, a log message is printed indicating a tag size overflow, and the loop is broken.
+
+2. Next, the code adds an additional check after calculating the size of the tag data:
+   ```
+   if ((d->entries[i].components) && (buf_size / d->entries[i].components < exif_format_get_size(d->entries[i].format))) {
+       exif_log (md->log, EXIF_LOG_CODE_CORRUPT_DATA,
+                                 "ExifMnoteApplet", "Tag size overflow detected (components %lu vs size %u)", d->entries[i].components, buf_size);
+       break;
+   }
+   ```
+   This check verifies that the calculated size of the tag data, which is the product of the number of components and the size of the format, does not exceed the `buf_size`. If it does, a log message is printed indicating a tag size overflow, and the loop is broken.
+
+3. Additionally, the code adds a new check to validate the offset (`dofs`) after calculating it based on the offset read from the buffer. The check is as follows:
+   ```
+   if (dofs > buf_size) {
+       exif_log (md->log, EXIF_LOG_CODE_CORRUPT_DATA,
+                                 "ExifMnoteApplet", "Tag size overflow detected (%u vs size %u)", dofs, buf_size);
+       continue;
+   }
+   ```
+   This check ensures that the calculated offset (`dofs`) does not exceed the `buf_size`. If it does, a log message is printed indicating a tag size overflow, and the loop continues to the next iteration.
+
+4. Finally, an additional check is added after copying the tag data to verify that the calculated offset plus the size of the data does not exceed the `buf_size`:
+   ```
+   if (dofs + dsize > buf_size) {
+       exif_log (md->log, EXIF_LOG_CODE_CORRUPT_DATA,
+                                 "ExifMnoteApplet", "Tag size overflow detected (%u vs size %u)", dofs + dsize, buf_size);
+       continue;
+   }
+   ```
+   This check ensures that the calculated offset plus the size of the tag data does not exceed the `buf_size`. If it does, a log message is printed indicating a tag size overflow, and the loop continues to the next iteration.

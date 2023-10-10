@@ -1,0 +1,54 @@
+Vulnerability:
+
+The vulnerability addressed by this diff file is a potential memory allocation failure in the function `BlobToStringInfo()`. The vulnerability occurs when the length of the blob is less than the value of `MagickPathExtent` (an internal constant defined elsewhere in the code). In such cases, the function tries to allocate a memory block of size `length + MagickPathExtent`, which can result in a failed allocation if `length + MagickPathExtent` exceeds the available memory.
+
+Summary of the Fix:
+
+The fix ensures that the memory block allocated in `BlobToStringInfo()` is always successful by checking if `length + MagickPathExtent` is less than `MagickPathExtent` (criteria for a failed allocation). If the condition is true, the function throws a fatal exception, preventing the allocation and avoiding potential memory allocation failure.
+
+Detailed Description of the Fix:
+
+1. The fix starts by modifying the condition in `BlobToStringInfo()` that checks if `~length < MagickPathExtent`, to check if `~length >= MagickPathExtent` instead. This ensures that the allocation is only attempted when `length + MagickPathExtent` is less than `MagickPathExtent`.
+
+```diff
+@@ -59,7 +59,7 @@ BlobToStringInfo(const void *blob,const size_t length)
+    StringInfo
+      *string_info;
+
+-   if (~length < MagickPathExtent)
++   if (~length >= MagickPathExtent)
+      ThrowFatalException(ResourceLimitFatalError,"MemoryAllocationFailed");
+```
+
+2. After updating the allocation condition, the function starts the allocation process by acquiring a `StringInfo` container.
+
+```diff
+    string_info=AcquireStringInfoContainer();
+```
+
+3. The next step is to allocate the memory block needed to store `length + MagickPathExtent` elements of `unsigned char` type. However, the allocation is performed using `AcquireQuantumMemory()` instead of the regular memory allocation function.
+
+```diff
+-   string_info->datum=(unsigned char *) AcquireQuantumMemory(length+
+-     MagickPathExtent,sizeof(*string_info->datum));
++   string_info->datum=(unsigned char *) AcquireQuantumMemory(length +
++     MagickPathExtent, sizeof(*string_info->datum));
+```
+
+4. After successfully allocating the memory block, the function now checks if the `blob` parameter is not `NULL` before performing the `memcpy()` operation. If `blob` is not `NULL`, it copies `length` elements from `blob` to `string_info->datum`.
+
+```diff
+    if (blob != (const void *) NULL)
+      (void) memcpy(string_info->datum,blob,length);
+```
+
+5. Finally, the fix adds an `else` condition in case `blob` is `NULL`, where it calls `memset()` to set all elements of `string_info->datum` to `0`.
+
+```diff
++  else
++    (void) memset(string_info->datum,0,length);
+```
+
+Explanation:
+
+This fix ensures that the memory allocation in `BlobToStringInfo()` is only attempted when the combined length of the blob and `MagickPathExtent` is less than `MagickPathExtent`. This prevents potential memory allocation failures and improves the overall stability of the code. Additionally, it enhances the function's behavior by setting all elements of `string_info->datum` to `0` when `blob` is `NULL`, ensuring consistent behavior in different scenarios.

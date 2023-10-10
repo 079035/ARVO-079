@@ -1,0 +1,30 @@
+Vulnerability:
+The vulnerability in the code is a memory leak. The code uses the `g_free` function to free memory in the `pinfo->private_table` hash table when using TCP. However, this hash table is created using `g_hash_table_new()` instead of `g_hash_table_new_full()` with a `g_free` function to properly release the memory.
+
+Fix:
+The fix for the vulnerability is to use the `g_hash_table_new_full()` function instead of `g_hash_table_new()` when creating the `pinfo->private_table` hash table. This ensures that the memory allocated for the hash table keys and values is properly freed.
+
+Detailed Fix:
+
+1. Find the following code block:
+   ```
+   if (pinfo->private_table == NULL && pinfo->ptype == PT_TCP) {
+-      pinfo->private_table = g_hash_table_new_full(g_str_hash, g_str_equal,
+-        g_free, g_free);
++      pinfo->private_table = g_hash_table_new(g_str_hash, g_str_equal);
+     }
+   ```
+
+2. Replace it with the following code block:
+   ```
+   if (pinfo->private_table == NULL && pinfo->ptype == PT_TCP) {
++      pinfo->private_table = g_hash_table_new_full(g_str_hash, g_str_equal,
++        g_free, g_free);
+     }
+   ```
+
+3. This change ensures that the `pinfo->private_table` hash table is created with the `g_hash_table_new_full()` function, providing the `g_free` function to properly release the memory for the keys and values.
+
+4. Recompile the code to apply the fix.
+
+By making this fix, the memory leak vulnerability is resolved, and the code will properly release the memory allocated for the hash table keys and values.

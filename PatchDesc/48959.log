@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability in the code is that the temporary arrays `tree1d[]` and `blcount[]` are not sized according to the worst-case scenario. The original code assumes that the maximum length of the trees is 15, but in reality, the trees can have lengths of 19, 32, or 288. Therefore, there is a possibility of buffer overflow or memory corruption if the actual tree length exceeds the allocated buffer sizes.
+
+Fix Summary:
+The fix updates the sizing of the temporary arrays `tree1d[]` and `blcount[]` to accommodate the worst-case scenario. It also adds assertions to catch any further problems related to buffer lengths.
+
+Detailed Fix Description:
+1. The fix declares the temporary arrays `tree1d[]` and `blcount[]` with sizes `NUM_DEFLATE_CODE_SYMBOLS` instead of `MAX_SYMBOLS`. `NUM_DEFLATE_CODE_SYMBOLS` represents the worst-case size for the trees.
+2. It adds an assertion to check if `tree->numcodes` is within the bounds of `blcount[]`. If `bitlen[bits]` exceeds the size of `blcount[]`, it returns a fatal error (`LWS_SRET_FATAL + 1`).
+3. It adds assertions to verify that `tree->maxbitlen` and `tree->numcodes` are within the bounds of `blcount[]`, `nextcode[]`, and `tree1d[]`.
+4. It initializes `tree1d[]`, `blcount[]`, and `nextcode[]` with appropriate values.
+5. It adds an assertion to ensure that `treepos` does not exceed `tree->numcodes - 2u`.
+6. It adds an assertion to check if the `tree->tree2d[]` slots are empty, and if so, assigns them a value of 0.
+
+These changes fix the vulnerability by ensuring that the temporary arrays are sized properly for the worst-case scenario, and by adding assertions to validate the buffer sizes and prevent buffer overflow or memory corruption.

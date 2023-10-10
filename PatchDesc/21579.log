@@ -1,0 +1,26 @@
+Vulnerability:
+The vulnerability fixed in this patch is an out-of-bounds read. Specifically, there is a missing bounds check when reading the next character in `ucl_parse_value` function. This can lead to reading beyond the end of the buffer, causing undefined behavior.
+
+Summary of the fix:
+The fix adds a bounds check to ensure that the pointer is not past the end of the buffer before trying to read the next character. If the pointer is past the end of the buffer, an error is returned.
+
+Detailed description of the fix:
+The fix modifies the `ucl_parse_value` function in the `ucl_parser.c` file. Here are the changes made in the fix:
+
+1. Before the switch statement in the while loop, a new variable `p_end` is declared and assigned the value of `chunk->end`. This variable represents the end of the buffer.
+
+2. Inside the switch statement, when processing the multiline value case, a check is added to ensure that `p` is not equal to `p_end`. If `p` is equal to `p_end`, it means that the pointer is past the end of the buffer, and an error is returned.
+
+```c
+if(p == chunk->end) {
+	ucl_set_err (parser, UCL_ESYNTAX,
+		"unterminated multiline value", &parser->err);
+	return false;
+}
+```
+
+This check ensures that the function does not attempt to read beyond the end of the buffer, preventing the out-of-bounds read vulnerability.
+
+3. The indentation of the code has been adjusted for readability.
+
+By adding this bounds check, the fix ensures that the function returns early with an error in case of a missing newline when the string ends with a Multiline terminator without a newline, preventing the out-of-bounds read.

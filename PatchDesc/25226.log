@@ -1,0 +1,19 @@
+Vulnerability:
+The vulnerability fixed in this commit is a typo in the README.md file of the src/cli directory. 
+
+Summary of the fix:
+The fix corrects the typo by changing "steeeringdata" to "steeringdata" in the commands used as examples in the README.md file.
+
+Detailed description of the fix:
+In the README.md file of the src/cli directory, there are examples of commands that can be used with the netdata CLI tool. However, there is a typo in the commands related to "steeeringdata". The incorrect commands are:
+```
+> netdata steeeringdata check d45e64fa83f81cf7
+> netdata steeeringdata check 0xabc/12
+> netdata steeeringdata check 0xdef/12
+```
+The fix corrects the typo by changing "steeeringdata" to "steeringdata" in the commands. The corrected commands are:
+```
+> netdata steeringdata check d45e64fa83f81cf7
+> netdata steeringdata check 0xabc/12
+> netdata steeringdata check 0xdef/12
+```

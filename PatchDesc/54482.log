@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability fixed in this patch is an addition overflow in the calculation of the size of the hdmx table.
+
+Summary of the fix:
+The fix checks for addition overflow when calculating the size of the hdmx table.
+
+Detailed description of the fix:
+The fix introduces a check to prevent addition overflow in the calculation of the size of the hdmx table. In the `sanitize` function of the `hdmx` struct, the condition `min_size + numRecords * sizeDeviceRecord > numRecords * sizeDeviceRecord` is added to ensure that the addition does not result in an overflow. This condition checks if the sum of `min_size` and `numRecords * sizeDeviceRecord` is greater than `numRecords * sizeDeviceRecord`. If the addition would cause an overflow, the condition will evaluate to false and the function will return `false`, indicating that the hdmx table is not sanitized. Otherwise, the function will continue with the remaining checks.
+
+This fix prevents potential arithmetic errors that could occur if the addition of `min_size` and `numRecords * sizeDeviceRecord` exceeds the maximum representable value for the data types involved.

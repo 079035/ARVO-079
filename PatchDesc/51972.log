@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the given code is that it does not properly nul-terminate a string before converting it to a C++ string using the `Exiv2::toString()` function. The string is read from the buffer `buf` and stored in the `xmpData_` map, but the conversion to a C++ string does not guarantee nul-termination, which can lead to undefined behavior when accessing the string.
+
+Summary of the fix:
+The fix adds a line of code to nul-terminate the string before converting it to a C++ string.
+
+Detailed description of the fix:
+In the `else if (tv)` block, after reading `tv_size` bytes into the `buf` buffer, the fix adds the following line of code:
+
+```c++
+buf.write_uint8(tv_size, 0); // nul-terminate string
+```
+
+This line of code writes a nul character (`'\0'`) at the position `tv_size` in the `buf` buffer, effectively nul-terminating the string. This ensures that the string is properly terminated before converting it to a C++ string using the `Exiv2::toString()` function. This fix prevents any potential undefined behavior caused by accessing the non-null-terminated string.

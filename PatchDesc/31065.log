@@ -1,0 +1,19 @@
+Vulnerability:
+
+The vulnerability addressed in this patch is a use-after-free bug in the CIL compiler of the libsepol library.
+
+Summary of the fix:
+
+The fix in this patch destroys the classperms list without destroying the data in it when resetting a classpermission rule. This ensures that the list doesn't retain any of its elements when it is reset, preventing any potential use-after-free vulnerabilities.
+
+Detailed description of the fix:
+
+The fix is implemented in the `cil_reset_classpermission` function defined in the `cil_reset_ast.c` file.
+
+Before the fix, the function `cil_reset_classpermission` was resetting a classpermission rule by calling `cil_reset_classperms_list` on the `classperms` list. This function was responsible for resetting the classperms list but not destroying it, resulting in a use-after-free vulnerability.
+
+The fix replaces the call to `cil_reset_classperms_list` with a call to `cil_list_destroy`. The `cil_list_destroy` function takes a pointer to a list and a boolean flag indicating whether to destroy the data in the list nodes. In this case, the flag is set to `CIL_FALSE`, indicating that the data in the list nodes should not be destroyed, only the list itself.
+
+By using `cil_list_destroy` instead of `cil_reset_classperms_list`, the classperms list is properly destroyed without retaining any of its elements. This prevents any potential use-after-free bugs when resetting a classpermission rule.
+
+The fix ensures proper memory management and improves the overall security and stability of the CIL compiler in the libsepol library.

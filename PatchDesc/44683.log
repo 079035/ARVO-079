@@ -1,0 +1,12 @@
+Vulnerability:
+There is a vulnerability in the code where the shared packet object (`client->msg`) is not reset after use in the `MqttClient_WaitType` function.
+
+Summary of the Fix:
+The fix ensures that the shared packet object is reset after use by adding the line `XMEMSET(&client->msg, 0, sizeof(client->msg));`.
+
+Detailed Description of the Fix:
+In the `MqttClient_WaitType` function, there is a portion of code where the shared packet object `client->msg` is used when a specific packet is not received. However, after using the shared packet object, it is not properly reset for the next use.
+
+To fix this vulnerability, the fix adds the line `XMEMSET(&client->msg, 0, sizeof(client->msg));` after handling the packet in the `MqttClient_HandlePacket` function. This line of code resets the shared packet object, ensuring that it is clean and ready for the next use.
+
+By resetting the shared packet object, the fix prevents any data or state from previous packet handling to interfere with the handling of subsequent packets. This improves the overall stability and correctness of the code.

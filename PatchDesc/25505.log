@@ -1,0 +1,11 @@
+Vulnerability: Integer Overflow
+
+Summary of Fix: The fix in this commit addresses an integer overflow vulnerability by using a 64-bit signed integer (`int64_t`) instead of a 32-bit integer (`int`) for calculating the maximum coordinates of the `tileMax` variable in the `dataWindowForTile` function.
+
+Detailed Description of Fix: In the original code, the `tileMax` variable was calculated by adding the `tileDesc.xSize - 1` and `tileDesc.ySize - 1` to the `tileMin` coordinates. However, if the `tileDesc.xSize` or `tileDesc.ySize` is sufficiently large, an integer overflow can occur.
+
+To fix this vulnerability, the code was modified to use a 64-bit signed integer (`int64_t`) for `tileMaxX` and `tileMaxY`, which prevent the possibility of an integer overflow. The `tileMaxX` is calculated by adding `tileDesc.xSize - 1` to the x-coordinate of `tileMin`, and `tileMaxY` is calculated by adding `tileDesc.ySize - 1` to the y-coordinate of `tileMin`.
+
+Additionally, the `levelMax` coordinates are cast to `int64_t` to ensure consistent comparison. The `tileMax` coordinates are then updated by taking the minimum of `tileMaxX` and `levelMax[0]` for the x-coordinate, and minimum of `tileMaxY` and `levelMax[1]` for the y-coordinate. Finally, the updated `tileMax` coordinates are used to construct the `Box2i` object that is returned by the function.
+
+This modification ensures that the `tileMax` coordinates do not exceed the `levelMax` coordinates and eliminates the possibility of an integer overflow vulnerability in the `dataWindowForTile` function.

@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability patched in the given diff file is a null pointer dereference on documents without a root node.
+
+Summary of the fix:
+
+The fix avoids the null pointer dereference by checking if the current node is equal to the document's root node before returning from the function.
+
+Detailed description of the fix:
+
+In the function `xsltCleanupSourceDoc()`, the original code did not handle the case when the current node is equal to the document's root node. It would continue to iterate through the nodes, potentially causing a null pointer dereference.
+
+The fixed code now checks if the current node is equal to the document's root node (`if (cur == (xmlNodePtr) doc)`) before returning from the function. This prevents further iteration and avoids the possibility of a null pointer dereference.
+
+With this fix, the code now properly handles documents without a root node and prevents any potential null pointer dereference.

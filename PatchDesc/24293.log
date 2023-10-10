@@ -1,0 +1,10 @@
+Vulnerability: Out-of-bounds write
+
+Summary of the Fix: The issue was introduced in the commit a63d579b2c23656314225903436e85263b17b1ad. The fix resolves an out-of-bounds write vulnerability in the yr_re_ast_extract_literal function.
+
+Detailed Description of the Fix:
+1. In the original code, the function yr_re_ast_extract_literal extracts a string from a regular expression abstract syntax tree (re_ast). It checks the root_node type to determine the extraction logic.
+2. If the root_node type is RE_NODE_LITERAL, it sets the length to 1 and assigns the value to the c_string of the SIZED_STRING struct.
+3. If the root_node type is RE_NODE_CONCAT, it iterates through the children_tail of the root_node and increments the length for each child node of type RE_NODE_LITERAL. It also assigns the values of the child nodes to the c_string array of the SIZED_STRING struct in reverse order.
+4. However, there is a vulnerability if the root_node type is RE_NODE_LITERAL and the value is not a null-terminated string. In this case, when assigning the value to string->c_string[0], it could result in an out-of-bounds write if the value exceeds the bounds of the c_string array.
+5. The fix modifies the line string->c_string[length] = '\0' by using string->length instead of length to ensure the null-termination of the string. This prevents an out-of-bounds write by correctly accessing the last index of the c_string array.

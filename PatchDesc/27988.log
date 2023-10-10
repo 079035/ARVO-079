@@ -1,0 +1,19 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is a use-after-free vulnerability. This vulnerability can occur when freeing certain memory blocks associated with the `ndpi_flow_struct` structure in the `ndpi_free_flow` function. Specifically, there is a potential use-after-free when freeing memory related to SSL/TLS protocols (`NDPI_PROTOCOL_TLS` and `NDPI_PROTOCOL_QUIC`).
+
+Summary of the Fix:
+The fix addresses the use-after-free vulnerability by introducing a local variable `is_quic` to determine if the flow protocol is QUIC. The memory blocks related to SSL/TLS protocols are freed only if the flow protocol is not QUIC (`!is_quic`). This prevents the potential use-after-free scenario by ensuring that the memory blocks related to SSL/TLS are not freed when the flow protocol is QUIC.
+
+Detailed Description of the Fix:
+1. A local variable `is_quic` of type `u_int` is introduced.
+2. The `is_quic` variable is assigned the value of the `flow_is_proto` function with the `NDPI_PROTOCOL_QUIC` as the protocol parameter. This will check if the flow protocol is QUIC and store the result in `is_quic`.
+3. The `if` condition for freeing memory blocks related to SSL/TLS protocols is modified to include the new `is_quic` variable.
+4. If `is_quic` is false (`!is_quic`), the following memory blocks are freed:
+   - `flow->protos.stun_ssl.ssl.alpn`
+   - `flow->protos.stun_ssl.ssl.tls_supported_versions`
+   - `flow->protos.stun_ssl.ssl.issuerDN`
+   - `flow->protos.stun_ssl.ssl.subjectDN`
+   - `flow->l4.tcp.tls.srv_cert_fingerprint_ctx`
+   - `flow->protos.stun_ssl.ssl.encrypted_sni.esni`
+5. This ensures that the memory blocks related to SSL/TLS protocols are freed only if the flow protocol is not QUIC, preventing the use-after-free vulnerability.
+6. The rest of the code remains the same.

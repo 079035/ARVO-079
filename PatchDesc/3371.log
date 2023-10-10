@@ -1,0 +1,23 @@
+Vulnerability: The vulnerability that has been patched in this diff file is an unexpected value for the `bitPerPixel` variable. The code allowed values of `bitPerPixel` other than 12 or 14, which could potentially lead to incorrect decoding of the raw image data.
+
+Summary of the Fix: The fix ensures that only `bitPerPixel` values of 12 or 14 are allowed. Any other value will throw an exception, preventing incorrect decoding.
+
+Detailed Description of the Fix: 
+
+1. The fix adds a switch statement that checks the value of `bitPerPixel`:
+
+   ```cpp
+   switch (bitPerPixel) {
+   case 12:
+   case 14:
+     break;
+   default:
+     ThrowRDE("Unexpected bits per pixel: %u.", bitPerPixel);
+   };
+   ```
+
+2. If the value of `bitPerPixel` is 12 or 14, the code does nothing and continues execution.
+
+3. If the value of `bitPerPixel` is not 12 or 14, an exception is thrown with a message indicating the unexpected value.
+
+This fix ensures that only valid values of `bitPerPixel` are allowed, preventing incorrect decoding of the raw image data.

@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability addressed in this patch is related to insufficient slices. In the section of the code that processes the image slices, there is a check to ensure that the slice width is a multiple of the pixel group size. However, there is no check to ensure that the slices fill the entire image. This can lead to uninitialized garbage pixels in the image if there are not enough slices to cover the entire image area.
+
+Summary of the fix:
+The fix ensures that the slices fill the entire image area. An additional check is added to verify that the last slice, if it is not the last slice, fills the entire image. If it does not fill the entire image, an exception is thrown indicating insufficient slices.
+
+Detailed description of the fix:
+1. In the code block for X_S_F == 1, an additional check is added after the if condition that verifies if the slice width + destX is less than the image width. This check ensures that the slice, if it is not the last slice, fills the entire image.
+
+   ```
+   if (((sliceId + 1) == slicing.numSlices) &&
+       ((destX + sliceWidth) < static_cast<unsigned>(mRaw->dim.x)))
+     ThrowRDE("Unsufficient slices - do not fill the entire image");
+   ```
+
+2. If the check fails, and there are insufficient slices to fill the entire image, an exception is thrown with an error message indicating the insufficiency.
+
+   ```
+   ThrowRDE("Unsufficient slices - do not fill the entire image");
+   ```
+
+The fix ensures that the image is fully filled with slices and prevents the presence of uninitialized garbage pixels in the image.

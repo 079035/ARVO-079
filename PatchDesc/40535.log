@@ -1,0 +1,5 @@
+Vulnerability: Potential memory corruption vulnerability.
+
+Summary of fix: The fix disables the m3d-export feature to prevent potential memory corruption.
+
+Detailed description of fix: In the given diff file, the vulnerability is addressed by disabling the m3d-export feature. This is accomplished by adding the line `ADD_DEFINITIONS( -DASSIMP_BUILD_NO_M3D_EXPORTER)` to the CMakeLists.txt file. By defining `ASSIMP_BUILD_NO_M3D_EXPORTER`, the m3d-exporter functionality is disabled during the build process. This prevents any potential memory corruption issues that may exist in the exporter code. This fix ensures that the vulnerable code is not executed, reducing the risk of exploitation.

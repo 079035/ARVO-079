@@ -1,0 +1,18 @@
+Vulnerability:
+The code contains a memory bug that can cause incorrect behavior or crashes. The issue is related to stackifying virtual register operands in the `WebAssemblyRegStackify::runOnMachineFunction` function.
+
+Summary of the fix:
+The fix addresses the use of an incorrect instruction (`DefI`) after calling the `rematerializeCheapDef` function. To resolve this, the fix replaces the usage of `DefI` with `Insert` when examining additional multivalue stackifications.
+
+Detailed description of the fix:
+1. The fix starts by declaring `SubsequentDef` and `SubsequentUse` pointers, initially pointing to the first defining instruction of `Insert` and the current machine operand, respectively.
+2. A loop is executed as long as `SubsequentDef` is not at the end of the defining instructions for `Insert` and `SubsequentUse` is not at the end of the uses of the parent instruction of the current operand.
+3. Within the loop, the fix checks if both `SubsequentDef` and `SubsequentUse` are register operands and have the same register.
+4. Additionally, the fix verifies that the register has exactly one use in the machine register information (`MRI`).
+5. If the conditions are satisfied, the fix stackifies the register by calling `MFI.stackifyVReg(DefReg)`. This ensures that this operand is treated as a stack value instead of being stored in a register.
+6. After stackifying the register, the `SubsequentDef` and `SubsequentUse` pointers are incremented to move to the next defining instruction and use, respectively.
+7. The loop continues until either `SubsequentDef` reaches the end of the defining instructions or `SubsequentUse` reaches the end of the uses.
+8. After the loop, if the instruction that was stackified is an `IMPLICIT_DEF` instruction, the fix converts it to a constant zero instruction using the `convertImplicitDefToConstZero` function. This ensures that the def is explicit and maintains the push/pop correspondence.
+9. Finally, the fix resets the `Commuting` state and pushes the operands of the defining instruction onto the worklist stack to continue building deeper trees for stackification.
+
+Overall, the fix ensures that the correct instruction (`Insert`) is used after calling `rematerializeCheapDef` and adds the necessary logic to handle subsequent stackifications of multivalue defs.

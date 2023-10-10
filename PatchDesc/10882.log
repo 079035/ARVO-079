@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability that could be patched in this code is that the subdissector is being called even if there is no data in the packet. This can lead to unnecessary processing and potential crashes if the subdissector is not expecting an empty packet.
+
+Summary of Fix:
+The fix prevents the subdissector from being called if there is no data in the packet. It checks if there is any remaining captured data in the packet before calling the subdissector.
+
+Detailed Description of Fix:
+The fix involves modifying the `ositp_decode_CR_CC` function in the `packet-ositp.c` file. 
+1. At line 146, the code checks if there is any remaining captured data in the packet using the `tvb_captured_length_remaining()` function.
+2. If there is remaining captured data, a new subset of the packet is created using the `tvb_new_subset_remaining()` function at line 147.
+3. The code then checks if the packet uses the inactive subset. If it does not, it attempts to call the subdissector using the `dissector_try_heuristic()` function at line 149. If the subdissector is called, the `subdissector_found` flag is set to true.
+4. If the subdissector is not found, the `call_data_dissector()` function is called at line 157 to process the remaining data.
+5. The offset is updated to skip the processed data at line 162.
+6. The function returns the updated offset value.
+
+Overall, this fix ensures that the subdissector is only called if there is remaining captured data in the packet, avoiding unnecessary processing and potential crashes.

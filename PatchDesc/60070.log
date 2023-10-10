@@ -1,0 +1,10 @@
+Vulnerability:
+Heap Buffer Overflow
+
+Summary of the fix:
+The fix addresses a heap buffer overflow vulnerability in the `thrift.c` file.
+
+Detailed description of the fix:
+In the original code, the function `thrift_set_method` copies the `method` string into the `flow->protos.thrift.method` buffer using the `strncpy` function. However, the size of the `method` string may exceed the size of the destination buffer, resulting in a buffer overflow.
+
+To fix the vulnerability, the code has been modified to use `ndpi_min` to determine the maximum number of characters to copy from the `method` string. This ensures that the copy operation does not exceed the size of the destination buffer, preventing a heap buffer overflow.

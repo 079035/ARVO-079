@@ -1,0 +1,14 @@
+Vulnerability:
+ASAN heap-buffer-overflow when reading chunk offset in the frame.
+
+Summary of the fix:
+The fix addresses a heap-buffer-overflow vulnerability that occurs when reading the chunk offset in the frame.
+
+Detailed description of the fix:
+In the given diff file, the fix involves modifying the code in the `get_coffsets` function. The vulnerability is addressed by adding a check to ensure that the value of `*off_cbytes` does not exceed the frame boundary.
+
+Before the fix, if the value of `*off_cbytes` was greater than the frame length, it could lead to a heap-buffer-overflow. This vulnerability is fixed by checking if `*off_cbytes` is less than 0 or if adding it to the `off_pos` exceeds the frame length. If either of these conditions is true, an error is thrown, and the function returns NULL.
+
+By implementing this fix, the code prevents accessing offsets outside the frame boundary, thus eliminating the heap-buffer-overflow vulnerability.
+
+Overall, the fix ensures that the code reads offsets within the frame's boundary, preventing any potential heap-buffer-overflow vulnerabilities.

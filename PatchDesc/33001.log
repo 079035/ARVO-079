@@ -1,0 +1,49 @@
+Vulnerability:
+
+In the given diff file, the vulnerability that was patched is an uninitialized access to a member of the `rescale[]` array in the `get_gray_rgb_row()` or `get_gray_cmyk_row()` functions in the `rdppm.c` file. This vulnerability was triggered by a fuzzing test case that was effectively a 1-pixel PGM file with a maximum value of 1 and an actual value of 8. The `get_gray_rgb_row()` and `get_gray_cmyk_row()` functions do not perform bounds checking on the PPM values for performance reasons, so it was necessary to ensure that unused members of the `rescale[]` array are initialized to fix this vulnerability.
+
+Fix Summary:
+
+The fix for this vulnerability involves initializing the unused members of the `rescale[]` array in the `start_input_ppm()` function in the `rdppm.c` file. The `MEMZERO` macro is used to initialize the `source->rescale` array with zeros before computing the rescaling array.
+
+Detailed Fix Description:
+
+1. In the `start_input_ppm()` function, a check is performed to determine if rescaling is needed:
+   ```c
+   need_rescale = TRUE;          /* do we need a rescale array? */
+   
+   ...
+   
+   if (need_rescale) {
+     ... // Compute the rescaling array
+   }
+   ```
+
+2. Within the rescaling block, the `source->rescale` array is allocated and initialized:
+   ```c
+   source->rescale = (JSAMPLE *)
+     (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
+                                 (size_t)(((long)MAX(maxval, 255) + 1L) *
+                                          sizeof(JSAMPLE)));
+   MEMZERO(source->rescale, (size_t)(((long)MAX(maxval, 255) + 1L) *
+                                      sizeof(JSAMPLE)));
+   ```
+
+   The `rescale` array is allocated with a size based on the maximum value `maxval` and the size of `JSAMPLE`.
+
+3. The `MEMZERO` macro is used to initialize the `source->rescale` array with zeros before computing the rescaling array.
+
+4. The rescaling array is computed using the `maxval` value:
+   ```c
+   long val, half_maxval;
+ 
+   half_maxval = maxval / 2;
+   for (val = 0; val <= (long)maxval; val++) {
+     source->rescale[val] = (JSAMPLE)((val * MAXJSAMPLE + half_maxval) /
+                                       maxval);
+   }
+   ```
+
+   The rescaling equation `(val * MAXJSAMPLE + half_maxval) / maxval` is applied to each element of the `rescale` array.
+
+This fix ensures that all members of the `rescale` array are properly initialized, preventing any uninitialized access vulnerabilities when accessing the `rescale[]` array in the `get_gray_rgb_row()` or `get_gray_cmyk_row()` functions.

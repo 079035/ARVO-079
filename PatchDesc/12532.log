@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability that is patched in this diff file is a potential buffer over-read in the `get_anchor` function of the `ankr` struct. Specifically, the code does not properly check the bounds when accessing the `anchors` array in the `get_anchor` function.
+
+Summary of the fix:
+The fix fully sanitizes the `ankr` table at sanitize time to prevent potential buffer over-read issues. This fix addresses the vulnerability by adding proper bounds checks when accessing the `anchors` array.
+
+Detailed description of the fix:
+1. In the original code, the bounds checks in the `get_anchor` function were incomplete. The code checked if the `anchors` array struct itself was within the valid range, but it did not check if the data pointed to by the `anchors` array (specifically, the `len` and `get_size` values) were within the valid range.
+2. The fix adds missing bounds checks by using the `end` parameter (which is the end address of the `ankr` struct) to compare against the data referenced by the `anchors` array. The fixed code now checks if `end` is less than the address of `anchors` or if subtracting the address of `anchors` from `end` is less than the sizes of `len` and `get_size`.
+3. The fix also updates the `sanitize` function to properly check the `lookupTable` and `anchorData` offsets. In the original code, only the `lookupTable` offset was sanitized, while the `anchorData` offset was ignored. The fixed code updates the `sanitize` function to include the `anchorData` offset as well, ensuring that both offsets are sanitized and checked for validity.
+4. Overall, the fix ensures that the `get_anchor` function correctly checks the bounds when accessing the `anchors` array, preventing any potential buffer over-read issues. Additionally, the `sanitize` function is fixed to properly sanitize both the `lookupTable` and `anchorData` offsets, ensuring the overall integrity of the `ankr` table.

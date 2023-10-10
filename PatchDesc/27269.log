@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability in the given code diff is related to copying secondary device types for a P2P group client. The issue arises when parsing and copying the WPS secondary device types list. While there is validation to check if the list length is too long for WPS messages, similar validation is missing for P2P group information. This causes a potential buffer overflow, leading to memory corruption within the `p2p_device` struct. As a result, it can cause invalid operations and unexpected behavior, especially when trying to free pointers from the corrupted memory.
+
+Fix Summary:
+The fix ensures that the length of the WPS secondary device types list is validated for P2P group information as well. If the length exceeds the maximum limit, it is truncated to the maximum allowed length (`WPS_SEC_DEV_TYPE_MAX_LEN`).
+
+Detailed Fix Description:
+In the given code diff, the fix is implemented by adding a validation check to limit the length of the WPS secondary device types list. The specific code change is as follows:
+
+```c
+dev->info.wps_sec_dev_type_list_len = 8 * cli->num_sec_dev_types;
+if (dev->info.wps_sec_dev_type_list_len > WPS_SEC_DEV_TYPE_MAX_LEN)
+	dev->info.wps_sec_dev_type_list_len = WPS_SEC_DEV_TYPE_MAX_LEN;
+```
+
+After copying the number of secondary device types (`cli->num_sec_dev_types`), the total length is calculated by multiplying it with 8 (as each device type is 8 bytes long). Then, a check is added to compare the length with the maximum allowed length (`WPS_SEC_DEV_TYPE_MAX_LEN`). If the length exceeds the maximum, it is truncated to the maximum length. This ensures that the memory allocated for the list does not get overwritten, preventing memory corruption and potential vulnerabilities.

@@ -1,0 +1,14 @@
+Vulnerability:
+Use-after-free vulnerability in the `dxf_objects_read` function in the `in_dxf.c` file.
+
+Summary of Fix:
+The fix addresses a use-after-free vulnerability by properly handling the freeing and reassignment of the `pair` variable to prevent accessing freed memory.
+
+Detailed Description of Fix:
+The fix involves modifying the code in the `dxf_objects_read` function as follows:
+
+1. After calling `dxf_free_pair(pair)` on line 38, a new `pair` is read from the `dat` stream by calling `pair = dxf_read_pair(dat)` on line 39.
+
+2. Before accessing the new `pair`, a check is performed to ensure that the end of file (EOF) has not been reached. This is done by calling `DXF_CHECK_EOF` on line 40.
+
+By doing these modifications, the fix ensures that a new pair is read and properly checked for EOF before any further operations are performed, preventing the use-after-free vulnerability.

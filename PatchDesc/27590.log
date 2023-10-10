@@ -1,0 +1,21 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to the decoding of video frames using the dav1d library in the dav1d_decode_image() function. The vulnerability allows input frames to be decoded incorrectly or skipped, resulting in incorrect or incomplete decoding of the video frames.
+
+Summary of the Fix:
+The fix ensures that the input stream is properly flushed before decoding the frames using the dav1d library. This fixes the issue of frames being skipped or incorrectly decoded.
+
+Detailed Description of the Fix:
+1. A new boolean variable 'flushed' is introduced and initialized as false.
+2. A loop is added for continuous decoding until a valid frame is obtained.
+3. Inside the loop, the dav1d_send_data() function is called to send the input data to the decoder. If the return value res is negative and not equal to DAV1D_ERR(EAGAIN), it indicates an error and the function returns the corresponding error code.
+4. After sending the data, the dav1d_get_picture() function is called to retrieve the decoded frame. If the return value res is DAV1D_ERR(EAGAIN), indicating that more data is needed, and 'flushed' is false, a check is performed. If the decoder's data size is 0, it means there is no more data to be sent and the 'flushed' flag is set to true. The loop then continues to the next iteration.
+5. If the return value res is negative (other than DAV1D_ERR(EAGAIN)), it indicates an error and the function returns the corresponding error code.
+6. If none of the above conditions are met, it means a valid frame has been obtained, and the loop breaks.
+7. The heif_chroma and heif_colorspace variables are set based on the pixel layout of the frame obtained.
+8. A heif_image object is created with the specified width, height, colorspace, and chroma.
+9. The nclx parameters (color primaries, transfer characteristics, matrix coefficients, and full range flag) are read from the decoded AV1 bitstream and set in the heif_image object.
+10. The image data is then transferred from the dav1d's frame object to the heif_image object. For each channel (Y, Cb, Cr), the plane data is added to the heif_image object, and the image data is copied from the frame's buffer to the plane data in the heif_image object.
+11. The dav1d_picture_unref() function is called to release the references to the frame's buffer.
+12. The resulting heif_image object is assigned to the 'out_img' pointer, and the function returns heif_error_Ok to indicate success.
+
+Overall, the fix ensures that the input stream is properly flushed before decoding frames, preventing issues with missing or incorrect frames in the decoded output.

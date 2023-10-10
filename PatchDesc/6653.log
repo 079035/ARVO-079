@@ -1,0 +1,11 @@
+Vulnerability: Improper handling of image file read errors
+
+Summary of the fix: Proper error handling and exception throwing
+
+Detailed description of the fix:
+1. The fix introduces proper error handling by checking the return value of the `ReadBlob` function. If the return value is not equal to the expected number of bytes read, an exception `CorruptImageError` is thrown.
+2. The fix also includes creating an `ExceptionInfo` structure to store any errors or warnings that occur during image processing.
+3. The `ThrowReaderException` function is used to throw the `CorruptImageError` exception, indicating that the image file is not in the expected format.
+4. Proper clean-up is performed by destroying the image if the file read operation fails.
+
+Note: The complete fix is provided in the diff file.

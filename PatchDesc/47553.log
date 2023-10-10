@@ -1,0 +1,36 @@
+Vulnerability:
+
+In the given diff file, the vulnerability is related to a potential buffer overflow in the function `fxGetNextEntity` in the file `xsLexical.c`. 
+
+The vulnerable code can be found in the following lines:
+
+```c
+int c = parser->character;
+while ((('0' <= c) && (c <= '9')) || (('A' <= c) && (c <= 'Z')) || (('a' <= c) && (c <= 'z'))) {
+  *p++ = c;
+  fxGetNextCharacter(parser);
+  c = parser->character;
+}
+```
+
+In this code, the loop iterates while a certain condition is met, and during each iteration, the character `c` is copied into the buffer `p`. However, there is no boundary check on the buffer, which means that if the loop runs for too long or if the buffer `p` does not have enough capacity, a buffer overflow can occur, potentially leading to memory corruption or other undefined behavior.
+
+Summary of the fix:
+
+The fix in this commit is to add a check on the pointer `p` to ensure that it doesn't exceed the pointer `q`, which represents the end of the buffer. By checking if `p` is less than `q` before entering the loop, the code prevents a potential buffer overflow.
+
+Detailed description of the fix:
+
+The fix is implemented in the following lines:
+
+```c
+while ((p < q) && ((('0' <= c) && (c <= '9')) || (('A' <= c) && (c <= 'Z')) || (('a' <= c) && (c <= 'z')))) {
+  *p++ = c;
+  fxGetNextCharacter(parser);
+  c = parser->character;
+}
+```
+
+In this modified code, the condition in the while loop has been augmented with `(p < q)`. This ensures that the loop only executes when the pointer `p` is still within the bounds of the buffer. If `p` exceeds the pointer `q`, the loop terminates, preventing any potential buffer overflow.
+
+This fix effectively prevents the buffer overflow vulnerability by checking the buffer boundaries before copying characters into the buffer.

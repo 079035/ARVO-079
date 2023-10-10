@@ -1,0 +1,66 @@
+{
+    "fix": "https://github.com/OISF/libhtp/commit/fe16fa764f7cea57be5a288ee85b27dffc460f6f",
+    "verify": "0",
+    "localId": 17198,
+    "project": "libhtp",
+    "fuzzer": "afl",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow READ 1",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 17198,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1568556169,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5659352148475904\n\nProject: libhtp\nFuzzing Engine: afl\nFuzz Target: fuzz_htp\nJob Type: afl_asan_libhtp\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow READ 1\nCrash Address: 0x621000003a6d\nCrash State:\n  LzmaDec_DecodeToDic\n  LzmaDec_DecodeToBuf\n  htp_gzip_decompressor_decompress\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=afl_asan_libhtp&range=201909140220:201909150222\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5659352148475904\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 17198,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1568817968,
+                "content": "ClusterFuzz testcase 5659352148475904 is verified as fixed in https://oss-fuzz.com/revisions?job=afl_asan_libhtp&range=201909170218:201909180219\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 17198,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "4164592774",
+                    "displayName": "sheriffbot@chromium.org"
+                },
+                "timestamp": 1571413138,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "fe16fa764f7cea57be5a288ee85b27dffc460f6f",
+    "repo_addr": "https://github.com/OISF/libhtp.git"
+}

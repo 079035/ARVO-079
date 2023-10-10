@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is related to the detection of Domain Generating Algorithms (DGAs) for numeric IP addresses. The code did not correctly handle the case where the input name is a numeric IP address, leading to a potential false positive detection of a suspicious DGA domain.
+
+Summary of the fix:
+The fix in this patch ensures that the code correctly ignores the check for numeric IP addresses when the name starts with a digit.
+
+Detailed description of the fix:
+1. The code checks if the first character of the input name is a digit using the `isdigit` function.
+2. If the first character is a digit, it attempts to convert the input name to an IP address using `inet_addr`.
+3. After converting the input name, it compares the obtained IP address with the input name using `strcmp`.
+4. If the comparison matches (indicating that the conversion was successful), the code returns 0 to ignore the numeric IP address for DGA detection.
+5. The fix ensures that the check for numeric IPs is accurate and prevents false positive detections.

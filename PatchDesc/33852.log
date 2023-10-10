@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability in the given diff file is a potential use-after-free issue. The `m_heredoc_initiations` vector is being cleared before it is used, which can lead to accessing invalid memory.
+
+Summary of the fix:
+The fix involves moving the `m_heredoc_initiations` vector to a local value before processing it. This ensures that the vector is not modified while it is being accessed, avoiding potential use-after-free issues.
+
+Detailed description of the fix:
+1. The `m_heredoc_initiations` vector is moved to a local variable `heredocs` using the `move()` function. This transfers ownership of the vector's contents to `heredocs`.
+   ```cpp
+   auto heredocs = move(m_heredoc_initiations);
+   ```
+2. The `m_heredoc_initiations` vector is then cleared to empty it for future use.
+   ```cpp
+   m_heredoc_initiations.clear();
+   ```
+3. The for loop that iterates over the `heredocs` vector is modified to iterate over the `heredocs` variable instead of the `m_heredoc_initiations` vector.
+   ```cpp
+   for (auto& record : heredocs) {
+   ```
+4. The remaining code in the for loop remains the same, processing the heredoc entries based on the record.
+
+The fix ensures that the `m_heredoc_initiations` vector is not modified while it is being accessed, preventing potential use-after-free issues.

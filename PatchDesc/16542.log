@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the code is that it does not handle the case where the calculated value of `quantum` exceeds the maximum value that can be stored in a `size_t` variable. This can lead to an integer overflow vulnerability.
+
+Summary of the fix:
+The fix addresses the vulnerability by checking if the value of `quantum` exceeds `SSIZE_MAX` before performing any operations with it.
+
+Detailed description of the fix:
+1. The code first allocates memory for the `coefficients` and `points` arrays.
+2. It then calculates the value of `quantum` by iterating over the `primitive_info` array. If the difference between the x or y coordinates of two points exceeds `SSIZE_MAX`, the function throws an exception and returns `MagickFalse` to indicate a memory allocation failure.
+3. After calculating `quantum`, the code checks if it exceeds `SSIZE_MAX` and sets it to the minimum value between `quantum/number_coordinates` and `BezierQuantum` if it does not exceed `SSIZE_MAX`.
+4. Next, the code allocates memory for the `coefficients` array and the `points` array using the calculated values of `number_coordinates` and `quantum`.
+5. The code then checks if the memory allocation was successful. If not, it frees the previously allocated memory, throws an exception, and returns `MagickFalse`.
+6. The code then checks if the extent of the primitive (stored in `mvg_info->primitive_info`) plus `control_points + 1` exceeds the primitive's extent limit. If it does, the function frees the memory allocated for `points` and `coefficients`, and returns `MagickFalse`.
+7. Finally, if all the above checks pass, the code continues with the execution of the rest of the function. This includes computing the bezier points, tracing the points along the bezier curves, updating the coordinates, and relinqushing the memory allocated for `points` and `coefficients` before returning `MagickTrue`.

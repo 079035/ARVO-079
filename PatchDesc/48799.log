@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in this diff file is an out-of-array access issue. 
+
+Summary of the Fix:
+The fix in this patch is to add checks for the bounds of the `dst` and `src` pointers to ensure that they are within the allowed range. 
+
+Detailed Description of the Fix:
+The function `lag_decode_zero_run_line` is responsible for decoding a zero run line in the Lagarith video codec. The patch introduces two checks to prevent out-of-bounds access.
+
+1. The first check is added before the loop that processes the non-zero run. It ensures that the index `i` does not exceed the difference between `src_end` and `src`. This check prevents the code from attempting to access elements beyond the end of the `src` array.
+
+2. The second check is added inside the conditional statement that handles the zero run. It checks if the calculated value of `i` exceeds either the remaining space in the `dst` buffer or the remaining elements in the `src` array. This ensures that the `memcpy` operation in the zero run case does not exceed the boundaries of the `dst` and `src` buffers.
+
+By adding these checks, the patch prevents the possibility of out-of-bounds access in the `lag_decode_zero_run_line` function, fixing the vulnerability.

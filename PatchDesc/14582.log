@@ -1,0 +1,10 @@
+Vulnerability: Insufficient Input Validation
+Summary of the fix: The fix ensures that there is a full request after ignoring leading whitespace.
+Detailed description of the fix: 
+
+1. The code defines a constant `min_request_size` as the minimum size of a valid HTTP request (excluding leading whitespace). It is set to the size of the string "GET / HTTP/1.1\r\n\r\n" minus 1.
+2. The code checks if the length of the buffer is less than `min_request_size`. If it is, the code returns a HTTP_BAD_REQUEST status, indicating an incomplete or invalid request.
+3. The code then checks if the buffer (after ignoring leading whitespace) is at or beyond the end of the request buffer minus `min_request_size`. If it is, the code returns a HTTP_BAD_REQUEST status, indicating an incomplete or invalid request.
+4. If the above checks pass, the code proceeds with parsing the HTTP request as usual.
+
+These changes ensure that the code validates the input and only proceeds with parsing if there is a full request after ignoring leading whitespace. This helps prevent potential vulnerabilities or crashes caused by invalid or incomplete requests.

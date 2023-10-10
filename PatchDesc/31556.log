@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability that has been patched in this diff file is an ASAN heap-buffer-overflow when reading the chunk offset in the frame.
+
+Summary of Fix:
+The fix addresses the heap-buffer-overflow vulnerability by adding boundary checks when reading the chunk offset in the frame. It ensures that the offset does not exceed the frame boundary.
+
+Detailed Description of Fix:
+The fix includes the following changes:
+1. Added a check to ensure that the offset position is within the frame boundary before reading the offsets.
+2. Added a check to verify that the read offset size does not exceed the frame boundary.
+3. Modified the condition to calculate the offset position when the frame is in-memory.
+4. Added additional checks to validate the trailer offset and ensure it is within the frame boundaries.
+5. Modified the calculation of coffsets_cbytes based on whether the frame is an sframe or not.
+6. Modified the fseek position when reading the coffsets based on whether the frame is an sframe or not.
+7. Added checks to ensure that the number of bytes read matches the expected offset size.
+8. Assigned the allocated coffsets memory to frame->coffsets.
+
+These changes effectively fix the heap-buffer-overflow vulnerability by ensuring that the offset and offset size are properly validated before reading the chunk offsets in the frame.

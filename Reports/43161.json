@@ -1,0 +1,100 @@
+{
+    "fix": "https://github.com/GrokImageCompression/grok/commit/5ee01b547418efb8b90702d8b8ec5d05d1f28015",
+    "verify": "0",
+    "localId": 43161,
+    "project": "grok",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow WRITE 4",
+    "severity": "High",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43161,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1640950530,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=6179011041034240\n\nProject: grok\nFuzzing Engine: libFuzzer\nFuzz Target: grk_decompress_fuzzer\nJob Type: libfuzzer_asan_grok\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow WRITE 4\nCrash Address: 0x628000003c00\nCrash State:\n  grk::GrkImage::cieLabToRGB\n  grk::GrkImage::applyColourManagement\n  grk::CodeStreamDecompress::postProcess\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: High\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_grok&range=202112240610:202112280611\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6179011041034240\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43161,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1640980282,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-03-31"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43161,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "3188657982",
+                    "displayName": "boxe...@gmail.com"
+                },
+                "timestamp": 1641597019,
+                "content": "Long standing bug fixed by 5ee01b547418efb8b90702d8b8ec5d05d1f28015",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Fixed",
+                        "oldValue": "New"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43161,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1641659680,
+                "content": "ClusterFuzz testcase 6179011041034240 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_grok&range=202201070609:202201080601\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "Fixed"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43161,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1641670897,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "5ee01b547418efb8b90702d8b8ec5d05d1f28015",
+    "repo_addr": "https://github.com/GrokImageCompression/grok.git"
+}

@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in this code is a heap buffer overflow.
+
+Summary of the Fix:
+The fix addressed the heap buffer overflow issue in the IRC protocol implementation.
+
+Detailed Description of the Fix:
+1. The code fix starts with a modification in the `snprintf` function call on line 104.
+   - Before the fix: `snprintf(buf, sizeof(buf), "%s", &user[5])`
+   - After the fix: `snprintf(buf, sizeof(buf), "%.*s", packet->payload_packet_len - 5, &user[5])`
+   - The fix ensures that `snprintf` writes a maximum of `packet->payload_packet_len - 5` characters to the `buf` array.
+   - This change prevents a potential heap buffer overflow when the length of `buf` exceeds its size.
+
+2. No other modifications have been made to directly patch the heap buffer

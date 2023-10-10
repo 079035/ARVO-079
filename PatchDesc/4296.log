@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability that was fixed in this code patch is a double free vulnerability. This vulnerability occurs when memory that has already been freed is freed again, leading to undefined behavior and potential crashes.
+
+Summary of the fix:
+
+The fix for this vulnerability is to modify the code to make a copy of the `typeId` using the `UA_NodeId_copy` function, before assigning it to `dst->content.encoded.typeId`. This ensures that the memory for `typeId` is properly managed and avoids the double free vulnerability.
+
+Detailed description of the fix:
+
+In the original code, the `typeId` was directly assigned to `dst->content.encoded.typeId` without making a copy. This means that if `typeId` was freed before the function returns, and the `dst->encoding` is set to `UA_EXTENSIONOBJECT_ENCODED_BYTESTRING`, it would result in a double free vulnerability.
+
+To fix this vulnerability, the fix introduced the function `UA_NodeId_copy` to make a copy of the `typeId`. This function allocates memory for the new `UA_NodeId` struct and performs a deep copy of the data from the source `UA_NodeId` into the newly allocated memory.
+
+By using `UA_NodeId_copy` to assign a copy of `typeId` to `dst->content.encoded.typeId`, the fix ensures that the memory for `typeId` is properly managed. This eliminates the possibility of a double free vulnerability and ensures correct behavior of the code.

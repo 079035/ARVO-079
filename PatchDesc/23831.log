@@ -1,0 +1,12 @@
+Vulnerability: Integer Overflow
+
+Summary of the Fix: The fix improves the boundary check to prevent an overflow in the code.
+
+Detailed Description of the Fix:
+1. The code is part of a function that searches for IAX (Inter-Asterisk eXchange) packets in a network flow.
+2. In the "ndpi_search_setup_iax" function, the code checks various conditions to determine if the packet is an IAX packet.
+3. The vulnerability lies in the loop that iterates through the packet payload. It calculates the "packet_len" by adding 2 and the value of "packet->payload[packet_len + 1]" to the current "packet_len".
+4. The condition `(packet_len+1) >= packet->payload_packet_len` is used to check if the packet length exceeds the payload length. However, this condition is insufficient to prevent an integer overflow.
+5. An attacker could craft a malicious packet with a large payload length, causing the addition `packet_len + 2 + packet->payload[packet_len + 1]` to overflow and potentially lead to unexpected behavior or security vulnerabilities.
+6. The fix improves the boundary check by including the "+1" term in the condition, `(packet_len+1) >= packet->payload_packet_len`. This ensures that the correct length comparison is performed and prevents an integer overflow.
+7. After applying the fix, the code will correctly handle packets with payload lengths that do not result in an overflow, mitigating the vulnerability.

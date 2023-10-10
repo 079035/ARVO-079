@@ -1,0 +1,14 @@
+Vulnerability:
+In the given diff file, the vulnerability being patched is a potential memory leak. 
+
+Summary of the fix:
+The fix involves freeing the memory allocated for 'points' and 'coefficients' before returning from the function 'TraceBezier'.
+
+Detailed description of the fix:
+The original code allocates memory for 'points' and 'coefficients' using AcquireQuantumMemory. However, in case the memory allocation fails, it does not properly free the allocated memory before returning from the function 'TraceBezier'. This can result in a memory leak.
+
+The fixed code includes the following modifications:
+1. It adds the statements 'points=(PointInfo *) RelinquishMagickMemory(points);' and 'coefficients=(double *) RelinquishMagickMemory(coefficients);' before throwing a MagickException and returning MagickFalse in case the memory allocation fails.
+2. It frees the allocated memory before returning by adding the statements 'points=(PointInfo *) RelinquishMagickMemory(points);' and 'coefficients=(double *) RelinquishMagickMemory(coefficients);' after the successful completion of the Bezier curve computation and tracing.
+
+These changes ensure that the allocated memory for 'points' and 'coefficients' is properly released, preventing any potential memory leaks.

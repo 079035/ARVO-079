@@ -1,0 +1,24 @@
+Vulnerability:
+The vulnerability in the given diff file is that it does not perform any check while adding points to the symbolObj structure. It allows adding an arbitrary number of points to the POINT block without any limit.
+
+Summary of the fix:
+The fix ensures that the POINT block does not contain too many points. It checks if the number of points in the symbolObj structure exceeds the maximum limit defined (MS_MAXVECTORPOINTS) and raises an error if it does.
+
+Detailed description of the fix:
+To fix the vulnerability, the following changes were made in the code:
+
+1. Added a condition to check the number of points in the POINT block against the maximum limit (MS_MAXVECTORPOINTS).
+   ```
+   if(s->numpoints == MS_MAXVECTORPOINTS) {
+     msSetError(MS_SYMERR, "POINT block contains too many points.", "loadSymbol()");
+     return(-1);
+   }
+   ```
+
+The above code snippet checks if the current number of points (s->numpoints) is equal to the maximum allowed number of points (MS_MAXVECTORPOINTS). If it is, an error message is set, and the function returns -1 to indicate a failure.
+
+By adding this check, the code ensures that the number of points in the POINT block does not exceed the allowed limit, preventing any potential buffer overflow or memory corruption issues.
+
+After applying the fix, when the code encounters a point in the POINT block and the number of points has already reached the maximum limit, it raises an error and returns -1, indicating a failure.
+
+The fix ensures that the program handles a scenario where the number of points in the POINT block exceeds the maximum allowed limit.

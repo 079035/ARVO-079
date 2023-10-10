@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability in the code is that the session is not properly detached from the session manager before removing it.
+
+Summary of the fix:
+The fix in the code is to detach the session from the secure channel before removing it.
+
+Detailed description of the fix:
+In the given code, the fix involves adding a new line of code to detach the session from the secure channel. The line `UA_Session_detachFromSecureChannel(&sentry->session);` is added before deactivating the session. 
+
+The detachment of the session from the secure channel ensures that any existing connection between the session and the secure channel is properly released. This prevents any potential memory leaks or invalid references that could occur if the session was not detached before removal. 
+
+After detaching the session from the secure channel, the session is marked as deactivated with `sentry->session.activated = false;`. The session is then scheduled for removal using a delayed callback.
+
+Additionally, a comment is added to clarify that the session is being detached from the session manager and the capacity is being made available. This helps in understanding the purpose of detaching the session. 
+
+Finally, the session is detached from the session manager using `LIST_REMOVE(sentry, pointers);` and the current session count is decremented using `UA_atomic_add(&sm->currentSessionCount, (UA_UInt32)-1);`. This ensures that the session is properly removed and the capacity is updated accordingly.
+
+Overall, the fix ensures that the session is detached from the secure channel and the session manager before being removed, preventing any potential issues or vulnerabilities related to improper removal of sessions.

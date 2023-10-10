@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability in the given diff file is an invalid pointer dereference. Specifically, in the `AddLongTermToList` function, there is a loop that iterates over the `pRefPic->pLongRefList[LIST_0]` array, and if a `NULL` element is encountered, the function returns with an `ERR_INFO_INVALID_PTR` error.
+
+Fix - Summary:
+To fix the vulnerability, the code adds a check to ensure that the loop does not exceed the maximum allowed number of iterations, which is `WELS_MIN(pRefPic->uiLongRefCount[LIST_0], MAX_REF_PIC_COUNT)`. The `MAX_REF_PIC_COUNT` is a constant value representing the maximum number of reference pictures. By adding this check, the code avoids accessing `NULL` pointers and fixes the invalid pointer dereference vulnerability.
+
+Fix - Description:
+The fix for the vulnerability involves modifying the loop condition in the `AddLongTermToList` function. Instead of iterating over the entire `pRefPic->uiLongRefCount[LIST_0]` array, the loop now iterates up to the minimum value between `pRefPic->uiLongRefCount[LIST_0]` and `MAX_REF_PIC_COUNT` using the `WELS_MIN` macro. This ensures that the loop does not exceed the maximum allowed number of iterations even if `pRefPic->uiLongRefCount[LIST_0]` is larger than `MAX_REF_PIC_COUNT`.
+
+Inside the loop, the code checks if the current element in `pRefPic->pLongRefList[LIST_0]` is `NULL`. If a `NULL` element is found, the function returns with an `ERR_INFO_INVALID_PTR` error, indicating an invalid pointer dereference. This check prevents accessing `NULL` pointers and avoids potential crashes or undefined behavior.
+
+After the loop, the code uses the `memmove` function to shift the remaining elements of `pRefPic->pLongRefList[LIST_0]` to make space for the new `pPic` to be inserted at the correct position. The `memmove` function safely handles the overlapping memory regions, ensuring that the elements are moved correctly.
+
+Finally, the code sets the newly inserted `pPic` at the appropriate position in `pRefPic->pLongRefList[LIST_0]` and increments `pRefPic->uiLongRefCount[LIST_0]` to reflect the addition of a new long-term reference.
+
+By adding the check and modifying the loop, the vulnerability is patched, and the code avoids the invalid pointer dereference issue.

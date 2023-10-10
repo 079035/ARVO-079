@@ -1,0 +1,16 @@
+1. Summary of the fix:
+The fix in the diff file addresses a vulnerability related to parsing geometry specifications in the `MagickCore/geometry.c` file.
+
+2. Description of the vulnerability:
+In the `ParseGeometry()` function, the code does not properly handle certain characters in the geometry string. This can lead to incorrect parsing of the geometry values and potential memory corruption.
+
+3. Description of the fix:
+The fix in the diff file includes several changes to the `ParseGeometry()` function to address the vulnerability:
+
+- The code now removes whitespace and certain meta characters from the geometry string before parsing.
+- The code checks for valid characters and handles them correctly, including special cases like coordinates and negative offsets.
+- The code normalizes sampling factors and supports negative height values.
+- The code now correctly handles percentage values and sets them to the nearest integer size.
+- The code includes additional error handling and reporting.
+
+These changes improve the robustness and correctness of the geometry parsing logic, addressing the vulnerability and ensuring that geometry specifications are parsed correctly.

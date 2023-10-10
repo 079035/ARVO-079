@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability in the code is that it incorrectly accesses a specific byte of the `ws_in4_addr` variable.
+
+Summary of the Fix:
+The fix addresses the regression introduced by a previous code change. It corrects the way the `ws_in4_addr` variable is accessed by modifying the code to proceed byte by byte.
+
+Detailed Description of the Fix:
+The code change in the fix modifies line 50 of the `addr_and_mask.c` file. In the original code, the `addr[addr_len - 1]` expression is used to access a specific byte of the `ws_in4_addr` variable. However, this access is incorrect because `addr` is actually a pointer to `ws_in4_addr` variable. The fix corrects this issue by casting `addr` to a pointer of type `guint8*` and then accessing the specific byte using `((guint8*)addr)[addr_len - 1]`. This ensures that the code correctly accesses the byte-by-byte representation of the `ws_in4_addr` variable.

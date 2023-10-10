@@ -1,0 +1,32 @@
+Vulnerability:
+The vulnerability fixed in this diff file is a one-byte buffer overwrite and an assertion failure caused by a subtraction that was broken by a change to an unsigned type.
+
+Summary of the fix:
+The fix for this vulnerability involves changing the subtraction calculation in the code to correctly handle the unsigned type. The fix also includes updating the assert condition to reflect the correct calculation.
+
+Detailed description of the fix:
+1. The code initially allocates memory for `buf` based on the size of the encoded data divided by 4, multiplied by 3, and adds the maximum of the remainder after dividing by 4 and 1. However, this calculation is incorrect for the case when the remainder is 1. The fix adjusts this calculation to correctly handle the unsigned type by removing the `-1` from the calculation and adding it outside of the `FFMAX` macro.
+
+Before fix:
+```c
+buf = malloc(size / 4 * 3 + FFMAX(size % 4 - 1, 0));
+```
+
+After fix:
+```c
+buf = malloc(size / 4 * 3 + FFMAX(size % 4, 1) - 1);
+```
+
+2. The loop that decodes the font data checks for the size of the data modulo 4 to determine if there are remaining bytes to decode. If there are 2 or 3 remaining bytes, they are decoded accordingly by the `decode_chars` function. However, the assertion after the loop incorrectly compares the decoded size `dsize` with the previous calculation of the buffer size. The fix updates this assertion to correctly compare `dsize` with the new calculation that handles the unsigned type.
+
+Before fix:
+```c
+assert(dsize == size / 4 * 3 + FFMAX(size % 4 - 1, 0));
+```
+
+After fix:
+```c
+assert(dsize == size / 4 * 3 + FFMAX(size % 4, 1) - 1);
+```
+
+By making these changes, the fix ensures that the buffer allocation and assertion calculations are correct and prevent the one-byte buffer overwrite and assertion failure.

@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability patched in the given diff file is a buffer overflow.
+
+Summary of the fix:
+The fix addresses the buffer overflow issue by adding a condition to ensure that the offset (variable `off`) is within the bounds of the input string before accessing its character (`CH(off)`).
+
+Detailed description of the fix:
+In the original code, there is a block of code that checks if the offset (`off`) is within the bounds of the input string (`ctx->size`). However, there is a missing check for the offset being less than the size in two conditions.
+
+The fix introduces the additional check (`off < ctx->size`) in the condition to ensure that the offset is within the bounds before accessing the character. This prevents the buffer overflow vulnerability from occurring.
+
+By adding the condition `(off < ctx->size && ...)` in two places where the character at offset `off` is checked, the fix ensures that the offset is valid and prevents the buffer overflow. These two places are:
+
+1. In the condition `(CH(off) == _T('-') || CH(off) == _T('+') || CH(off) == _T('*'))` where the character at `off` is checked against `-`, `+`, or `*`.
+2. In the condition `(CH(off) == _T('.') || CH(off) == _T(')'))` where the character at `off` is checked against `.` or `)`.
+
+The addition of the check ensures that the buffer overflow vulnerability is addressed and the program operates within the bounds of the input string.

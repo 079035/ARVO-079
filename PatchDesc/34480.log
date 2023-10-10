@@ -1,0 +1,15 @@
+Vulnerability: 
+The vulnerability in the given diff file is that the code does not support NV12 as an output format. 
+
+Summary of the Fix: 
+The fix adds support for NV12 as an output format in addition to the existing YV12 and I420 formats.
+
+Detailed Description of the Fix: 
+1. The code starts by enumerating available output types and checking if they match the desired format. 
+2. In the case of video, the code checks if the output media type is equal to YV12 or I420. The fix adds NV12 as a valid format for video.
+3. If the desired format is not found, the code falls back to using a D3DFMT proprietary FCC format if available.
+4. After finding the appropriate output format, the code sets it using `IMFTransform_SetOutputType`.
+5. The code then retrieves information from the output media type and updates the output format accordingly. For video, it copies the input format and checks if the format is a D3DFMT proprietary FCC format. For audio, it updates the format's bits per sample, channels, and sample rate.
+6. Finally, the code returns the output media type.
+
+The fix ensures that NV12 is supported as an output format, allowing the code to handle NV12 output effectively.

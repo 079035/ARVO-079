@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability that was patched in this code is an out-of-bounds write. Specifically, the issue arises when `im->transparent` is equal to -1 and `gdImageColorTransparent` is called. Prior to the fix, when `im->transparent` is set to -1, an out-of-bounds write occurs on the `im->alpha` array.
+
+Summary of the fix:
+The fix ensures that the out-of-bounds write does not occur when `im->transparent` is equal to -1. The fix introduces a check before assigning a value to `im->alpha[im->transparent]`. If `im->transparent` is not equal to -1, the assignment will be executed. Otherwise, when it is -1, the assignment will be skipped.
+
+Detailed description of the fix:
+1. Before the fix, the problematic code was:
+   ```c
+   im->alpha[im->transparent] = gdAlphaOpaque;
+   ```
+   This line attempts to assign `gdAlphaOpaque` to `im->alpha[im->transparent]`.
+
+2. After the fix, the code is modified as follows:
+   ```c
+   if (im->transparent != -1) {
+       im->alpha[im->transparent] = gdAlphaOpaque;
+   }
+   ```
+   This change introduces an if-statement to check if `im->transparent` is equal to -1. If it is not -1, the assignment to `im->alpha[im->transparent]` will be executed. Otherwise, the assignment will be skipped.
+
+   This fix prevents the out-of-bounds write because the assignment will only occur when `im->transparent` is within the bounds of the `im->alpha` array.

@@ -1,0 +1,32 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential memory corruption issue that could occur when processing certain font glyphs.
+
+Summary of the fix:
+The fix addresses a specific issue with the `subset` function in the `Anchor` struct. It ensures that when dropping hints, only `AnchorFormat` 1, 2, and 3 are converted to format 1, while any other formats would return `false`.
+
+Detailed description of the fix:
+1. In the `subset` function, a check is added to verify if the `drop_hints` flag is set in the subset context. If so, the following code block is executed:
+   ```cpp
+   if (u.format != 1 && u.format != 2 && u.format != 3)
+     return_trace (false);
+   return_trace (bool (reinterpret_cast<Anchor *> (u.format1.copy (c->serializer))));
+   ```
+   This block ensures that if the current `u.format` is not 1, 2, or 3, the function returns `false`, indicating that the subset operation fails.
+
+2. The previous code block is wrapped in curly braces to ensure that the added code block is only executed when the `drop_hints` flag is set. The modified code block now looks like this:
+   ```cpp
+   if (c->plan->drop_hints)
+   {
+     // AnchorFormat 2 and 3 just containing extra hinting information, so
+     // if hints are being dropped convert to format 1.
+     if (u.format != 1 && u.format != 2 && u.format != 3)
+       return_trace (false);
+     return_trace (bool (reinterpret_cast<Anchor *> (u.format1.copy (c->serializer))));
+   }
+   ```
+
+3. The `return_trace` macro is used to return the result of the subset operation. The `reinterpret_cast<Anchor *>` is used to cast the result of `u.format1.copy` to an `Anchor` object, ensuring type safety.
+
+4. The `switch` statement in the `subset` function also remains unchanged for the cases where the `drop_hints` flag is not set. Different formats of `Anchor` objects are converted to their corresponding `format` using the `reinterpret_cast` and `copy` functions.
+
+The added code block and the modification to the existing code ensure that only `AnchorFormat` 1, 2, and 3 formats can be converted when hints are being dropped, preventing potential memory corruption issues.

@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability in this code is a potential use-after-free issue. In the function `DecreasePicBuff`, the code frees the `pPicOldBuf` memory using `pMa->WelsFree`, but it does not update the `pPicOldBuf` pointer to NULL after the memory is freed. This can lead to a situation where the pointer is accessed again later in the code, resulting in undefined behavior.
+
+Fix Summary:
+The fix for this vulnerability involves updating the `pPicOldBuf` pointer to NULL after freeing the memory in the `DecreasePicBuff` function.
+
+Detailed Fix Description:
+To fix the vulnerability, the code needs to be modified as follows:
+
+```c
+// remove old PicBuf
+if (pPicOldBuf->ppPic != NULL) {
+  pMa->WelsFree (pPicOldBuf->ppPic, "pPicOldBuf->queue");
+  pPicOldBuf->ppPic = NULL;
+}
+pPicOldBuf->iCapacity = 0;
+pPicOldBuf->iCurrentIdx = 0;
+pMa->WelsFree (pPicOldBuf, "pPicOldBuf");
+pPicOldBuf = NULL;  // <-- Add this line to set the pointer to NULL after freeing the memory
+```
+
+By setting the `pPicOldBuf` pointer to NULL after freeing the memory, we ensure that the pointer is not accessed again later in the code, preventing any potential use-after-free issues.

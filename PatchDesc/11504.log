@@ -1,0 +1,14 @@
+Vulnerability description:
+The vulnerability in the code is related to handling of nodes obtained from the `freeElems` list in the `xmlSAX2StartElementNs` function. Prior to the fix, when a node was obtained from the `freeElems` list, the `doc` field of the node was not set. This caused an issue during the execution of `xmlFreeNode` function, as it wouldn't realize that the node name might be in the dictionary and would lead to an invalid free.
+
+Summary of the fix:
+In the fix, the `doc` field of the node obtained from the `freeElems` list is set to the `myDoc` field of the parser context in the `xmlSAX2StartElementNs` function.
+
+Detailed description of the fix:
+The fix involves adding the following line of code after initializing the `ret` node with a node from the `freeElems` list:
+```c
+ret->doc = ctxt->myDoc;
+```
+This sets the `doc` field of the `ret` node to the `myDoc` field of the parser context.
+
+By setting the `doc` field of the node obtained from `freeElems` to the `myDoc` field, the `xmlFreeNode` function can properly access the dictionary and avoid the invalid free. This fix ensures that the `xmlFreeNode` function can correctly handle the node and prevent potential vulnerabilities.

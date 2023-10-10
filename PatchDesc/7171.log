@@ -1,0 +1,12 @@
+Vulnerability: The vulnerability in this code can be described as a potential buffer overflow.  
+
+Summary of Fix: The fix ensures that the destination X coordinate, `destX`, is checked against the dimensions of the image to prevent buffer overflow.
+
+Detailed Description of Fix: In the `Cr2Decompressor::decodeN_X_Y()` function, there is a loop that processes the image slices. Within the loop, the destination X coordinate, `destX`, is calculated based on the `processedLineSlices` and other variables. However, there is no boundary check for `destX`, which could result in buffer overflow if it exceeds the width of the image.
+
+To fix this vulnerability, the code has been modified in the following way:
+
+- The `destX` calculation has been changed to use the `slicing.widthOfSlice(0)` instead of `slicing.sliceWidth`. This ensures that the correct width is used when calculating the X coordinate of the destination.
+- The `destX` is then checked against the dimensions of the image using the condition `destX >= static_cast<unsigned>(mRaw->dim.x)`. If `destX` exceeds the width of the image, the loop is broken and the function returns.
+
+By adding the boundary check for the `destX` coordinate, the fix prevents buffer overflow by ensuring that the destination coordinates stay within the limits of the image dimensions.

@@ -1,0 +1,16 @@
+Vulnerability Description:
+The vulnerability in the code is a buffer overrun. The variable `len_out` is wrapping to a large number when bad input is encountered. This could lead to buffer overflow and subsequent memory corruption.
+
+Summary of the Fix:
+The fix for the vulnerability is to ensure that the variable `len_out` is non-zero before proceeding with the `iconv` function.
+
+Detailed Description of the Fix:
+In the code, the `while` loop iterates as long as `len_out` is non-zero. However, the problem is that `len_out` is not explicitly checked for zero before calling `iconv`. This means that when bad input is encountered and `len_out` becomes zero, the loop continues to execute leading to a buffer overrun.
+
+The fix introduces a check for `len_out` inside the `while` loop condition. The loop will only continue as long as `len_out` is non-zero, preventing the buffer overrun. This ensures that the `iconv` function is not called with an invalid value for `len_out`.
+
+Additionally, the code includes a check for the number of bytes in UCS-2. If the `len_in` is less than or equal to 1 (indicating an odd number of bytes), the loop is terminated. This protects against invalid input and prevents further processing of the input.
+
+Finally, the fix also adds the assignment `dlen -= len_out + 1;` to calculate the length of the output string. The character at index `dlen` is set to null-terminator to correctly terminate the string.
+
+These fixes ensure that the buffer overrun vulnerability is addressed and the code handles bad input correctly without causing memory corruption.

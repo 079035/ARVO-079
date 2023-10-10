@@ -1,0 +1,20 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is related to a missing check for the success of a function call. In the function `serialize()` of the `CmapSubtableFormat14` struct, after some processing, there is a call to `c->check_success()` which checks whether or not to continue with the serialization process. However, this check is missing for the call to `obj_indices.in_error()` before returning. This means that even if there are errors in `obj_indices`, the code will continue to execute and potentially cause undefined behavior or memory corruption.
+
+Summary of the fix:
+
+The fix in this patch involves adding a missing check for the success of the function call `!obj_indices.in_error()` before proceeding with the serialization process. This ensures that if there are any errors in `obj_indices`, the function will return and not continue with potentially unsafe operations.
+
+Detailed description of the fix:
+
+1. The `if` statement `if (unlikely (!c->check_success (!obj_indices.in_error ()))) return;` is added after the calculation of `tail_len`. It checks whether there are any errors in `obj_indices` by calling the `in_error()` function on `obj_indices` and negating the result. If there are errors, the function returns immediately, preventing further execution.
+
+```diff
++    if (unlikely (!c->check_success (!obj_indices.in_error ())))
++      return;
+```
+
+2. This change ensures that any potential issues with `obj_indices` are caught and the function exits early without proceeding with the serialization process.
+
+This fix enhances the robustness of the code by preventing the execution of unsafe operations when there are errors in `obj_indices`.

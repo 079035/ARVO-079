@@ -1,0 +1,121 @@
+{
+    "fix": "https://github.com/OSGeo/gdal/commit/987261c1a5315cbcbe526d4dc4935e6f3b9a62a9",
+    "verify": "0",
+    "localId": 55772,
+    "project": "gdal",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Heap-use-after-free READ 8",
+    "severity": "High",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55772,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1675795011,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5762439728988160\n\nProject: gdal\nFuzzing Engine: libFuzzer\nFuzz Target: ogr_fuzzer\nJob Type: libfuzzer_asan_gdal\nPlatform Id: linux\n\nCrash Type: Heap-use-after-free READ 8\nCrash Address: 0x6030000204b8\nCrash State:\n  GMLHandler::endElementGeometry\n  GMLHandler::endElement\n  GMLExpatHandler::endElementCbk\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: High\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_gdal&range=202302040606:202302050615\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5762439728988160\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55772,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "3393638884",
+                    "displayName": "even....@gmail.com"
+                },
+                "timestamp": 1675795835,
+                "content": "fixed per https://github.com/OSGeo/gdal/commit/1753c73487e4cb967171a2fdb6d391720c033f0b"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55772,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1675886403,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2023-05-08"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55772,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1682966217,
+                "content": "This bug is approaching its deadline for being fixed, and will be automatically derestricted within 7 days. If a fix is planned within 2 weeks after the deadline has passed, a grace extension can be granted.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Deadline-Approaching"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55772,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "3393638884",
+                    "displayName": "even....@gmail.com"
+                },
+                "timestamp": 1682976556,
+                "content": "extra fix in https://github.com/OSGeo/gdal/pull/7670"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55772,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1683129676,
+                "content": "ClusterFuzz testcase 5762439728988160 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_gdal&range=202305020602:202305030603\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55772,
+                "sequenceNum": 6,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1683139701,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-deadline-approaching -restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "987261c1a5315cbcbe526d4dc4935e6f3b9a62a9",
+    "repo_addr": "https://github.com/OSGeo/gdal"
+}

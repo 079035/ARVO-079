@@ -1,0 +1,11 @@
+Vulnerability: Access violation in Format3
+Summary of the fix: The fix aims to prevent an access violation in Format3.
+Detailed description of the fix: In the given code, there was a potential vulnerability related to accessing arrays without proper bounds checking. The fix for this vulnerability involved several changes. 
+
+1. The function `get_kerning` had the potential to access arrays `kernValue`, `leftClass`, `rightClass`, and `kernIndex` without proper bounds checking. The fix added bounds checking to ensure that the indices accessed are within the valid range of the respective arrays.
+
+2. The function `sanitize` previously had a return statement that always returned true. The fix removed this line, as it was unnecessary and could have misled the code reader. 
+
+3. Some parts of the code were wrapped in an `#if 0` conditional statement, indicating that they were disabled. The fix removed these disabled parts as they were not contributing to the code functionality and were not necessary for the fix.
+
+4. The `flags` member variable, previously set to zero, was marked as reserved for future use. The fix did not make any changes to this member variable.

@@ -1,0 +1,11 @@
+Vulnerability: Upper-bound decompression calculation is incorrect.
+
+Summary of Fix:
+The fix corrects the upper-bound decompression calculation in the `flb_gzip_compress` function to ensure memory safety during gzip compression.
+
+Detailed Description of Fix:
+The vulnerability in the code is related to the calculation of the upper bound for gzip compression. The original code attempts to calculate the maximum compressed size by summing the sizes of the header, footer, input expansion, and input size. However, this calculation is not accurate and can lead to memory allocation issues.
+
+The fix introduces a more reliable approach to calculate the upper bound for gzip compression. Instead of manually calculating the size, the code now utilizes miniz library's `compressBound` function. This function accurately determines the upper bound size required for compressing the input data into gzip format. By relying on miniz's calculation, the fix ensures memory safety during compression.
+
+With the fix in place, the `out_size` variable is assigned the correct upper bound size calculated using `compressBound(in_len)`. This ensures that sufficient memory is allocated for the compressed data.

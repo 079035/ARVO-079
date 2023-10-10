@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability in this code is that it does not check if the current message size exceeds the size of the allocated buffer before reusing the buffer. This can lead to buffer overflows and result in memory corruption.
+
+Summary of the Fix:
+The fix in this code is to add a check before reusing the buffer to ensure that the size of the current message does not exceed the size of the allocated buffer. If the size is larger than the available buffer space or if the current buffer position is within the initial handshake buffer, a new message is initialized.
+
+Detailed Description of the Fix:
+1. In the function `size_ready()`, the check `unlikely (!_zero_copy || allocator.data() > read_pos_ || static_cast<size_t>(read_pos_ - allocator.data()) > allocator.size() || _size > static_cast<size_t>(allocator.data() + allocator.size() - read_pos_))` is added. This check verifies if the current buffer is suitable for the incoming message or if a new message should be initialized.
+
+2. If the check condition evaluates to true, it means that a new message needs to be initialized because the size of the incoming message exceeds the available buffer space or the current buffer position is within the initial handshake buffer. In this case, the function `_in_progress.init_size()` is called to initialize a new message with the size of the incoming message.
+
+3. If the check condition evaluates to false, it means that the current buffer is suitable for the incoming message. In this case, the function `_in_progress.init()` is called to construct the message using the appropriate number of bytes from the buffer as storage. If the message is a small message, the buffer reference count is increased and the content is advanced. If the message is a large message, a valid reference count memory location is passed.
+
+4. After initializing the message, further operations are performed to set the message flags and update the `read_pos`. The function `next_step()` is called to set the next step in the decoding process.
+
+5. Finally, the function returns 0 to indicate successful execution.
+
+By adding the check before reusing the buffer, the fix ensures that the code handles incoming messages correctly and avoids buffer overflows.

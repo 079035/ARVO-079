@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is a buffer overread in the `htmlParseScript` function of the `HTMLparser.c` file. 
+
+Summary of the fix:
+The fix for this vulnerability is to add a check to prevent the buffer overread when reading characters in the `htmlParseScript` function. 
+
+Detailed description of the fix:
+In the `htmlParseScript` function, there is a loop that reads characters from the input and copies them to a buffer. However, there is no length check on the buffer, so if the number of characters read exceeds the size of the buffer, a buffer overread can occur.
+
+To fix this issue, a check is added within the loop to ensure that the number of characters read does not exceed the size of the buffer. If the buffer is full, the contents of the buffer are processed and the buffer is reset to empty before continuing to read more characters.
+
+Additionally, some code related to memory allocation is removed from the loop, as it is unnecessary and does not affect the vulnerability. The function also includes other error handling and recovery logic, but these details are not relevant to the vulnerability fix.

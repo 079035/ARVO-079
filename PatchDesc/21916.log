@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is a heap-buffer-overflow in the `json_reader` function.
+
+Summary of the fix:
+The fix in this patch is to add a check to ensure that the buffer has at least 3 characters before comparing the first three characters with the BOM (Byte Order Mark) sequence.
+
+Detailed description of the fix:
+In the `OurReader::skipBom` function, there is a check to skip the BOM if the `skipBom` parameter is true. The vulnerability lies in the initial check `strncmp(begin_, "\xEF\xBB\xBF", 3) == 0` which compares the first 3 characters of the `begin_` buffer with the BOM sequence (`\xEF\xBB\xBF`). 
+
+The fix introduces an additional check `(end_ - begin_) >= 3` to ensure that the buffer has at least 3 characters before performing the comparison. This prevents the possibility of a heap-buffer-overflow if the buffer is shorter than 3 characters. 
+
+After the fix, the code will only enter the if statement and skip the BOM if the buffer has at least 3 characters and the first three characters match the BOM sequence.

@@ -1,0 +1,31 @@
+Vulnerability:
+The vulnerability patched in the given diff file is an insecure string pass. The code does not null-terminate the key string before passing it to the `flb_warn` function, which expects a null-terminated string. This can result in undefined behavior and potential security issues.
+
+Summary of Fix:
+The fix for this vulnerability involves null-terminating the key string before passing it to the `flb_warn` function. This ensures that a valid null-terminated string is provided, preventing any potential issues.
+
+Detailed Description of Fix:
+To fix the vulnerability, the following changes were made to the code:
+
+1. A null-terminated key string is created using `flb_malloc` to allocate memory for `nt_key`, which is a character array of size `key_len + 1`.
+   ```c
+   char *nt_key = flb_malloc(key_len + 1);
+   ```
+
+2. The key string is copied into `nt_key` using `memcpy`, and a null terminator ('\0') is added at the end of the copied string.
+   ```c
+   memcpy(nt_key, key, key_len);
+   nt_key[key_len] = '\0';
+   ```
+
+3. The modified `nt_key` is then passed to the `flb_warn` function instead of the original key.
+   ```c
+   flb_warn("[PARSER] key=%s cast error. save as string.", nt_key);
+   ```
+
+4. After the usage of `nt_key`, the dynamically allocated memory is freed to avoid memory leaks.
+   ```c
+   flb_free(nt_key);
+   ```
+
+By null-terminating the key string and passing a valid null-terminated string to `flb_warn`, the vulnerability is fixed, ensuring that the `flb_warn` function works correctly without any undefined behavior.

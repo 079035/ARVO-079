@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability in the given diff file is a heap use-after-free issue. When the CIL compiler tries to destroy its database after failing to compile a specific policy, the use of a stack variable in the AST object leads to a use-after-free condition.
+
+Summary of the Fix:
+The fix in this commit is to drop the "&" sign in the line `cil_list_append(*leaf_expr, CIL_LIST, &sub_list);` to correctly add the list to the leaf expression. By removing the "&" sign, the list is added as intended and avoids the use-after-free issue.
+
+Detailed Description of the Fix:
+In the original code, the variable `sub_list` is a stack variable, and its address is passed as an argument to `cil_list_append` using the "&" sign. This creates a reference to a stack variable in the AST object `leaf_expr`. Later, when the database is destroyed, the stack variable `sub_list` goes out of scope, leading to a use-after-free vulnerability.
+
+The fix in this commit removes the "&" sign and directly passes the `sub_list` to `cil_list_append`. By doing so, the list is added correctly and does not reference the stack variable anymore, effectively fixing the use-after-free vulnerability.

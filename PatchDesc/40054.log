@@ -1,0 +1,11 @@
+Vulnerability Description:
+The vulnerability in the given diff file is an out-of-array access issue in the function `speex_decode_frame` of the file `speexdec.c`. Specifically, the issue occurs when calculating the buffer size of the AVPacket. It is worth noting that this vulnerability appears to have been discovered during continuous fuzzing with the oss-fuzz project.
+
+Summary of Fix:
+The fix addresses the out-of-array access issue by ensuring that the `frame->nb_samples` value is aligned to the next multiple of 4. This prevents the access from going beyond the array boundaries.
+
+Detailed Fix Description:
+1. The line `frame->nb_samples = FFALIGN(s->frame_size * s->frames_per_packet, 4);` has been added. This change calculates the new value for `frame->nb_samples` by aligning the product of `s->frame_size` and `s->frames_per_packet` to the next multiple of 4 using the `FFALIGN` macro.
+2. The line `frame->nb_samples = s->frame_size * s->frames_per_packet;` has been moved below the line `s->fdsp->vector_fmul_scalar(dst, dst, scale, frame->nb_samples * frame->channels);`. This ensures that the `frame->nb_samples` value is set to the correct value after the multiplication operation performed in the specified line.
+
+The fix ensures that the `frame->nb_samples` value is correctly calculated and utilized, avoiding any out-of-array access and potential memory corruption.

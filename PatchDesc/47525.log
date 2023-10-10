@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability in this code is that when the state of the decoder is set to `FLAC__STREAM_DECODER_SEARCH_FOR_FRAME_SYNC`, it causes the decoder to overread a buffer into an uninitialized part. This occurs when the mechanism to improve metadata reading added in commit 0077d3b overrides a `FLAC__STREAM_DECODER_ABORTED` with `FLAC__STREAM_DECODER_SEARCH_FOR_FRAME_SYNC`. This can lead to undefined behavior and potential security issues.
+
+Fix Summary:
+A fix was implemented to ensure that the `FLAC__STREAM_DECODER_SEARCH_FOR_FRAME_SYNC` is only set when the decoder is still in a valid state. This prevents the overreading of the buffer into an uninitialized part.
+
+Detailed Fix:
+The fix involves adding a check before setting the decoder state to `FLAC__STREAM_DECODER_SEARCH_FOR_FRAME_SYNC`. If the current state of the decoder is `FLAC__STREAM_DECODER_READ_METADATA`, then the state is set to `FLAC__STREAM_DECODER_SEARCH_FOR_FRAME_SYNC`. This ensures that the decoder is in a valid state before allowing the search for frame sync. This fixes the vulnerability and prevents the overreading issue.
+
+Commit: 69cf76c58e797d093cea73b1f8ad1ff55ec2786d

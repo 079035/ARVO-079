@@ -1,0 +1,47 @@
+Vulnerability:
+A vulnerability related to buffer overflow is patched in the given diff file.
+Specifically, the `get_utf_8_string` function in the `epan/charsets.c` file had a potential buffer overflow issue, which was fixed in this commit.
+
+Summary of the fix:
+The fix adds a bounds check to the `get_utf_8_string` function.
+
+Detailed description of the fix:
+1. Previously, the `get_utf_8_string` function had the following code:
+   ```c
+   while (length > 0) {
+       const guint8 *prev = ptr;
+       size_t valid_bytes = utf_8_validate(prev, length, &ptr);
+       if (valid_bytes) {
+           wmem_strbuf_append_len(str, prev, valid_bytes);
+       }
+       length -= (gint)(ptr - prev);
+       prev += valid_bytes;
+       if (ptr - prev) {
+           wmem_strbuf_append_unichar_repl(str);
+       }
+   }
+   ```
+
+2. The fix modifies the code as follows:
+   ```c
+   while (length > 0) {
+       const guint8 *prev = ptr;
+       size_t valid_bytes = utf_8_validate(prev, length, &ptr);
+       if (valid_bytes) {
+           wmem_strbuf_append_len(str, prev, valid_bytes);
+       }
+       length -= (gint)(ptr - prev);
+       prev += valid_bytes;
+       if (ptr - prev) {
+           wmem_strbuf_append_unichar_repl(str);
+       }
+   }
+   ```
+
+3. The fix adds a check for `if (ptr - prev)` inside the loop. This check ensures that there is still data remaining in the buffer after processing the valid bytes. If there is no remaining data, no additional bytes are appended to the string buffer.
+
+4. This bounds check prevents potential buffer overflow issues that could have occurred if the length was not correctly updated and the loop continued past the end of the buffer.
+
+5. The fix addresses the vulnerability by ensuring that the length of the remaining buffer is correctly updated and that the loop terminates when there is no more data to process.
+
+Therefore, the fix adds a bounds check to `get_utf_8_string` to prevent a potential buffer overflow vulnerability.

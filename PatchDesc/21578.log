@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is an out-of-bounds read in the `ucl_lex_json_string` function. 
+
+Summary of the fix:
+The fix moves the bounds check before reading the next character, ensuring that the read does not go out of bounds.
+
+Detailed description of the fix:
+In the original code, when encountering a backslash character '\' inside a JSON string, the code attempted to read the next character before performing a bounds check. This could lead to an out-of-bounds read if the string ended with a backslash character. 
+
+The fix in this commit addresses the vulnerability by moving the bounds check before the read operation. This ensures that the code checks the bounds first and avoids the out-of-bounds read if the string ends with a backslash character.
+
+This fix was made to address the issue reported in the Chromium OSS Fuzz project (https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=21578).

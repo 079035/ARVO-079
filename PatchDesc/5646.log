@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is a stack buffer overflow in the GetNextToken function in token.c file. This vulnerability could potentially allow an attacker to overwrite adjacent memory on the stack if a long token is passed as input.
+
+Summary of Fix:
+The fix eliminates the stack buffer overflow by increasing the length check for the token. It checks if the length of the token is greater than 5 instead of 4 before performing further operations on the token.
+
+Detailed Description of Fix:
+In the GetNextToken function, there is a check for the token that starts with "url(". Previously, the check was performed by comparing the first 4 characters of the token with "url(". However, this check does not take into account the null terminator character at the end of the token. If the token has a length of exactly 4 characters, it can cause a stack buffer overflow.
+
+The fix modifies the check to compare the first 4 characters of the token with "url(" and also checks if the length of the token is greater than 5. By including the check for the length of the token, the fix ensures that there is enough space for the null terminator character.
+
+The fix correctly updates the offset variable and copies the substring of the token starting from the offset value to the token buffer. It also sets the null terminator at the correct position in the token buffer after the substring is copied.
+
+This fix eliminates the vulnerability by preventing the stack buffer overflow when processing tokens starting with "url(".

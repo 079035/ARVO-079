@@ -1,0 +1,33 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to an incorrect iteration in the `destroy_all()` function of the `UniformBumpAllocator` class. There are two bugs present:
+
+1. The variable `end_offset` was not considering the alignment that might have been introduced while computing `base_ptr`.
+2. The `end_offset` was computing the offset of the first byte that is outside the current chunk. However, this might be in the middle of a hypothetical object. As a result, the loop in `destroy_all()` iterates once too often if the last few bytes of the chunk are unused.
+
+Fix Summary:
+The fix ensures that the `end_offset` takes into account the alignment of `base_ptr` and computes the offset of the first byte after the last valid object in case the end of the chunk does not align with the end of an object.
+
+Detailed Fix Description:
+The fix involves modifying the calculation of the `end_offset` variable in the `destroy_all()` function of the `UniformBumpAllocator` class.
+
+Before the fix, the `end_offset` was computed as the offset of the first byte after the chunk, without considering alignment:
+
+```cpp
+FlatPtr end_offset = this->m_chunk_size - sizeof(typename Allocator::ChunkHeader);
+```
+
+After the fix, two changes are made:
+
+1. Compute the offset of the first byte after the chunk by adding the size of the chunk to the base pointer:
+
+```cpp
+FlatPtr end_offset = base_ptr + this->m_chunk_size - chunk;
+```
+
+2. Compute the offset of the first byte after the last valid object by dividing `end_offset` by the size of `T` (the type being allocated) and then multiplying it by the size of `T` to get the final offset:
+
+```cpp
+end_offset = (end_offset / sizeof(T)) * sizeof(T);
+```
+
+By making these changes, the `end_offset` now correctly represents the offset of the first byte after the last valid object, considering alignment. This ensures that the loop in the `destroy_all()` function iterates over only the valid objects and avoids iterating once too often.

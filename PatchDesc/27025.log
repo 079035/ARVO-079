@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in the given diff file is a double-free vulnerability.
+
+Summary of the fix:
+The fix ensures that memory allocation is properly done in order to avoid double-free issues.
+
+Detailed description of the fix:
+In the original code, when the type of the map allows multiple entries and the user context is a linked list, the code simply points the user structure to the preprocessed list of entries. However, if no default value exists or the map will not write to the user context, the code simply skips it.
+
+The vulnerability arises when the map type allows multiple entries and a property set by the user overrides the default value. In this case, the code creates a node and populates it with the value from the user. The issue is that the code uses `flb_sds_create()` to assign the value of `kv->val` to `entry->val.str`. This function creates a new Simple Dynamic String (SDS) using the given value and returns a pointer to it. However, the assignment is not being done correctly, leading to a double-free vulnerability.
+
+The fix introduces the correct assignment by calling `flb_sds_create()` with `kv->val` and assigning the returned SDS pointer to `entry->val.str`. This ensures that memory is correctly allocated for the SDS string and avoids any potential double-free issues.
+
+Overall, the fix ensures that memory allocation is done correctly in order to avoid double-free vulnerabilities.

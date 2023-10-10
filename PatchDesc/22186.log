@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability in the given code patch is a potential uninitialized memory read. The `unpack_buffer` array is not being initialized before being used in the `UnpackScanline()` function.
+
+Summary of the Fix:
+The fix initializes the `unpack_buffer` array to all zeroes before its first usage.
+
+Detailed Description of the Fix:
+In the given code patch, the `unpack_buffer` array is used in the `DecodeImage()` function without being initialized. This can lead to a potential uninitialized memory read if the array is passed to the `UnpackScanline()` function.
+
+To fix this vulnerability, the fix simply adds the following line before using the `unpack_buffer` array: 
+```
+(void) memset(unpack_buffer, 0, sizeof(unpack_buffer));
+```
+
+This line uses the `memset()` function to set all elements of the `unpack_buffer` array to zero. This ensures that the array is initialized before it is used in the `UnpackScanline()` function, preventing any potential uninitialized memory read.

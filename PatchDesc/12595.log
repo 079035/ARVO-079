@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to a potential buffer overflow in the `sav_read_variable_missing_values` function of the `readstat_sav_read.c` file. The function reads missing values for a variable from an input file. 
+
+Summary of the fix:
+The fix improved bounds checking by adding a condition to check if the number of missing values is greater than 3 or less than -3. If this condition is true, the function returns with an error.
+
+Detailed description of the fix:
+- A new condition was added at line 251 to check if the number of missing values (`info->n_missing_values`) is greater than 3 or less than -3. If this condition is true, the function returns with an error (`READSTAT_ERROR_PARSE`) and `goto cleanup` is executed to jump to the cleanup section.
+- Previously, there was a separate condition at line 245 to check if the number of missing values exceeds 3 (`info->n_missing_values > 3`). This condition was removed because the new condition covers it.
+- The code block starting from line 254 that reads the missing values from the input file (using the `io->read` function) remains unchanged. The fix does not address any potential buffer overflow during the read operation.
+- The subsequent block of code starting from line 264 handles the missing values and sets them to appropriate values based on specific conditions. This code remains unchanged in the fix.

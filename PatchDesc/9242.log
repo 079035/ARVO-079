@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is a potential buffer overflow.
+
+Summary of the fix:
+The fix ensures that the length of the AEC dump message is correctly validated before processing.
+
+Detailed description of the fix:
+- The fix checks the length of the AEC dump message using the `MSG_LEN_VALID` macro.
+- If the length is not valid, it returns an error code `-EINVAL`.
+- This prevents reading past the end of the message and avoids potential buffer overflow vulnerabilities.
+- The fix also includes a comment indicating that the change fixes a reading past the end of the message found by continuous fuzzing.
+- Credit is given to OSS-Fuzz for finding the vulnerability quickly.
+
+Overall, the fix ensures that the AEC dump message is properly validated to prevent buffer overflow vulnerabilities when handling messages from the client.

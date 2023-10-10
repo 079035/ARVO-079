@@ -1,0 +1,23 @@
+Vulnerability: 
+The vulnerability in this code exists in the `ReadMACImage` function. The code does not properly handle errors when allocating memory for the `pixels` array. If the memory allocation fails, the function continues execution and attempts to use the `pixels` array without checking if it is valid. This can lead to undefined behavior, crashes, or other issues.
+
+Summary of the fix:
+The fix adds a check after the memory allocation for the `pixels` array to verify if the allocation was successful. If not, the function returns and frees any previously allocated memory.
+
+Detailed description of the fix:
+1. After the memory allocation for the `pixels` array, a check is added to verify if the allocation was successful:
+```c
+pixels=(unsigned char *) AcquireQuantumMemory(length+1,sizeof(*pixels));
+if (pixels == (unsigned char *) NULL) 
+    ThrowReaderException(ResourceLimitError,"MemoryAllocationFailed");
+```
+2. If the allocation failed, the function returns and frees any previously allocated memory:
+```c
+if (pixels == (unsigned char *) NULL) 
+{
+    if (image != NULL)
+        image=DestroyImageList(image);
+    return((Image *) NULL);
+}
+```
+This ensures that the code does not continue execution with an invalid `pixels` array.

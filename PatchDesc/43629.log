@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the provided diff file is related to uninitialized pixels in the `allocCompositeData` function in the `GrkImage.cpp` file. When multiple tiles are present (`multiTile` is true), the function checks if the output component dimensions are valid and then allocates pixel data for each component. However, there is a possibility of uninitialized pixel data in the `destComp->data` if the allocation fails.
+
+Summary of the Fix:
+The fix involves zeroing out the composite data to avoid uninitialized pixels when allocating pixel data for the components.
+
+Detailed Description of the Fix:
+To fix the vulnerability, the following changes were made in the `GrkImage.cpp` file:
+
+- Line 400: The function call `GrkImage::allocData(destComp)` has been replaced with `GrkImage::allocData(destComp, true)`. The second argument `true` indicates to zero out the allocated data.
+
+This change ensures that if the allocation fails, the `destComp->data` is allocated and zeroed out to avoid uninitialized pixel data.

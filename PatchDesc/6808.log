@@ -1,0 +1,3 @@
+Vulnerability: Possible null pointer dereference
+Summary of the fix: Check the status after acquiring image and return if it is false to avoid null pointer dereference
+Detailed description of the fix: In the function `ReadPSDImage`, after acquiring the image using `AcquireImage`, the status is checked to see if it is false. If the status is false, the function returns with a NULL image. This prevents null pointer dereference if the status is false.

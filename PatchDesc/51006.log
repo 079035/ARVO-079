@@ -1,0 +1,12 @@
+Vulnerability: Modified macOS build configuration can lead to compatibility issues and unexpected behavior.
+
+Summary of Fix: The fix updates the macOS build configuration to use the AArch64 architecture instead of the previous AMD64 architecture.
+
+Detailed Description of Fix: 
+1. In the `.cirrus.yml` file, the `macos_task` section has been modified.
+2. The `name` field has been changed from `macos-amd64` to `macos-aarch64`, indicating a switch from the AMD64 architecture to the AArch64 architecture.
+3. The `image` field has been updated to `ghcr.io/cirruslabs/macos-ventura-xcode:14.1`, specifying a macOS 13 environment with Xcode 14.1.
+4. The `MAKEFLAGS` field has been changed from `'-j 12'` to `'-j 4'`, indicating the number of cores to be used for building on macOS VMs.
+5. The script section remains the same and performs necessary tasks, such as updating Brew and running the `build_matrix.sh` script.
+
+This fix ensures that the macOS build configuration is updated to use the AArch64 architecture and specifies the appropriate macOS environment for the build. The number of cores used for building has also been adjusted.

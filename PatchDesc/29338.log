@@ -1,0 +1,17 @@
+Vulnerability:
+There is a vulnerability in the code where the offset check in the `Font::load_from_offset` function is insufficient. If the addition of the given offset and the offset table size would cause an overflow, the code does not handle this properly. This can lead to a read buffer overflow when reading in the table information.
+
+Summary of the fix:
+The fix for this vulnerability is to add a check to see if the addition of the given offset and the offset table size would overflow. If it does overflow, the code should return early and indicate that the offset in the font header is invalid.
+
+Detailed description of the fix:
+1. Add an `if` statement to check if the addition of the given offset and the offset table size would cause an overflow:
+```cpp
+if (Checked<u32>::addition_would_overflow(offset, (u32)Sizes::OffsetTable)) {
+    dbgln("Invalid offset in font header");
+    return nullptr;
+}
+```
+2. If the check fails, print a debug message indicating that the offset in the font header is invalid and return `nullptr`.
+
+This fix ensures that the code handles the case where the offset plus offset table size would cause an overflow properly. If the check fails, the code will return early and indicate that the offset in the font header is invalid, preventing any potential read buffer overflows when reading in the table information.

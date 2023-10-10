@@ -1,0 +1,21 @@
+Vulnerability:
+The vulnerability in the provided diff file is that there is no check for the existence of input data before attempting to decode it. This can lead to a crash or undefined behavior if there is no input data to decode.
+
+Summary of fix:
+The fix in the provided diff file is to add a check for the existence of input data before attempting to decode it. If there is no input data, an exception is thrown with an appropriate error message.
+
+Detailed description of fix:
+1. The fix starts by creating a `ByteStream` object `bs` using the `offset` obtained from the IFD (Image File Directory) entry `STRIPOFFSETS`.
+   ```cpp
+   ByteStream bs(DataBuffer(mFile->getSubView(offset), Endianness::little));
+   ```
+
+2. Next, a check is added to verify if the `bs` object has any remaining data to decode.
+   ```cpp
+   if (bs.getRemainSize() == 0)
+       ThrowRDE("No input to decode!");
+   ```
+
+3. If there is no remaining data in `bs`, an `RDE` (RawDecoderException) is thrown with the error message "No input to decode!".
+
+4. This check ensures that there is input data available to decode before attempting to proceed with the decoding operation, preventing crashes or undefined behavior.

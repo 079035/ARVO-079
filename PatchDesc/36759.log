@@ -1,0 +1,5 @@
+Vulnerability: The vulnerability in the given diff file is that the version suffix is set to "RC1" instead of "Beta1". 
+
+Summary of the fix: The fix updates the version suffix from "Beta1" to "RC1". 
+
+Detailed description of the fix: In the given diff file, the line `#define LIBRAW_VERSION_TAIL Beta1` is changed to `#define LIBRAW_VERSION_TAIL RC1`. This change updates the version suffix of the LibRaw library from "Beta1" to "RC1". The version suffix is used to indicate the development stage of the software release. "Beta1" typically represents the first beta release, while "RC1" represents the first release candidate. This change in the version suffix ensures that the correct development stage is reflected in the library's version.

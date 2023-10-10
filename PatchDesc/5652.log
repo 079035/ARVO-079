@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability fixed in this diff file is that the session was allowed to be activated multiple times. This could result in the session being added to the channel multiple times, leading to an infinite loop during cleanup.
+
+Summary of fix:
+The fix prevents the session from being activated multiple times. If the session is already activated, the function will return with an error status code.
+
+Description of fix:
+1. The fix introduces a new check at the beginning of the `Service_ActivateSession` function to see if the session is already activated. If it is, the function will log an error message and return with a `UA_STATUSCODE_BADSESSIONIDINVALID` status code.
+2. Before detaching the old secure channel (if it exists), a new flag `session->activated` is set to `false` to indicate that the session is no longer activated.
+3. After detaching the old secure channel, another check is added to see if the session is already activated. If it is, the function will log an error message and return with a `UA_STATUSCODE_BADSESSIONIDINVALID` status code.
+4. If the session is not already activated, it is attached to the new secure channel and the `session->activated` flag is set to `true`.
+5. Finally, the lifetime of the session is updated and a log message indicating that the session has been activated is printed.
+
+Overall, the fix ensures that the session can only be activated once and prevents the possibility of an infinite loop during cleanup.

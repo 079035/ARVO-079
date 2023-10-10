@@ -1,0 +1,49 @@
+Vulnerability:
+The vulnerability in this code can be described as an information disclosure vulnerability. Specifically, there is a risk of reading uninitialized memory.
+
+Summary of Fix:
+The fix for this vulnerability involves changing the type of the 'contclasslen' variable from 'short' to 'unsigned short'. This ensures that the variable can hold higher positive values and eliminates the risk of potential memory corruption.
+
+Detailed Description of Fix:
+In the given code, the 'contclasslen' variable is initially declared as a 'short' type, which has a range of values from -32,768 to 32,767. However, throughout the code, 'contclasslen' is used to store an unsigned short value.
+
+This inconsistency in the variable type can lead to undefined behavior, as the signed short variable 'contclasslen' could potentially hold a negative value. This, in turn, can result in memory corruption or undefined data access when used in operations or calculations involving unsigned short values.
+
+To fix this vulnerability, the fix involves changing the type of 'contclasslen' from 'short' to 'unsigned short'. By using an unsigned type, we ensure that the variable can hold only positive values within its range (0 to 65,535). This fixes the vulnerability by eliminating the potential for uninitialized memory access and ensures the variable is used correctly throughout the codebase.
+
+The updated code snippet with the fix is as follows:
+
+```c++
+class AffEntry {
+  private:
+   AffEntry(const AffEntry&);
+   AffEntry& operator=(const AffEntry&);
+ 
+  public:
+   AffEntry()
+       : numconds(0),
+         opts(0),
+         aflag(0),
+         morphcode(0),
+         contclass(NULL),
+         contclasslen(0) {}
+   virtual ~AffEntry();
+   std::string appnd;
+   std::string strip;
+   unsigned char numconds;
+   char opts;
+   unsigned short aflag;
+   union {
+     char conds[MAXCONDLEN];
+     struct {
+       char conds1[MAXCONDLEN_1];
+       char* conds2;
+     } l;
+   } c;
+   char* morphcode;
+   unsigned short* contclass;
+   unsigned short contclasslen; // Fixed: changed from 'short' to 'unsigned short'
+ };
+```
+
+By making this fix, we ensure that the 'contclasslen' variable is consistently used as an unsigned short throughout the codebase, eliminating the risk of uninitialized memory access and potential memory corruption.

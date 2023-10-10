@@ -1,0 +1,30 @@
+Vulnerability:
+
+The vulnerability that is being patched in this diff file is a buffer overflow in the dotnet module of the libyara library.
+
+Summary of the fix:
+
+The fix for the buffer overflow vulnerability involves adding a check for the size of the blob before parsing it. If the size is 0, the parsing is stopped. This prevents the overflow from occurring.
+
+Detailed description of the fix:
+
+1. In the `dotnet_parse_us` function, a check is added to ensure that `blob_result.size` is not 0:
+```
+if (blob_result.size == 0)
+  break;
+```
+This check breaks out of the loop if the size is 0, preventing the parsing of empty blobs and avoiding the buffer overflow.
+
+2. Additionally, the check for whether the blob size fits in the PE is moved inside the condition that checks if the length of the blob is greater than 0:
+```
+if (blob_result.length > 0 && fits_in_pe(pe, offset, blob_result.length))
+```
+This ensures that the size of the blob is checked only if the length is greater than 0, preventing unnecessary checks for empty blobs.
+
+3. The `set_integer` function is called to set the number of user strings found:
+```
+set_integer(i, pe->object, "number_of_user_strings");
+```
+This function sets the value of the specified integer attribute in the `pe` object.
+
+Overall, these changes in the code prevent the buffer overflow by checking the size of the blob before parsing it and avoiding empty blobs.

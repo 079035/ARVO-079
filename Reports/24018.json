@@ -1,0 +1,82 @@
+{
+    "fix": "https://github.com/zeromq/libzmq/commit/16684328946bcb8b251e4fd6da52c983b9cdc9cf",
+    "verify": "0",
+    "localId": 24018,
+    "project": "libzmq",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "ubsan",
+    "crash_type": "Bad-cast",
+    "severity": "High",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 24018,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1594255819,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5281118160158720\n\nProject: libzmq\nFuzzing Engine: libFuzzer\nFuzz Target: test_bind_ws_fuzzer\nJob Type: libfuzzer_ubsan_libzmq\nPlatform Id: linux\n\nCrash Type: Bad-cast\nCrash Address: 0x7ff8280071a0\nCrash State:\n  Bad-cast to zmq::session_base_t from invalid vptr\n  zmq::stream_engine_base_t::in_event_internal\n  zmq::stream_engine_base_t::in_event\n  \nSanitizer: undefined (UBSAN)\n\nRecommended Security Severity: High\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_ubsan_libzmq&range=202007060323:202007070328\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5281118160158720\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 24018,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1594498343,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2020-10-07"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 24018,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1597589768,
+                "content": "ClusterFuzz testcase 5281118160158720 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_ubsan_libzmq&range=202008150625:202008160621\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 24018,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1600200391,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "16684328946bcb8b251e4fd6da52c983b9cdc9cf",
+    "repo_addr": "https://github.com/zeromq/libzmq.git"
+}

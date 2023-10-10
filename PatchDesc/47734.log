@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that could be patched in this diff file is a heap buffer overflow error. This vulnerability is identified as an "AddressSanitizer" error, specifically a "heap-buffer-overflow" error. The error occurs at address 0x60b000014739, and it is a READ operation of size 12 at that address. The error is triggered in the `ndpi_check_http_header` function at line 982 of the `http.c` file. The vulnerability was discovered by oss-fuzzer and reported in the bug tracker.
+
+Summary of the fix:
+The fix for the vulnerability involves modifying the `ndpi_check_http_header` function to correctly handle the length of the packet line strings when using `snprintf`. Instead of assuming a fixed size for the `str` buffer, the fix uses the `packet->line[i].len` value to properly specify the length of the string to be copied.
+
+Detailed description of the fix:
+The vulnerable code in the `ndpi_check_http_header` function is using `snprintf` to copy the packet line string into a fixed-size buffer `str`. The fixed-size buffer has a size of 64 bytes, but the length of the packet line string is not properly taken into account. This can lead to a heap buffer overflow if the length of the string exceeds the size of the buffer.
+
+To fix the vulnerability, the code is modified to use the length of the packet line string when calling `snprintf`. The code replaces the fixed-size format specifier in `snprintf` with `%.*s`, which takes an additional argument representing the length of the string. This ensures that only the specified length of the string is copied into the buffer, preventing a buffer overflow.
+
+By making this correction in each case statement, the fix ensures that the `str` buffer is always large enough to hold the copied string and eliminates the possibility of a heap buffer overflow.

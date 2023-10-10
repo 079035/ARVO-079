@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability in the code is a heap-buffer-overflow issue in the function `fio_keyword_replace()` in the `options.c` file. This vulnerability was discovered by Google's OSS-fuzz when substituting keywords in job files. It can be triggered by compiling fio with address sanitizer options and running a specific job file.
+
+Summary of the fix:
+The fix for this vulnerability involves correcting a thinko and rearranging some code to make it clearer that the `olen` variable is being used as an initial offset. This fix prevents the heap-buffer-overflow issue from occurring.
+
+Detailed description of the fix:
+1. The problematic line that caused the heap-buffer-overflow issue is `opt += olen + strlen(kw->word);`. The fix modifies this line to `opt += olen + strlen(kw->replace);`. This change corrects the thinko and ensures that the correct length is added to `opt`.
+
+2. Additionally, the code is rearranged to make it clearer that the `olen` variable is used as an initial offset. The fixed code now calculates the length of the opt string (`len`) before copying the original string (if present) to the new string. This ensures that the correct length is used for memory allocation and copying.
+
+3. The fix also includes freeing the old `opt` string after replacing it with the new string.
+
+These modifications prevent the heap-buffer-overflow issue from occurring when substituting keywords in job files and resolve the vulnerability.
+
+(Source: https://github.com/axboe/fio/commit/85b9ee7e801f59c61c0a81c75a56563098443445)

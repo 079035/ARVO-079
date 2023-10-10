@@ -1,0 +1,23 @@
+Vulnerability:
+
+This diff file patches a vulnerability in the function `parse_to_param()` in the file `parse_addr_spec.c`. The vulnerability is related to an unexpected end of data within a quoted value. If the character '\' is encountered and it is not followed by '\r' or '\n', an error is triggered. Similarly, if the character '"' is encountered and it is not followed by another character, an error is triggered.
+
+Fix Summary:
+
+The fix improves error handling for unexpected end of data within quoted values. It checks if the next character after '\' or '"' is within the bounds of the `buffer` and throws an error if it is not.
+
+Detailed Fix Description:
+
+To fix the vulnerability, the code has been modified as follows:
+
+1. For the character '\':
+   - A check is added to ensure that the next character after '\' is within the bounds of the `buffer`.
+   - If the next character is not within the bounds, an error is thrown.
+   - This check prevents unexpected end of data in the 'PARA_VALUE_QUOTED' status.
+
+2. For the character '\"':
+   - A check is added to ensure that the next character after '\"' is within the bounds of the `buffer`.
+   - If the next character is not within the bounds, an error is thrown.
+   - This check prevents unexpected end of data in the 'S_PARA_VALUE' status.
+
+These improvements in error handling ensure that the code does not encounter unexpected end of data within quoted values, which could lead to potential vulnerabilities.

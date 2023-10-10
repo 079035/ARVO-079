@@ -1,0 +1,17 @@
+Vulnerability:
+Stack-buffer-overflow READ
+
+Summary of the fix:
+The fix in this commit addresses a stack buffer overflow vulnerability in the `ndpi_check_http_server` function in the `http.c` file. 
+
+Detailed description of the fix:
+1. The fix introduces a new variable `off` to store the offset from the beginning of the server string.
+2. The fix modifies the for loop condition that iterates over the server string to include additional checks to prevent reading beyond the bounds of the `buf` array.
+3. The fix adds a new variable `msg` to store the error message string.
+4. The fix moves the declaration of `msg` outside of the if-else block to prevent redeclaration.
+5. The fix eliminates code duplication by removing the redundant declarations of `msg`.
+6. The fix uses `snprintf` to safely format the error message into `msg`.
+7. The fix uses `ndpi_set_risk` function to assign the error message to the flow's risk field.
+8. The fix checks for the minimum version requirements and compares it with the parsed version from the server string.
+9. The fix includes appropriate conditions to check for the correct `off` value and version number.
+10. The fix addresses the vulnerability by preventing reading beyond the bounds of the `buf` array and properly handling the error message assignment.

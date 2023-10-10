@@ -1,0 +1,18 @@
+Vulnerability: Unintended parsing behavior on lone tag escape
+
+Summary of the Fix: The fix ensures that parsing of the tag stops when encountering a lone tag escape (backslash) character.
+
+Detailed Description of the Fix:
+1. The code first checks if the input `tag` is NULL, and if so, returns immediately to handle the null case.
+2. Next, the code iterates through each character of the input `tag` using the `tmp` and `tag` pointers.
+3. If the character at `tmp` is a backslash (`\`), indicating the start of a tag escape sequence, the code proceeds to the next character and checks if it is the null terminator (`\0`). If it is, the loop is terminated to handle the case of a lone tag escape.
+4. If the character following the backslash is not the null terminator, a switch statement checks the specific character following the backslash.
+   - If the character is a colon (`:`), the corresponding character in the `tag` string is set to a semicolon (`;`).
+   - If the character is an 'n', the corresponding character in the `tag` string is set to a newline (`\n`).
+   - If the character is an 'r', the corresponding character in the `tag` string is set to a carriage return (`\r`).
+   - If the character is an 's', the corresponding character in the `tag` string is set to a space (` `).
+   - If the character does not match any of the above cases, the corresponding character in the `tag` string is set to the same character as in the `tmp` string.
+5. If the character at `tmp` is not a backslash, the corresponding character in the `tag` string is set to the same character as in the `tmp` string.
+6. Finally, after iterating through all characters in the `tag` string, the null terminator character is appended to the end of the `tag`.
+
+This fix ensures that parsing of the tag stops when encountering a lone tag escape (backslash) character, preventing unintended behavior and ensuring correct handling of escape sequences within the `tag` string.

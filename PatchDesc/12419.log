@@ -1,0 +1,9 @@
+Vulnerability: Double-free vulnerability.
+
+Summary of fix: The fix for the vulnerability is to assign NULL to the `attr->name` pointer before freeing it.
+
+Detailed description of fix: In the original code, the function `xmlTextReaderRemoveID` removes an ID from the XML ID table. In the process, it frees the `attr->name` pointer. However, after freeing it, the code continues to use the `attr->name` pointer by assigning it to `id->name`. This creates a double-free vulnerability, where the memory pointed to by `attr->name` could be freed twice.
+
+The fix consists of inserting the line `attr->name = NULL;` before assigning `attr->name` to `id->name`. By setting `attr->name` to NULL, the code ensures that the memory is not accidentally freed again.
+
+By making this change, the fix prevents the double-free vulnerability and ensures that the program behaves correctly when removing an ID from the XML ID table.

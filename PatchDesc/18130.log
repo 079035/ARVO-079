@@ -1,0 +1,17 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is a potential arithmetic overflow. 
+
+Summary of the fix:
+
+The fix updates the conditional statements in the `ConstrainCoordinate()` function to ensure that the values being checked do not exceed the maximum value of the `ssize_t` type.
+
+Detailed description of the fix:
+
+In the original code, the `ConstrainCoordinate()` function checks if the input value `x` is less than or greater than the maximum value of `ssize_t` (`SSIZE_MAX`). If the conditions are true, it returns the corresponding limiting value.
+
+However, this code does not take into account the possibility of an arithmetic overflow when calculating the limiting values. An arithmetic overflow occurs when a calculation results in a value that is outside the range that can be represented by the data type. In this case, if the value of `SSIZE_MAX` is close to the maximum value that can be represented, adding or subtracting a large number may cause an overflow.
+
+The fix updates the conditional statements to subtract a smaller value (512) from `SSIZE_MAX` to create a buffer zone when comparing against `x`. This ensures that even if the value of `SSIZE_MAX` is at its maximum, the addition or subtraction will not cause an overflow.
+
+With this fix, if `x` is less than `-(SSIZE_MAX-512)`, it will be limited to `-SSIZE_MAX` and if `x` is greater than `(SSIZE_MAX-512)`, it will be limited to `SSIZE_MAX`. This prevents any potential arithmetic overflow when performing the comparisons and ensures the function operates within the valid range of `ssize_t`.

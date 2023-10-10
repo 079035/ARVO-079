@@ -1,0 +1,16 @@
+Vulnerability:
+Buffer overflow
+
+Summary of the Fix:
+Add length checks to prevent buffer overflow.
+
+Detailed Description of the Fix:
+In the given code, the vulnerability lies in the `HandleCommissioningSet` function of the `Leader` class in the `network_data_leader_ftd.cpp` file. In this function, a buffer named `tlvs` is used to store some data. However, the length of the data read from the `aMessage` object is not properly checked, which could result in a buffer overflow.
+
+To fix this vulnerability, the following changes have been made:
+1. The variable `length` has been changed from `uint8_t` to `uint16_t` to accommodate larger sizes.
+2. Before reading the data into the `tlvs` buffer, a check has been added to ensure that the length of the data is not greater than the size of the `tlvs` buffer. This prevents buffer overflow.
+3. The loop that iterates over the MeshCoP TLVs has been modified to properly handle the length of the TLVs and prevent buffer overflow.
+4. The call to the `SetCommissioningData` function has been updated to pass the correct length of the `tlvs` buffer.
+
+These changes ensure that the length of the data is properly checked and prevent buffer overflow in the `HandleCommissioningSet` function.

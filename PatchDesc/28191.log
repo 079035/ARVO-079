@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability in the code is that it assumes the address size to be 6 bytes. This assumption causes a failing read when the address size is not actually 6 bytes.
+
+Summary of Fix:
+The fix for this vulnerability is to use addresses from the structures and allocate dynamic memory for the `hash_buf` instead of using a local buffer.
+
+Detailed Description of Fix:
+1. The fix begins by declaring two variables `src_len` and `dst_len` of type `guint8`, which will hold the lengths of the `src` and `dst` addresses, respectively.
+2. Then, a new variable `hash_buf_len` of type `guint8` is declared, which calculates the total size of the `hash_buf` based on the lengths of the `src` and `dst` addresses, the size of `guint8`, and the size of `guint32`.
+3. Next, a dynamic memory block is allocated using the function `wmem_alloc()`. The memory is allocated with the size calculated in `hash_buf_len` and with the packet scope, indicated by the `wmem_packet_scope()` function.
+4. The original code that copied the address bytes to `hash_buf` is modified to use the lengths `src_len` and `dst_len` instead of assuming a fixed length of 6 bytes. The `memcpy()` function is used to copy the address bytes to the appropriate positions in `hash_buf`.
+5. The line that sets the `hash_buf[12]` value is left unchanged.
+6. Similarly, the line that copies the `vlan_id` to `hash_buf` is modified to correctly calculate the position based on the lengths of `src` and `dst` addresses, the `guint8` value, and the `guint32` value.
+7. Finally, the `hash_val` is calculated using the modified `hash_buf` and the `hash_buf_len` parameter in the `wmem_strong_hash()` function.
+8. The fix ensures that the address size is no longer assumed to be 6 bytes and uses the actual lengths of the `src` and `dst` addresses, provided by the input data.

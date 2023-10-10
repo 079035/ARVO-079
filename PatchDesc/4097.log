@@ -1,0 +1,12 @@
+Vulnerability:
+Heap use after free.
+
+Summary of the fix:
+The fix ensures that any remaining publish responses are sent if the last subscription is removed.
+
+Detailed description of the fix:
+In the original code, if the last subscription was removed and the condition `if(LIST_FIRST(&session->serverSubscriptions))` returned false, the code would call `UA_Server_delayedCallback` to send any remaining publish responses in a delayed callback. However, this introduces a potential vulnerability of heap use after free, where memory that has been freed is still being accessed.
+
+The fix modifies the code to call `UA_Subscription_answerPublishRequestsNoSubscription` directly, instead of using the delayed callback. This ensures that any remaining publish responses are sent before the session is deleted, without the risk of heap use after free.
+
+The fix makes the code safer and eliminates the possibility of heap use after free vulnerability.

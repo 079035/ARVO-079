@@ -1,0 +1,14 @@
+Vulnerability Description:
+The vulnerability in this code is that the condition in the if statement on line 47 is checking the wrong variable. Instead of checking `buffer->cur().mask`, it should be checking `info[idx].mask`. This means that the loop is not correctly determining whether to skip the glyph.
+
+Summary of the Fix:
+The fix for this bug is to change the condition in the if statement on line 47 to check `info[idx].mask` instead of `buffer->cur().mask`.
+
+Detailed Description of the Fix:
+In the original code, the loop iterates over the glyphs in the buffer and checks if the glyph has the desired mask (`kern_mask`). However, it uses the incorrect variable `buffer->cur().mask`, which is not the current glyph being processed. This results in the condition always evaluating to false and the loop continuing to the next iteration without processing the glyph.
+
+To fix this issue, the code needs to be updated to check `info[idx].mask` instead of `buffer->cur().mask`. This will correctly check the mask of the current glyph in the loop. Once the correct glyph is identified, the code proceeds with the required calculations and adjustments to the glyph positions.
+
+After making this fix, the loop will correctly process the glyphs with the desired mask and perform the necessary adjustments to the glyph positions based on the kerning values.
+
+Overall, this fix ensures that the correct mask is checked in the if statement, allowing the code to correctly apply kerning adjustments to the glyph positions.

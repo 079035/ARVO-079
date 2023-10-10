@@ -1,0 +1,21 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is a heap-use-after-free in the function __class_reset_perm_values() in the file cil_reset_ast.c. This vulnerability is triggered when a certain CIL policy is processed causing a crash when Address Sanitizer is enabled.
+
+Summary of the fix:
+
+The fix involves counting the number of class permissions and then calculating the number of common permissions before accessing them in the reset code. This avoids accessing already destroyed memory and prevents the heap-use-after-free issue.
+
+Detailed description of the fix:
+
+1. In the function cil_reset_class(), a check is added to verify if the class's common field is not NULL.
+
+2. Inside the if condition, the number of common permissions is calculated by subtracting the number of primary permissions from the total number of permissions in the class.
+
+3. The cil_symtab_map() function is called with the updated number of common permissions as an argument. This function iterates over the permissions and applies the __class_reset_perm_values() function to them.
+
+4. The class's num_perms field is updated with the number of primary permissions, effectively resetting the number of common permissions back to their original values.
+
+5. Finally, the class's common field is set to NULL to prevent any errors during re-resolving.
+
+By performing these steps, the fix ensures that the class's common permissions are correctly handled and avoids accessing destroyed memory, resolving the heap-use-after-free vulnerability.

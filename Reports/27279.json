@@ -1,0 +1,82 @@
+{
+    "fix": "https://github.com/fluent/fluent-bit//commit/cadff53c093210404aed01c4cf586adb8caa07af",
+    "verify": "0",
+    "localId": 27279,
+    "project": "fluent-bit",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Heap-double-free",
+    "severity": "High",
+    "report": {
+        "comments": [
+            {
+                "localId": 27279,
+                "descriptionNum": 1,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=6257779226181632\n\nProject: fluent-bit\nFuzzing Engine: libFuzzer\nFuzz Target: flb-it-fuzz-http_fuzzer_OSSFUZZ\nJob Type: libfuzzer_asan_fluent-bit\nPlatform Id: linux\n\nCrash Type: Heap-double-free\nCrash Address: 0x61d000000080\nCrash State:\n  flb_free\n  flb_http_client_destroy\n  flb_http_client\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: High\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_fluent-bit&range=202011060613:202011070625\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6257779226181632\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "timestamp": 1604753436
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2021-02-05"
+                    }
+                ],
+                "localId": 27279,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot",
+                    "userId": "1950284618"
+                },
+                "sequenceNum": 1,
+                "timestamp": 1604779565
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "oldValue": "New",
+                        "newOrDeltaValue": "Verified"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ],
+                "localId": 27279,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "ClusterFuzz testcase 6257779226181632 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_fluent-bit&range=202011070625:202011080619\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 2,
+                "timestamp": 1604848521
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ],
+                "localId": 27279,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot",
+                    "userId": "1950284618"
+                },
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "sequenceNum": 3,
+                "timestamp": 1607457336
+            }
+        ]
+    },
+    "fix_commit": "cadff53c093210404aed01c4cf586adb8caa07af",
+    "repo_addr": "https://github.com/fluent/fluent-bit/"
+}

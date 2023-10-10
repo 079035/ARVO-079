@@ -1,0 +1,15 @@
+Vulnerability:
+
+In the given code, the vulnerability that was patched is related to a format string. In the function `ucl_inherit_handler`, there is a call to `ucl_create_err` that formats an error message. The format string used in the original code was incorrect for non-null-terminated strings. The correct format specifier for a non-null-terminated string is `%.*s`, but the code used `%*.s` instead. This can lead to unpredictable behavior or crashes when the format string is used with non-null-terminated strings.
+
+Summary of the fix:
+
+The fix in this patch changes the format string used in the call to `ucl_create_err` from `%*.s` to `%.*s`. This ensures that the format string is correct for non-null-terminated strings and prevents potential issues caused by using an incorrect format specifier.
+
+Detailed description of the fix:
+
+In the original code, the format string used in the call to `ucl_create_err` was `%*.s`. However, this format string is incorrect for non-null-terminated strings. The correct format specifier for a non-null-terminated string is `%.*s`, where the precision specifies the maximum number of characters to be printed.
+
+The fix in this patch corrects the format string by changing `%*.s` to `%.*s`. This ensures that the format specifier is correct for non-null-terminated strings and prevents potential issues caused by using an incorrect format specifier.
+
+By fixing the format string, the patch improves the robustness and correctness of the code, ensuring that the error message is formatted correctly for both null-terminated and non-null-terminated strings. This eliminates the vulnerability that could potentially lead to unpredictable behavior or crashes when the format string is used.

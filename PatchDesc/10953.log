@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability addressed in this patch is related to the handling of end-of-text conditions in the InsertionSubtable struct.
+
+Summary of the fix:
+The fix ensures that the insertion of glyphs is performed correctly when the end-of-text conditions are encountered.
+
+Detailed description of the fix:
+1. The patch modifies the `transition` function in the `driver_context_t` struct. This function is responsible for performing the glyph insertion based on the current state and flags.
+2. Previously, the function did not handle the case when the end-of-text condition was encountered. It would perform operations based on the `DontAdvance` flag, which resulted in incorrect glyph positioning.
+3. The fixed code now correctly checks for the `DontAdvance` flag and adjusts the glyph positioning accordingly. If the flag is set, the function moves the buffer position to `end`, meaning that newly inserted glyphs will be visible. If the flag is not set, the function moves the buffer position to `end + count`, allowing for proper insertion of the glyphs.
+4. Additionally, the code now checks the validity and bounds of the insertion glyph table before performing the insertion, using the `unlikely` macro and the `check_array` function from the sanitizer.
+5. Finally, the code sets the `mark_set` and `mark` variables when the `SetMark` flag is encountered, indicating that the current position should be marked for future reference.
+
+Overall, the fix ensures that the insertion of glyphs is handled correctly, taking into account the end-of-text conditions and the appropriate positioning of the inserted glyphs.

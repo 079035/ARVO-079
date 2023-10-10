@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability in the given diff file is a potential stack overflow in the function `ZipArchiveIOSystem::MapArchive` in the `ZipArchiveIOSystem.cpp` file. 
+
+Summary of the fix:
+
+The fix in the commit is to skip any file whose name is larger than the allocated buffer size of 256 characters (`FileNameSize`). This prevents writing out of bounds and avoids the stack overflow.
+
+Detailed description of the fix:
+
+In the original code, the `MapArchive` function iterates over all the files in a zip archive and extracts their filenames. It then stores these filenames in a local character array `filename` with a fixed size of `FileNameSize` (256 characters).
+
+The issue with the original code is that it does not check if the size of the filename obtained from the zip file is larger than the allocated buffer size. If a filename is larger than 256 characters, it would be written out of bounds into the `filename` array, leading to a stack overflow vulnerability.
+
+The fix in the commit addresses this vulnerability by introducing a check before storing the filename in the `m_ArchiveMap`. It checks if the size of the filename (`fileInfo.size_filename`) is less than or equal to `FileNameSize`. If the filename size exceeds the buffer size, the file is skipped and not added to the `m_ArchiveMap`. This ensures that filenames larger than 256 characters do not cause a stack overflow.

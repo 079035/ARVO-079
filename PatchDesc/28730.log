@@ -1,0 +1,12 @@
+Vulnerability:
+Heap buffer overflow
+
+Summary of the fix:
+The fix prevents a heap buffer overflow by checking the index `i` before using it.
+
+Detailed description of the fix:
+In the given diff file, the vulnerability is patched in the `dissect_idn_dmx_dictionary` function. The code iterates over a loop based on the value of `i`, and at a certain point, it checks if `i` is equal to `config->word_count` and `words_found` is false. Inside this condition, there is a loop that increments `i` and `curr_size` until `curr_size%4` is not equal to 0. However, there was no check for the value of `i` before entering the loop, which could lead to a heap buffer overflow if `i` is negative.
+
+The fix adds a check for `i > 0` in the while-loop condition to prevent the buffer overflow. Now, the loop will only execute if both `curr_size%4 != 0` and `i > 0`. This ensures that the loop is skipped when `i` is negative, avoiding a potential heap buffer overflow.
+
+Overall, this fix prevents a heap buffer overflow by checking the index `i` before using it in the loop condition.

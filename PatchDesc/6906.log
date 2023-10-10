@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability that could be patched in this diff file is the failure to check that slice widths are positive in the `Cr2Decompressor::decode()` function.
+
+Summary of the fix:
+The fix adds a loop to iterate through each `slicesWidth` value in the `slicesWidths` vector and check if it is less than or equal to 0. If a negative or zero value is found, an exception is thrown with the error message "Bad slice width: %i".
+
+Detailed description of the fix:
+The fix modifies the `Cr2Decompressor::decode()` function by adding the following lines of code before calling `AbstractLJpegDecompressor::decode()`:
+```cpp
+for (auto slicesWidth : slicesWidths) {
+  if (slicesWidth <= 0)
+    ThrowRDE("Bad slice width: %i", slicesWidth);
+}
+```
+In this loop, each `slicesWidth` value in the `slicesWidths` vector is checked. If a negative or zero value is found, the function `ThrowRDE()` is called, passing the error message "Bad slice width: %i" and the value of `slicesWidth` as arguments. This exception indicates that an invalid slice width has been encountered.
+
+This fix ensures that all slice widths passed to the `Cr2Decompressor::decode()` function are strictly positive, preventing any further processing or potential issues caused by negative or zero values.

@@ -1,0 +1,38 @@
+Vulnerability:
+Null-dereference WRITE in MqttProps_Free
+
+Summary of the Fix:
+The fix resolves a null-dereference issue in the MqttProps_Free function.
+
+Detailed Description of the Fix:
+In the provided diff, the vulnerable code is found in the `MqttClient_WaitType` function. The vulnerability occurs in a specific block of code where the program waits for a packet. The vulnerable code can be summarized as follows:
+
+```c
+if ((wait_type == MQTT_PACKET_TYPE_ANY ||
+    wait_type == packet_type ||
+    MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)) &&
+    (wait_packet_id == 0 || wait_packet_id == packet_id))
+{
+    use_packet_obj = packet_obj;
+    waitMatchFound = 1;
+}
+```
+
+In this code, there is a null-dereference issue because the `packet_obj` variable is used without checking if it is NULL or not. This can lead to a crash when accessing the `packet_obj` if it is NULL.
+
+The fix for this vulnerability involves adding a null check for the `packet_obj` variable before using it. Here is the fixed code:
+
+```c
+if ((wait_type == MQTT_PACKET_TYPE_ANY ||
+    wait_type == packet_type ||
+    MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)) &&
+    (wait_packet_id == 0 || wait_packet_id == packet_id))
+{
+    if (packet_obj != NULL) {
+        use_packet_obj = packet_obj;
+    }
+    waitMatchFound = 1;
+}
+```
+
+With this fix, the `packet_obj` variable is only used if it is not NULL, avoiding the null-dereference issue.

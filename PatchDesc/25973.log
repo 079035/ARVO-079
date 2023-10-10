@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability being patched in this diff file is related to error handling for certain error codes. Specifically, there is a condition where if the error code includes either `dsBitstreamError` or `dsDataErrorConcealed` and the slice type is `B_SLICE`, then the function will reset certain picture buffers and reference pictures and return without further processing.
+
+Summary of the fix:
+The fix involves resetting the picture buffers and reference pictures when the mentioned condition is met. This ensures that the decoder recovers from the error and continues processing the bitstream.
+
+Detailed description of the fix:
+In the code snippet provided, the fix can be found in the following lines:
+```
++    if ((pDecContext->iErrorCode & (dsBitstreamError | dsDataErrorConcealed)) && pDecContext->eSliceType == B_SLICE) {
++      ResetReorderingPictureBuffers (&m_sReoderingStatus, m_sPictInfoList, true);
++      WelsResetRefPic (pDecContext);
++      return dsErrorFree;
++    }
+```
+The added code segment checks if the error code contains either the `dsBitstreamError` or `dsDataErrorConcealed` flag, and if the slice type is `B_SLICE`. If both conditions are true, the `ResetReorderingPictureBuffers` function is called to reset the reordering picture buffers, and the `WelsResetRefPic` function is called to reset the reference pictures. Finally, the function returns `dsErrorFree`, indicating that the error has been handled and the decoding process can continue.
+
+This fix ensures that in case of certain error conditions in the bitstream, the decoder resets the necessary buffers and reference pictures, allowing it to recover from the error and continue decoding without any further issues.

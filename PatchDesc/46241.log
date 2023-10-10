@@ -1,0 +1,53 @@
+Vulnerability:
+The vulnerability in the given diff file is a bug in the code block selection code in the `allocSparseCanvas` function in the `TileComponent.cpp` file. The bug occurs when calculating the code block bounds and transforming the coordinates from canvas coordinates to buffer coordinates.
+
+Summary of the fix:
+The bug is fixed by using the `roi_grid` (Region of Interest grid) instead of the full code block grid for calculating the code block bounds and transforming the coordinates. This ensures that the code block bounds and coordinates are correctly calculated and do not result in incorrect canvas placement.
+
+Detailed description of the fix:
+1. Instead of using the full code block grid, the fix uses the `roi_grid` to calculate the code block bounds:
+```
+auto cblkBounds = precinct->getCodeBlockBounds(cblkno);
+```
+2. The fix correctly scales down the `roi_grid` using the `cblk_expn` (code block exponent) and clips it to the `cblk_grid` (code block grid):
+```
+auto roi_grid = roi->scaleDownPow2(cblk_expn).clip(cblk_grid);
+```
+3. The code now iterates over the `roi_grid` instead of the `cblk_grid` to correctly calculate the code block coordinates:
+```
+for(uint32_t gridY = roi_grid.y0; gridY < roi_grid.y1; ++gridY)
+{
+    uint64_t cblkno =
+        (roi_grid.x0 - cblk_grid.x0) + (uint64_t)(gridY - cblk_grid.y0) * w;
+    for(uint32_t gridX = roi_grid.x0; gridX < roi_grid.x1; ++gridX)
+    {
+        // code block coordinate calculations
+    }
+}
+```
+4. The fix ensures that the correct canvas coordinates are calculated by taking into account the band orientation and the previous resolution's width and height (if applicable):
+```
+uint32_t x = cblkBounds.x0 - band->x0;
+uint32_t y = cblkBounds.y0 - band->y0;
+if(band->orientation & 1)
+{
+    auto prev_res = tileCompResolution + resno - 1;
+    x += prev_res->width();
+}
+if(band->orientation & 2)
+{
+    auto prev_res = tileCompResolution + resno - 1;
+    y += prev_res->height();
+}
+```
+5. Finally, the fix correctly checks if the allocation of the code block in the sparse array is successful before proceeding:
+```
+if(!sa->alloc(
+    grk_rect32(x, y, x + cblkBounds.width(), y + cblkBounds.height()),
+    truncatedTile))
+{
+    delete sa;
+    throw std::runtime_error("unable to allocate sparse array");
+}
+```
+These changes ensure that the code block bounds and coordinates are correctly calculated and the sparse canvas is allocated without any issues.

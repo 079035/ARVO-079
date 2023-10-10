@@ -1,0 +1,21 @@
+Vulnerability:
+There is a global-buffer-overflow error reported by ASAN in the GSM RLC/MAC code. The issue is caused by the incorrect use of the M_NEXT_EXIST macro.
+
+Summary of the fix:
+The fix for the vulnerability is to modify the sequence of the structure elements and add another variable after the M_NEXT_EXIST macro.
+
+Detailed description of the fix:
+In the given diff file, the fix for the vulnerability involves modifying the structure IU_Mode_Channel_Request_Desk_t. The original code has a M_NEXT_EXIST macro that should be followed by another variable, but in this case, it is immediately ended with CSN_DESCR_END, causing the buffer overflow.
+
+To fix this issue, the code is modified to add another variable after the M_NEXT_EXIST macro. The code block that needs modification is commented out and a new line is added with the correct variable definition. 
+
+The modified code looks as follows:
+
+```c
+/* Don't use M_REC_TARRAY as we don't support multiple TBFs */
+/* M_NEXT_EXIST (IU_Mode_Channel_Request_Desk_t, Exist_Iu_Mode_ChRequestDesk, 1, &hf_iu_mode_chrequest_exist),
+M_TYPE       (IU_Mode_Channel_Request_Desk1, IU_Mode_Channel_Request_Desk_t), */
+M_UINT       (IU_Mode_Channel_Request_Desk_t, Exist_Iu_Mode_ChRequestDesk, 1, &hf_iu_mode_chrequest_exist),
+```
+
+This modification ensures that there is another variable (Exist_Iu_Mode_ChRequestDesk) after the M_NEXT_EXIST macro, preventing the global-buffer-overflow error.

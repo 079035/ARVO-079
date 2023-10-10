@@ -1,0 +1,17 @@
+Vulnerability:
+
+The vulnerability addressed in this diff file is related to memory allocation in the `ensure_mv_buffer` function. In the previous implementation, there was a potential memory leak. If the `buf->mvs` pointer was NULL or the `buf_rows` and `buf_cols` values did not match the `mi_rows` and `mi_cols` values from `mi_params`, then a new memory allocation was attempted. However, if the `enable_ref_frame_mvs` flag was true, the `buf->mvs` memory block was not freed before reallocating it. This could lead to a memory leak if the allocation failed and the function exited without freeing the previous memory block.
+
+Fix Summary:
+
+The fix in this commit reverts a previous change that conditionally allocated the `buf->mvs` memory buffer. The revert was based on ASan (AddressSanitizer) errors encountered with fuzzed input. The specific change being reverted is not provided in the diff, but it is likely that the prior change introduced the memory allocation issue described in the vulnerability section.
+
+Fix Description:
+
+1. The `buf->mvs` memory block is no longer conditionally allocated. Instead, it is always freed before reallocating it to ensure there are no memory leaks.
+
+2. The code now checks if the `buf->seg_map` memory block needs to be reallocated separately from the `buf->mvs` block. If either the `buf->seg_map` memory block or the `buf_rows` and `buf_cols` values do not match the `mi_rows` and `mi_cols` values, the corresponding memory blocks are freed before allocating new memory.
+
+3. The `cm->tpl_mvs` memory block is also reallocated if necessary. The condition for reallocation checks if the `tpl_mvs` pointer is NULL or if the `tpl_mvs_mem_size` is smaller than the required `mem_size`. If reallocation is needed, the `cm->tpl_mvs` memory block is freed before allocating a new block.
+
+Note: The precise details of the previous change being reverted and the exact code of the fixed version are not provided in the given diff file. Only the modifications made in the `ensure_mv_buffer` function are shown.

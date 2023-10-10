@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that was patched in this code is that the function `get_header_info` did not perform proper checks on the input `header_len` and `typesize` parameters before using them. This could potentially lead to memory access errors or incorrect behavior.
+
+Summary of the Fix:
+The fix added two checks to ensure the validity of the `header_len` and `typesize` parameters. If the `header_len` is less than the minimum allowed value (FRAME_HEADER_MINLEN), an error is returned. If the `header_len` exceeds the length of the frame, another error is returned. Similarly, if the `typesize` is zero or greater than the maximum allowed value (BLOSC_MAX_TYPESIZE), an error is returned.
+
+Detailed Description of the Fix:
+1. The fix added a check for `header_len` to ensure it is not zero or smaller than the minimum allowed value (FRAME_HEADER_MINLEN). If it is, an error is returned with a corresponding error message: "Header length is zero or smaller than min allowed."
+2. The fix added a check for `header_len` to ensure it does not exceed the length of the frame. If it does, an error is returned with a corresponding error message: "Header length exceeds length of the frame."
+3. The fix added a check for `typesize` to ensure it is not zero or greater than the maximum allowed value (BLOSC_MAX_TYPESIZE). If it is, an error is returned with a corresponding error message: "`typesize` is zero or greater than max allowed."
+
+These checks ensure that the input parameters `header_len` and `typesize` are within valid ranges and prevent potential memory access errors or incorrect behavior in the code.

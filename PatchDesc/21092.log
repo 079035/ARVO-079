@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability in this code is an out-of-bounds read. In the `SegmentMaps` struct, the `map` function is used to map a given `value` to a corresponding coordinate value. However, there is an issue when the `value` is bigger than all the coordinates in the `arrayZ` array. 
+
+Summary of the Fix:
+The fix for this vulnerability is to modify the loop in the `map` function to ensure that `i` does not become equal to the array's length.
+
+Detailed Description of the Fix:
+The vulnerability is fixed by changing the loop condition from `i < count` to `i < count && value > arrayZ[i].fromCoord`. This change ensures that the loop stops before `i` becomes equal to the array's length and prevents an out-of-bounds read. With this fix, the loop will only iterate until it finds the appropriate index where `value` is less than or equal to `arrayZ[i].fromCoord`.

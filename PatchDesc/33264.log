@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability patched in this diff file is that there is a possible buffer overflow when calculating the stop value in the `_blosc_getitem` function. If the calculated `stop` value exceeds the bounds of the source buffer, it could result in accessing memory beyond what is allocated for the buffer, leading to undefined behavior and potential security issues.
+
+Summary of the fix:
+The fix adds bounds checks for the `start` and `stop` values to ensure they do not exceed the boundaries of the source buffer. If either value is out of bounds, an error is returned.
+
+Detailed description of the fix:
+1. Introduced two bound checks for the `start` and `stop` values to ensure they do not exceed the boundaries of the source buffer.
+2. The first check `(start < 0) || (start * header->typesize > header->nbytes)` verifies if `start` is negative or if the calculated start index exceeds the size of the source buffer. If the check fails, an error is returned.
+3. The second check `(stop < 0) || (stop * header->typesize > header->nbytes)` verifies if `stop` is negative or if the calculated stop index exceeds the size of the source buffer. If the check fails, an error is returned.
+4. This fix ensures that the `start` and `stop` values are within the bounds of the source buffer before proceeding with the decompression operation, preventing buffer overflow vulnerabilities.

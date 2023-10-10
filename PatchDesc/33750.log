@@ -1,0 +1,12 @@
+Vulnerability:
+This code patch fixes a double-free vulnerability.
+
+Summary of Patch:
+The patch fixes the vulnerability by setting the `mp_buf` variable to `NULL` after freeing it to avoid accessing freed memory.
+
+Detailed Description of Patch:
+In the original code, the `mp_buf` variable is freed using `flb_free(mp_buf)` before the function returns. However, there's a possibility that the `mp_buf` could be freed again later in the code if a condition is met. To prevent double-freeing the memory, the patch sets the `mp_buf` variable to `NULL` after freeing it. This ensures that if the subsequent code tries to free `mp_buf` again, it will not cause issues since NULL pointers can be safely freed.
+
+The fix is implemented by adding the line `mp_buf = NULL;` after the call to `flb_free(mp_buf)`. This assigns a NULL value to `mp_buf` to indicate that the memory has been freed and should not be accessed again.
+
+Overall, the fix prevents potential double-freeing of the `mp_buf` memory, ensuring the correctness and stability of the code.

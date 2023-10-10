@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability being patched in this diff file is a potential memory read vulnerability. 
+
+Summary of the fix:
+The fix adds a check for the presence of a TLS hello message before reading memory, in order to prevent potential memory read vulnerabilities.
+
+Detailed description of the fix:
+In the existing code, there is a check to match a custom category based on the flow's `host_server_name`. However, the fix modifies this condition to include an additional check for the presence of a TLS hello message (`flow->l4.tcp.tls.hello_processed == 1`). This ensures that the memory is only read when the TLS connection has been properly established.
+
+By adding this extra check, the fix prevents potential vulnerabilities that may occur if the memory is read without proper TLS handshake.

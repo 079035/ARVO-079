@@ -1,0 +1,9 @@
+Vulnerability: The vulnerability fixed in this diff is related to the "LookupFormat10" struct in the "hb-aat-layout-common.hh" file. Specifically, there was a bug in the "DEFINE_SIZE_ARRAY" macro that defined the size of the "valueArrayZ" member.
+
+Summary of the fix: The fix updated the size parameter of the "DEFINE_SIZE_ARRAY" macro from 6 to 8.
+
+Detailed description of the fix: The "DEFINE_SIZE_ARRAY" macro is used to define a member variable of the "LookupFormat10" struct called "valueArrayZ". It specifies the size of the array based on the value of the "valueSize" member. However, there was a discrepancy in the size parameter specified in the macro and the actual size needed, resulting in a potential buffer overflow vulnerability.
+
+To fix this vulnerability, the size parameter in the "DEFINE_SIZE_ARRAY" macro was updated from 6 to 8. This ensures that the "valueArrayZ" member has enough space to hold the required data and prevents any potential buffer overflow issues.
+
+By making this change, the fix ensures that the "valueArrayZ" member is correctly sized based on the "valueSize" parameter specified in the struct, which eliminates the buffer overflow vulnerability.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is the failure to destroy the "classperms" list when resetting a permission. The "classperms" list is a pointer to a list of "classperms" that is created and added to when resolving classmapping rules. However, when a permission is reset, the "classperms" list is not destroyed, leading to potential memory leaks.
+
+Short summary of the fix:
+The fix involves calling the "cil_list_destroy()" function to destroy the "classperms" list without destroying the data in the list when resetting a permission.
+
+Detailed description of the fix:
+1. In the file "cil_reset_ast.c", locate the function "cil_reset_perm(struct cil_perm *perm)".
+2. Inside this function, find the line "cil_reset_classperms_list(perm->classperms);" and replace it with "cil_list_destroy(&perm->classperms, CIL_FALSE);".
+3. The "cil_list_destroy()" function takes two arguments: the address of the list pointer ("&perm->classperms") and a boolean flag ("CIL_FALSE").
+4. The boolean flag "CIL_FALSE" indicates that the data contained within the list should not be destroyed.
+5. By calling "cil_list_destroy()" with the appropriate arguments, the "classperms" list will be properly destroyed without affecting the data within the list, effectively fixing the memory leak issue.

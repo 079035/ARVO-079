@@ -1,0 +1,26 @@
+Vulnerability:
+The vulnerability in the given diff file is an invalid write in the function `SetQuantumDepth()`. Specifically, the line `extent=4*MagickMax(image->columns,image->rows)*quantum;` is writing beyond the allocated memory for the quantum pixel buffer.
+
+Summary of Fix:
+The fix eliminates the invalid write by correctly calculating the extent of the quantum pixel buffer.
+
+Detailed Description of Fix:
+In the original code, the extent of the quantum pixel buffer is calculated as `extent=4*MagickMax(image->columns,image->rows)*quantum;`. However, this calculation does not account for the actual depth of the quantum. 
+
+The fix involves modifying the calculation to correctly account for the quantum depth. It checks the value of `quantum_info->depth` and sets it to a valid value if it exceeds certain limits. Then, it recalculates the extent using the corrected depth.
+
+Specifically, the code snippet `extent=4*MagickMax(image->columns,image->rows)*quantum;` is replaced with:
+```
+    if (quantum_info->depth > 32)
+       quantum_info->depth=64;
+    else
+       if (quantum_info->depth > 16)
+         quantum_info->depth=32;
+       else
+         quantum_info->depth=16;
+    
+    quantum=(quantum_info->pad+MaxPixelChannels)*(quantum_info->depth+7)/8;
+    extent=MagickMax(image->columns,image->rows)*quantum;
+```
+
+This fix ensures that the extent calculation is done correctly and prevents the invalid write vulnerability.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is related to the return value of the function `ndpi_match_string_subprotocol()`. 
+
+Summary of the Fix:
+The fix ensures that the correct return value is returned when `ndpi_match_string_common()` fails.
+
+Detailed Description of the Fix:
+In the original code, the return value of `ndpi_match_string_common()` was stored in the variable `rc`. If `rc` was less than 0, which indicates a failure, the function would return `rc`. Otherwise, it would return `ret_match->protocol_id`, which is the result of the matching operation.
+
+The fix modifies the return statement to use the ternary operator (`?`) to evaluate the condition `rc < 0`. If the condition is true, it returns `NDPI_PROTOCOL_UNKNOWN`, indicating an unknown protocol. If the condition is false, it returns `ret_match->protocol_id`, preserving the previous behavior.
+
+By making this change, the fix ensures that when `ndpi_match_string_common()` fails, the function `ndpi_match_string_subprotocol()` returns the correct value, `NDPI_PROTOCOL_UNKNOWN`, to indicate the failure.

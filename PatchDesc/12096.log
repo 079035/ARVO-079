@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the given diff file is a memory leak in the function `h2o_http2_scheduler_relocate` when the `src` node has no children.
+
+Summary of the fix:
+The fix resolves the memory leak by freeing the memory allocated for the `src->node._queue` if `src` has no children.
+
+Detailed description of the fix:
+1. Previously, in the `h2o_http2_scheduler_relocate` function, if `src` had no children, the code would assign `NULL` to `src->node._queue`, but it didn't free the memory allocated for it. This resulted in a memory leak.
+
+2. The fix checks if the `src` node has no children. If it doesn't, the code frees the memory allocated for `src->node._queue` using the `free` function.
+
+3. After freeing the memory, the code assigns `NULL` to `src->node._queue` to prevent any further referencing of the freed memory.
+
+By making this change, the fix ensures that the memory allocated for `src->node._queue` is properly freed in the case where `src` has no children, preventing the memory leak.

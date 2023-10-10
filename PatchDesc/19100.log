@@ -1,0 +1,15 @@
+Vulnerability:
+
+This diff file fixes a buffer overflow vulnerability in the `amazon_video` dissector. The vulnerability occurs when checking the payload of a packet, specifically when accessing the `packet->payload` array. The vulnerability could be exploited by an attacker to overwrite adjacent memory locations and potentially execute arbitrary code or crash the program.
+
+Summary of the fix:
+
+The fix includes two modifications. First, a check is added to ensure that the length of the `packet->payload` is greater than 4 before accessing it. Second, curly braces are added to properly enclose the block of code that handles the TCP payload check.
+
+Detailed description of the fix:
+
+1. In the original code, the payload length is not checked before accessing it, which could lead to buffer overflow. The fix adds a check for `packet->payload_packet_len > 4` to ensure that there are at least 4 bytes in the payload before performing payload checks.
+
+2. In the original code, the block that handles the TCP payload check does not have curly braces, which could lead to incorrect behavior if additional checks are added later. The fix adds curly braces to properly enclose the block of code.
+
+These modifications mitigate the buffer overflow vulnerability by ensuring that the payload length is checked and properly handling the TCP payload check.

@@ -1,0 +1,12 @@
+Vulnerability:
+There is a stack-buffer-overflow vulnerability in the function `pns_decode` in the file `pns.c` of the `libfaad` library. The buffer overflow occurs when calculating the `begin` and `end` indices in the `gen_rand_vector` function calls. It allows an attacker to overwrite adjacent memory, which can result in undefined behavior, crashes, or execution of arbitrary code.
+
+Summary of the fix:
+The fix for the vulnerability is to ensure that the `begin` and `end` indices are properly calculated to avoid the buffer overflow. The patched code updates the calculation of the `begin` and `end` indices based on the `base` value and the offsets from the `ics_right` structure.
+
+Detailed description of the fix:
+1. Previously, the `begin` index was calculated as `min(base + ics_right->swb_offset[sfb], ics_right->swb_offset_max)`. This calculation could result in an index that is larger than the maximum offset allowed, causing a stack-buffer-overflow vulnerability.
+2. The fix updates the calculation of the `begin` index to ensure that it is within the allowed range. It calculates the `begin` index as `min(base + ics_right->swb_offset[sfb], ics_right->swb_offset_max)`.
+3. The `end` index calculation is also updated to ensure it is within the allowed range. It is calculated as `min(base + ics_left->swb_offset[sfb+1], ics_left->swb_offset_max)`.
+4. These updated `begin` and `end` indices are then passed to the `gen_rand_vector` function to generate the random vector.
+5. By properly calculating the `begin` and `end` indices, the fix prevents the stack-buffer-overflow vulnerability and ensures the integrity and stability of the program.

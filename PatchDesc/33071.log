@@ -1,0 +1,15 @@
+Vulnerability:
+This patch fixes an ASAN heap-buffer-overflow vulnerability when reading the frame's vlmetalayers. The vulnerability was caused by incorrect bounds checking while reading the content of the metalayers.
+
+Summary of the fix:
+The fix checks the bounds properly before reading the content of the metalayers.
+
+Detailed description of the fix:
+1. Previously, the code checked the bounds of the trailer buffer using the `trailer_pos` variable, which was incremented during the reading process. However, this was incorrect because `trailer_pos` was only used for enumerating offsets and not for bounds checking.
+2. The fix initializes a new variable `offset` to the offset value read from the trailer.
+3. The code now checks the bounds correctly by comparing `trailer_len` (the length of the trailer buffer) with `offset + 1 + 4 + content_len`. This ensures that there is enough space in the trailer buffer to read the content.
+4. If the bounds check fails, the code returns `BLOSC2_ERROR_READ_BUFFER` to indicate a read buffer error.
+5. The code now properly initializes `content_len` by reading the size of the content from `content_marker + 1`. The size is then checked to ensure it is not negative.
+6. Finally, the content is read from the trailer buffer and stored in the `content` variable of the metalayer.
+
+Overall, the fix ensures that bounds checking is done correctly while reading the content of the metalayers, preventing the ASAN heap-buffer-overflow vulnerability.

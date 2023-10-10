@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability patched in this diff file is a size inconsistency in the `NetworkData` class of the `network_data.hpp` file. The `kMaxSize` constant is defined as 255, but the comment above it states that it is the maximum size of Thread Network Data in bytes. However, the value should be 254 instead of 255 to conform to the Thread Conformance Specification.
+
+Summary of Fix:
+The fix in this patch changes the value of `kMaxSize` from 255 to 254.
+
+Detailed Description of Fix:
+In the `NetworkData` class of the `network_data.hpp` file, the `kMaxSize` constant is changed from 255 to 254. This fix ensures that the maximum size of Thread Network Data is correctly set to 254 bytes, conforming to the Thread Conformance Specification. This change aligns the code with the correct maximum size value, preventing potential buffer overflows or data truncation issues when handling Network Data.

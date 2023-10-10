@@ -1,0 +1,14 @@
+Vulnerability:
+The fixed code addresses a vulnerability related to the handling of profiles in the PSD file format. The vulnerability allows an attacker to cause a memory corruption and potential code execution by providing a specially crafted PSD file.
+
+Summary of the fix:
+The fix changes the condition for removing the resolution from a resource block in the PSD file. The new condition checks if the subtraction of `(cnt+12)` from the length of the `bim_profile` is positive in addition to the previous conditions.
+
+Detailed description of the fix:
+In the original code, the condition for removing the resolution from the resource block is `if ((id == 0x000003ed) && (cnt < (ssize_t) (length-12)))`. This condition checks if the `id` is equal to `0x000003ed` and if the `cnt` is less than the difference between the `length` and 12.
+
+However, the fix adds an additional condition to the if statement: `((ssize_t) length-(cnt+12)-(q-datum)) > 0`. This condition ensures that the difference between `length`, `(cnt+12)`, and the position of `q` in the `datum` array is positive. This effectively checks if there is enough data after `q` to remove.
+
+If the condition is met, the code copies memory starting from `q+cnt+12` to `q`, effectively removing the resolution from the resource block. Additionally, the length of `bim_profile` is updated to reflect the removal of the resolution.
+
+By adding this extra condition, the fix prevents potential memory corruption and mitigates the vulnerability by ensuring a valid length calculation is used when removing the resolution from the resource block in the PSD file.

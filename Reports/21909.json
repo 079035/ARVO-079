@@ -1,0 +1,115 @@
+{
+    "fix": "git://code.qt.io/qt/qt5.gitf4b02da372a602b792c39d97d72727efbd86b37c",
+    "verify": "0",
+    "localId": 21909,
+    "project": "qt",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow READ 4",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 21909,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1588069173,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5699424467812352\n\nProject: qt\nFuzzing Engine: libFuzzer\nFuzz Target: qtbase_gui_painting_qcolorspace_fromiccprofile\nJob Type: libfuzzer_asan_i386_qt\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow READ 4\nCrash Address: 0xf4702fe8\nCrash State:\n  QSpecialInteger<QBigEndianStorageType<unsigned int> >::operator unsigned int\n  QIcc::fromIccProfile\n  QColorSpace::fromIccProfile\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_i386_qt&range=202004210320:202004220624\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5699424467812352\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 21909,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1588104720,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2020-07-27"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 21909,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "3575182740",
+                    "displayName": "rlohn...@gmail.com"
+                },
+                "timestamp": 1588284654,
+                "content": "Reported to security@qt-project.org on May 1st."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 21909,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1589643035,
+                "content": "ClusterFuzz testcase 5699424467812352 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_i386_qt&range=202005150325:202005160324\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 21909,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "3575182740",
+                    "displayName": "rlohn...@gmail.com"
+                },
+                "timestamp": 1591963120,
+                "content": "Probably fixed by 6ebef2eb9a6a3630f9142fb040c3f87ba8eeac8e in qtbase: https://codereview.qt-project.org/c/qt/qtbase/+/299013"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 21909,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "3575182740",
+                    "displayName": "rlohn...@gmail.com"
+                },
+                "timestamp": 1591967031,
+                "content": "Fixed in Qt 5.15.0."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 21909,
+                "sequenceNum": 6,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1592251308,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "f4b02da372a602b792c39d97d72727efbd86b37c",
+    "repo_addr": "git://code.qt.io/qt/qt5.git"
+}

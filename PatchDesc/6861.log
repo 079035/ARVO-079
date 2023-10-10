@@ -1,0 +1,12 @@
+Vulnerability:
+In the file "MagickCore/draw.c", there is a vulnerability related to the function "DrawDashPolygon". At line 1432, there is a buffer overflow vulnerability where memory is allocated using AcquireQuantumMemory based on the length of "primitive_info" and is assigned to "dash_polygon". However, the length is calculated incorrectly, which leads to an insufficient allocation of memory.
+
+Summary of Fix:
+The fix for this vulnerability is to increase the length calculation for "dash_polygon" by 1, due to the addition of the terminating element "UndefinedPrimitive" that was previously not considered.
+
+Detailed Description of Fix:
+Prior to the fix, the length calculation of "dash_polygon" is incorrect and does not account for the extra element required to terminate the "dash_polygon" array. This inconsistency causes insufficient memory allocation and leads to a buffer overflow vulnerability.
+
+The fix increases the length calculation by 1, using the formula `(2UL*(number_vertices+2UL)+1UL)`. This accounts for the additional element "UndefinedPrimitive" needed to properly terminate the "dash_polygon" array.
+
+Now, when memory is allocated using AcquireQuantumMemory with the correct length, the buffer overflow vulnerability is resolved.

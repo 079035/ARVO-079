@@ -1,0 +1,8 @@
+Vulnerability:
+In the given diff file, the vulnerability is that the `LIBRAW_VERSION_TAIL` macro is set to `Beta1` instead of `RC1`.
+
+Summary of Fix:
+The fix changes the `LIBRAW_VERSION_TAIL` macro to `RC1`.
+
+Detailed Description of Fix:
+The fix in the diff file modifies the `LIBRAW_VERSION_TAIL` macro in the `libraw_version.h` file. The macro is changed from `Beta1` to `RC1`. This change updates the version tail suffix used in the `LIBRAW_VERSION_STR` macro. Hence, the vulnerability is patched by updating the version tail to the correct value of `RC1`.

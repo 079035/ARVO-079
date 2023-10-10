@@ -1,0 +1,15 @@
+Vulnerability: Buffer overflow in config file reader fuzzer
+
+Summary of fix: The fix in this commit addresses a buffer overflow vulnerability in the config file reader fuzzer.
+
+Detailed description of fix: 
+1. A buffer overflow vulnerability was present in the `config_open_for_fuzzing` function in the `lwan-config.c` file.
+2. The function creates a `config` structure and initializes its values.
+3. The vulnerable code is the `config_init_data` function call within the `if (config)` block.
+4. In the original code, the `data` size `len` was directly used as an argument to `config_init_data`.
+5. The fix subtracts 1 from `len` before passing it to `config_init_data`.
+6. By subtracting 1 from `len`, the fix prevents the buffer overflow by making the function read one less byte.
+7. This ensures that the `config_init_data` function does not read beyond the boundaries of the `data` buffer.
+8. The fix mitigates the vulnerability by ensuring that the size passed to `config_init_data` is within the expected boundaries.
+9. This prevents potential buffer overflows and improves the security of the code.
+10. The fix is considered effective in resolving the buffer overflow vulnerability in the config file reader fuzzer.

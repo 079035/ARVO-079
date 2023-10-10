@@ -1,0 +1,24 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to the `.BTF` and `.BTF.ext` ELF sections. These sections should have the `SHT_PROGBITS` type and contain data. However, if they do not meet these criteria, the ELF file is considered invalid or corrupted. This can lead to the `data->d_buf` pointer being NULL, which can result in a segmentation fault (`SIGSEGV`) later on. The vulnerability was reported by the oss-fuzz project.
+
+Summary of the Fix:
+The fix ensures that the `.BTF` and `.BTF.ext` sections have the `SHT_PROGBITS` type by adding checks for this condition. If either section has a type other than `SHT_PROGBITS`, the function returns an error code `-LIBBPF_ERRNO__FORMAT`.
+
+Detailed Description of the Fix:
+1. Inside the function `bpf_object__elf_collect`, the code now checks the `sh->sh_type` value for both `.BTF` and `.BTF.ext` sections.
+2. If the type is not `SHT_PROGBITS`, the function returns an error code `-LIBBPF_ERRNO__FORMAT`. This indicates that the ELF file is invalid or corrupted.
+3. The relevant code changes are as follows:
+
+```diff
+    } else if (strcmp(name, BTF_ELF_SEC) == 0) {
++       if (sh->sh_type != SHT_PROGBITS)
++           return -LIBBPF_ERRNO__FORMAT;
+        btf_data = data;
+    } else if (strcmp(name, BTF_EXT_ELF_SEC) == 0) {
++       if (sh->sh_type != SHT_PROGBITS)
++           return -LIBBPF_ERRNO__FORMAT;
+        btf_ext_data = data;
+    }
+```
+
+4. By performing these checks, the fix ensures that only valid and non-corrupted ELF files are processed, preventing potential segmentation faults caused by a NULL `data->d_buf` pointer.

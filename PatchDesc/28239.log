@@ -1,0 +1,5 @@
+Vulnerability: Out-of-bounds access in GIF deinterlacing
+
+Summary of the fix: The fix prevents potential out-of-bounds access in the GIF deinterlacing code by checking if the interlace pass index is about to overflow. If the index is greater than or equal to 4, the function returns false, indicating a failure.
+
+Details of the fix: Prior to the fix, the GIF deinterlacing code did not check if the interlace pass index exceeded the maximum number of passes (4 in this case), which could result in accessing rows outside the valid range. To address this issue, the fix adds a check after incrementing the interlace pass index. If the index is greater than or equal to 4, the function immediately returns false, indicating a failure to decode the GIF. The fix also includes a FIXME comment, suggesting that this check could be performed earlier to avoid unnecessary work.

@@ -1,0 +1,10 @@
+Vulnerability: Integer Overflow
+
+Summary of the fix: The fix protects against potential integer overflow in the `if` condition by adding an additional check.
+
+Detailed description of the fix:
+1. In the original code, there is a check to ensure that the `num_axes` value is greater than 0, and if true, it evaluates another condition that involves the size of the data and the number of axes.
+2. The fix adds an extra check to make sure that `num_axes` is less than 8 in addition to being greater than 0.
+3. The fix also checks that the size is greater than `num_axes * (sizeof(hb_tag_t) + sizeof(int))`, which ensures that there is enough data to process the axes.
+4. If all the conditions pass, the code iterates over the axes, extracting the `tag` and `value`, and then calls `hb_subset_input_pin_axis_location` function to set the axis location.
+5. Finally, the fix also removes duplicate code by declaring `input` outside the second `if` condition block.

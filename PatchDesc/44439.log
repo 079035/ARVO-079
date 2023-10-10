@@ -1,0 +1,21 @@
+Vulnerability: In the `dxf_tables_read` function of the `in_dxf.c` file, there is a potential buffer overflow vulnerability. When copying the value of the `pair->value.s` string into the `table` array, there is no check to ensure that the length of the string does not exceed the size of the `table` array, which is 80 bytes.
+
+Summary of the fix: The fix in the code is to add a check before copying the value of `pair->value.s` into the `table` array. The length of the string is checked using `strlen`, and if it exceeds the size of the `table` array, the copying is skipped.
+
+Detailed description of the fix: The fix involves adding an additional condition to the existing if statement that checks the length of `pair->value.s`. The condition also checks if the length is less than 80, which is the size of the `table` array. If the condition is not met, the copying operation is skipped. This prevents a potential buffer overflow that could occur if a longer string is encountered.
+
+```diff
+       else if (pair->code == 2 && pair->value.s && strlen (pair->value.s) < 80
+                && is_table_name (pair->value.s)) // new table NAME
+         {
+           BITCODE_BL i = 0;
+           BITCODE_BL ctrl_id;
+           strncpy (table, pair->value.s, 79);
+           table[79] = '\0';
+           pair = new_table_control (table, dat, dwg); // until 0 table
+           ctrl_id = dwg->num_objects - 1;             // dwg->object might move
+           while (pair && pair->code == 0 && pair->value.s
+                  && strEQ (pair->value.s, table))
+```
+
+In the above code snippet, the condition `strlen(pair->value.s) < 80` has been added to ensure that the length of `pair->value.s` does not exceed the size of the `table` array. If the condition is not met, the code inside the `else if` block will not be executed, and the potential buffer overflow is avoided.

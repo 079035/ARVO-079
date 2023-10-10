@@ -1,0 +1,20 @@
+Vulnerability:
+The vulnerability in this code relates to accessing out-of-bounds memory. Specifically, in the functions `filter_selectively_horiz()` and `highbd_filter_selectively_horiz()`, the code attempts to access thresholds for the next block within the current 64x64 block. However, if the next block is out of bounds, the code incorrectly points to the current edge's filter parameters instead of the next edge's filter parameters. This can lead to accessing invalid memory and potentially cause undefined behavior or crashes.
+
+Fix Summary:
+The fix in this code is to check if the next edge is within the bounds of the current 64x64 block before accessing its filter parameters. If the next edge is out of bounds, the code sets the next_edge variable to 0, ensuring that it points to the current edge's filter parameters instead of the invalid memory.
+
+Detailed Fix Description:
+1. In the `filter_selectively_horiz()` function, the following line is added before accessing the next block's thresholds:
+```c
+if (offset + next_edge >= MI_SIZE_64X64) next_edge = 0;
+```
+This line checks if the offset of the current edge plus the next edge is greater than or equal to the size of the 64x64 block. If it is, it means that the next block is out of bounds, so the next_edge variable is set to 0, ensuring that it points to the current edge's filter parameters instead of the invalid memory.
+
+2. In the `highbd_filter_selectively_horiz()` function, the same line is added before accessing the next block's thresholds:
+```c
+if (offset + next_edge >= MI_SIZE_64X64) next_edge = 0;
+```
+This line has the same purpose as in the `filter_selectively_horiz()` function, to check if the next block is out of bounds and set the next_edge variable accordingly.
+
+By adding this check, the code ensures that it correctly handles accessing filter parameters for the next block within the current 64x64 block and avoids accessing out-of-bounds memory.

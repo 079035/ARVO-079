@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability in the given code is an off-by-one error in the `FixBadPixelsList` constructor. The `fullImage` rectangle is created with the width and height specified as `ri->getUncroppedDim().x` and `ri->getUncroppedDim().y` respectively, but an off-by-one error is introduced on line 11 and 12 while initializing `fullImage` where the width and height are reduced by 1. This means that the actual dimensions of `fullImage` will be smaller than intended.
+
+Fix summary:
+The fix in the code is to correct the off-by-one error by subtracting 1 from both the width and height values when creating the `fullImage` rectangle.
+
+Detailed fix description:
+To fix the off-by-one error in the `FixBadPixelsList` constructor in the given code, the width and height values of the `fullImage` rectangle should be adjusted properly. On line 7, instead of `ri->getUncroppedDim().x - 1`, it should be `ri->getUncroppedDim().x` to represent the correct width of the image. Similarly, on line 8, instead of `ri->getUncroppedDim().y - 1`, it should be `ri->getUncroppedDim().y` to represent the correct height of the image.
+
+By making this fix, the `fullImage` rectangle will have the correct dimensions, preventing any off-by-one errors and ensuring that the rectangle accurately represents the dimensions of the image.

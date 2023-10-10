@@ -1,0 +1,34 @@
+Vulnerability:
+The vulnerability in this code is a potential double free bug. The code attempts to free the `pincode` variable twice if a certain condition is met.
+
+Summary of the fix:
+The fix for this vulnerability is to add an additional check to determine whether `pincode` was allocated before freeing it.
+
+Detailed description of the fix:
+In the code, there is a conditional branch where `pincode` is freed. However, before freeing, the code checks if `opt_pin` is `NULL`. If it is `NULL`, the `pincode` variable is freed. This check ensures that `pincode` is only freed when it was actually allocated.
+
+```diff
+ 	if (pincode == NULL && verbose)
+ 		printf("Old PIN value will be prompted with pinpad.\n");
+ 
+ 	newpin = (u8 *) opt_newpin;
+ 	while (newpin == NULL) {
+ 		u8 *newpin2;
+ 
+ 		newpin = get_pin("Enter new PIN", pin_obj);
+ 		if (pinpad_present && newpin == NULL)   {
+ 			if (verbose)
+ 				printf("New PIN value will be prompted with pinpad.\n");
+ 			break;
+ 		}
+ 		if (newpin == NULL || strlen((char *) newpin) == 0)   {
+ 			fprintf(stderr, "No new PIN value supplied.\n");
+ 			free(newpin);
+-			if (opt_pin == NULL)
++			if (opt_pin == NULL && pincode != NULL)
+ 				free(pincode);
+ 			return 2;
+ 		}
+```
+
+This fix adds an additional check `pincode != NULL` before freeing `pincode`. This ensures that the `pincode` variable is freed only if it was allocated.

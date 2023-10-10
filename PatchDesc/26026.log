@@ -1,0 +1,19 @@
+Vulnerability:
+The vulnerability in the given diff file is an incorrect size check in the `wavlike_read_cart_chunk` function. The code includes an additional 4-byte field called `tag_text_size` in the `SF_CART_INFO_16K` struct, which is not actually part of the chunk. As a result, the size check for `chunksize` is incorrect.
+
+Summary of Fix:
+The fix corrects the size check by excluding the additional 4-byte field `tag_text_size` from the chunk size check.
+
+Detailed Description of Fix:
+1. The code now includes a comment explaining that the `SF_CART_INFO_16K` struct has an extra field `tag_text_size` that is not part of the chunk.
+2. The `ifdef` statement checks if the `chunksize` is greater than or equal to the size of `SF_CART_INFO_16K` minus 4.
+3. If the `chunksize` is greater than or equal to `sizeof(SF_CART_INFO_16K) - 4`, it means the chunk is too big to be handled. A log message is printed, and the chunk is skipped.
+4. The `chunksize` is logged.
+5. If there is already a `cart_16k` chunk, it is freed.
+6. Memory is allocated for `psf->cart_16k` using `cart_var_alloc()`.
+7. The `c` pointer is set to `psf->cart_16k`.
+8. The various fields of `c` (version, title, artist, cut_id, client_id, category, classification, out_cue, start_date, start_time, end_date, end_time, producer_app_id, producer_app_version, user_def, level_reference, post_timers, reserved, url) are read from the `psf` buffer using `psf_binheader_readf()` function.
+9. If the chunk size is greater than `WAV_CART_MIN_CHUNK_SIZE`, the `tag_text_size` field of `c` is set to `chunksize - WAV_CART_MIN_CHUNK_SIZE`, and the `tag_text` field is read from the `psf` buffer.
+10. Finally, the function returns 0 to indicate success.
+
+The fix correctly handles the size of the chunk and ensures that the `tag_text` field is read properly without including the additional 4-byte `tag_text_size` field in the size check.

@@ -1,0 +1,29 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential buffer overflow in the `DecodeImage` function. The vulnerability occurs when the `bytes_per_line` is less than 8, and the pixels are already uncompressed. In this case, the function does not check if the number of pixels (`number_pixels`) to be copied from the `scanline` buffer exceeds the allocated memory for `pixels`, which can lead to a buffer overflow and potential crash or arbitrary code execution.
+
+Summary of Fix:
+The fix in this patch is to add a check to ensure that the number of pixels (`number_pixels`) to be copied from the `scanline` buffer does not exceed the allocated memory for `pixels`, thereby preventing a potential buffer overflow.
+
+Detailed Description of Fix:
+In the `DecodeImage` function, after the check for `bytes_per_line < 8`, the fix starts by adding the following code:
+```c
+if ((q+number_pixels) > (pixels+(*extent))) {
+  (void) ThrowMagickException(exception,GetMagickModule(),
+    CorruptImageError,"UnableToUncompressImage","`%s'",
+    image->filename);
+  break;
+}
+```
+This code checks if the destination pointer `q` plus the number of pixels to be copied, exceeds the allocated memory for `pixels`. If it does, it throws a `CorruptImageError` exception and breaks out of the loop, preventing the buffer overflow.
+
+Additionally, a similar check is added in the subsequent `for` loop to avoid potential buffer overflows when `scanline_length` is greater than or equal to `row_bytes`:
+```c
+if (scanline_length >= row_bytes) {
+  (void) ThrowMagickException(exception,GetMagickModule(),
+    CorruptImageError,"UnableToUncompressImage","`%s'",image->filename);
+  break;
+}
+```
+This check ensures that the `scanline_length`, which represents the length of the scanline buffer, is less than `row_bytes`, which represents the allocated memory for a single row of pixels. If `scanline_length` is greater than or equal to `row_bytes`, it throws a `CorruptImageError` exception and breaks out of the loop to prevent a potential buffer overflow.
+
+Overall, these checks ensure that the number of pixels to be copied from the `scanline` buffer does not exceed the allocated memory for `pixels`, preventing a buffer overflow vulnerability.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability being patched in this diff file is a potential security issue in the `averageImages` function of the Magick++ library. 
+
+Summary of Fix:
+The fix ensures that the `averageImages` function is correctly computing the signature of the averaged image. 
+
+Detailed Description of Fix:
+In the original code, there is a check for the signature of the averaged image to validate its correctness. However, there is a vulnerability where the check fails for certain signatures. 
+
+The fix in this diff file updates the check for the signature of the averaged image. It adds an additional condition to the check to account for a new valid signature. This ensures that the check passes for all valid cases and prevents false positives.
+
+With the addition of the new condition, the `averageImages` function now accurately computes and validates the signature of the averaged image, preventing any potential security issues.

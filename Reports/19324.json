@@ -1,0 +1,99 @@
+{
+    "localId": 19324,
+    "project": "ndpi",
+    "fix": "https://github.com/ntop/nDPI/commit/4749e61bdb96746a216abffaae069bd6ae0edf2f",
+    "verify": "0",
+    "fuzzer": "afl",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow READ 13",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "localId": 19324,
+                "descriptionNum": 1,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5113237544894464\n\nProject: ndpi\nFuzzing Engine: afl\nFuzz Target: fuzz_process_packet\nJob Type: afl_asan_ndpi\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow READ 13\nCrash Address: 0x60500000e05c\nCrash State:\n  ndpi_search_memcached\n  check_ndpi_udp_flow_func\n  ndpi_detection_process_packet\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nCrash Revision: https://oss-fuzz.com/revisions?job=afl_asan_ndpi&revision=201912050451\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5113237544894464\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "timestamp": 1576081808
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Fuzz-Blocker"
+                    }
+                ],
+                "localId": 19324,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "This crash occurs very frequently on linux platform and is likely preventing the fuzzer fuzz_process_packet from making much progress. Fixing this will allow more bugs to be found.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 1,
+                "timestamp": 1576083484
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2020-03-10"
+                    }
+                ],
+                "localId": 19324,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot@chromium.org",
+                    "userId": "4164592774"
+                },
+                "sequenceNum": 2,
+                "timestamp": 1576083707
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "oldValue": "New",
+                        "newOrDeltaValue": "Verified"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ],
+                "localId": 19324,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "ClusterFuzz testcase 5113237544894464 is verified as fixed in https://oss-fuzz.com/revisions?job=afl_asan_ndpi&range=202002020548:202002030550\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 3,
+                "timestamp": 1580743679
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ],
+                "localId": 19324,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot",
+                    "userId": "1950284618"
+                },
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "sequenceNum": 4,
+                "timestamp": 1583438514
+            }
+        ]
+    },
+    "fix_commit": "4749e61bdb96746a216abffaae069bd6ae0edf2f",
+    "repo_addr": "https://github.com/ntop/nDPI"
+}

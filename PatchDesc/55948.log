@@ -1,0 +1,29 @@
+Vulnerability:
+The vulnerability in the code can lead to a buffer overflow. The variable `leading_zero` is used to track the number of leading zeros in the input `hex`. However, there is no check on the value of `leading_zero` before storing a leading zero in the `bin` array. This can lead to writing past the end of the `bin` array if `leading_zero` reaches `bin_max_len`.
+
+Fix Summary:
+The fix in the code ensures that the value of `leading_zero` is checked before storing a leading zero in the `bin` array. If `leading_zero` is equal to or greater than `bin_max_len`, the function immediately returns 0, indicating failure.
+
+Detailed Fix Description:
+To fix the vulnerability, the code adds a check to ensure that `leading_zero` is not greater than or equal to `bin_max_len` before storing a leading zero in the `bin` array. If `leading_zero` exceeds or equals `bin_max_len`, the function returns 0, indicating failure.
+
+Here are the detailed changes made in the code:
+
+1. Previously, `leading_zero` was incremented unconditionally within the loop:
+   ```c
+   bin[leading_zero] = 0;
+   leading_zero++;
+   ```
+
+2. The fix adds a conditional check to ensure that `leading_zero` is less than `bin_max_len` before storing a leading zero. If `leading_zero` is equal to or greater than `bin_max_len`, the function returns 0:
+   ```c
+   if (leading_zero >= bin_max_len){
+       return 0;
+   }
+   bin[leading_zero] = 0;
+   leading_zero++;
+   ```
+
+3. By returning 0, the function indicates the failure to convert the input `hex` to binary.
+
+Overall, the fix prevents the possibility of a buffer overflow by correctly handling the case when `leading_zero` reaches or exceeds the `bin_max_len`.

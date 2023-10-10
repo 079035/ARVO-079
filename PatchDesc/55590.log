@@ -1,0 +1,30 @@
+Vulnerability:
+There is a memory leak and a potential crash on invalid documents in the GMLHandler::endElementGeometry method.
+
+Summary of the Fix:
+The fix addresses the memory leak and potential crash by ensuring that the code correctly handles the XML nodes and properly frees allocated memory.
+
+Detailed Description of the Fix:
+1. The variable `m_nGeometryDepth` is set to 0, ensuring that the correct depth is maintained.
+
+2. The code verifies that `apsXMLNode.size()` is equal to 2 using the `CPLAssert` macro. This assertion check ensures that the size of the `apsXMLNode` vector is accurate, preventing any potential issues with out-of-bounds access.
+
+3. The variable `psInterestNode` is assigned the last node from the `apsXMLNode` vector. This node will be parsed further based on specific conditions.
+
+4. Various conditions and logic are implemented to handle different scenarios based on the value of `eAppSchemaType` and the value of `psInterestNode->pszValue`.
+
+5. For the "ElevatedPoint" scenario in the AIXM AppSchema, the `psInterestNode` is passed to the `ParseAIXMElevationPoint` method for further parsing.
+
+6. For the "Murtoviiva", "Alue", and "Piste" scenarios in the MTKGML AppSchema, the `pszValue` of `psInterestNode` is updated accordingly.
+
+7. For the "BoundingBox" scenario, the `pszValue` of `psInterestNode` is updated to "Envelope". Additionally, the "crs" attribute's `pszValue` is updated to "srsName".
+
+8. Depending on the state and AppSchema type, the `psInterestNode` is handled differently. For STATE_BOUNDED_BY_IN_FEATURE state in CITYGML AppSchema, the `psInterestNode` is destroyed using `CPLDestroyXMLNode`. Otherwise, the `psInterestNode` is added as a geometry to the GMLFeature object.
+
+9. Based on specific conditions, the `psInterestNode` is either directly set as the geometry of the GMLFeature or added as a geometry. The `POP_STATE` macro is also called.
+
+10. Finally, the top element of `apsXMLNode` is removed using `apsXMLNode.pop_back()`, effectively handling the end of the element and preventing potential memory leaks.
+
+11. The `return OGRERR_NONE` statement ends the method.
+
+These changes ensure that memory is properly managed, preventing memory leaks and potential crashes in the GMLHandler::endElementGeometry method.

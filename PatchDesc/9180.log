@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given code patch is that the length (variable `len`) is not rounded down to a multiple of 4 before being used in the SonyDecrypt() function. This can lead to accessing memory beyond its bounds if the length is not already a multiple of 4.
+
+Summary of the Fix:
+The fix in the code patch is to round down the length (`len`) to a multiple of 4 before using it in the SonyDecrypt() function. The comment added states that the decryption is done in blocks of 4 bytes.
+
+Detailed Description of the Fix:
+1. The line `uint32 len = roundDown(sony_length->getU32(), 4);` is added to round down the length to a multiple of 4.
+2. This ensures that only the correct number of bytes (a multiple of 4) is passed to the SonyDecrypt() function.
+3. By rounding down the length to a multiple of 4, the fix prevents accessing memory beyond its bounds and eliminates the possibility of a buffer overflow vulnerability.
+4. The decryption is performed on the rounded down length in blocks of 4 bytes, ensuring that it is aligned correctly and processed efficiently.
+5. The fix improves the security and stability of the code by handling the encrypted data correctly and reducing the risk of memory corruption or undefined behavior.

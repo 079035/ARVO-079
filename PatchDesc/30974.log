@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability in the code is an integer-overflow issue. Specifically, the vulnerability occurs in the `get_coffsets` function in the `blosc/frame.c` file. The code calculates the `off_pos` variable by adding `header_len` and `cbytes`. However, due to the potential for integer overflow, the addition of these values may result in a value that cannot be represented in the `int64_t` data type.
+
+Fix Summary:
+The fix addresses the integer-overflow warning by adding a check to ensure that the addition of `header_len` and `cbytes` does not result in overflow before performing the addition.
+
+Detailed Fix:
+The fix modifies the `get_coffsets` function in the `blosc/frame.c` file. Prior to the fix, the code calculates the `off_pos` variable by adding `header_len` and `cbytes`. To address the integer-overflow issue, the fix introduces a check before performing the addition. The check verifies if `cbytes` is less than `INT64_MAX - header_len`. If this condition is true, it means that the addition of `cbytes` and `header_len` will not result in overflow. In this case, the code proceeds to add `cbytes` to `off_pos`. If the condition is false, indicating that the addition would result in overflow, the code skips the addition of `cbytes` and retains `header_len` as the value of `off_pos`. This ensures that the `off_pos` value does not become invalid due to overflow.
+
+After the fix, the relevant code snippet looks as follows:
+
+```c
+if (frame->cframe != NULL) {
+  int64_t off_pos = header_len;
+  if (cbytes < INT64_MAX - header_len) {
+    off_pos += cbytes;
+  }
+  // Rest of the code
+}
+```
+
+This fix prevents the occurrence of the integer-overflow issue, ensuring that the addition of `header_len` and `cbytes` is performed safely without resulting in undefined behavior.

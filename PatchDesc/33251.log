@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability fixed in this patch is an ASAN heap-buffer-overflow when reading frame metalayers. The issue arises from incorrect boundary checks while reading metadata from the frame header.
+
+Summary of the Fix:
+The fix addresses the heap-buffer-overflow vulnerability by improving the boundary checks when reading the content of metalayers from the frame header.
+
+Detailed Description of the Fix:
+1. Before the fix, the code checks the boundaries of the header while reading the metalayer content. However, it fails to ensure that there is enough space to read the content length and the actual content itself.
+2. The fix adds an additional boundary check to validate that there is enough space to read the content length and content. It verifies if `header_len` is less than `offset + 1 + 4 + content_len`, where `offset` is the offset of the content marker.
+3. If the condition fails, indicating insufficient space, the fix returns a `BLOSC2_ERROR_READ_BUFFER` error to prevent further execution and potential heap-buffer-overflow.
+4. The fix ensures that the content length is non-negative and updates the metalayer's `content_len` accordingly.
+5. Finally, the fix allocates memory for the content and copies it from the header, ensuring that the boundary checks for reading the content are also accurate.
+
+Overall, the fix fortifies the boundary checks while reading the metalayer content, preventing potential heap-buffer-overflow vulnerabilities.

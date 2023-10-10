@@ -1,0 +1,63 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is an out-of-bounds read (heap-buffer-overflow) in the function `ndpi_check_tinc` in `tinc.c`.
+The issue arises when processing a packet with a TCP payload. Specifically, there are several places in the code where the loop condition does not check if the current index (`i`) is within the bounds of the `packet_payload` array before accessing it. This can lead to reading data beyond the end of the array, resulting in undefined behavior.
+
+Summary of the Fix:
+
+The fix in this patch addresses the out-of-bounds read issue in the `ndpi_check_tinc` function of the `tinc.c` file. It ensures that the loop conditions always check if the current index (`i`) is within the bounds of the `packet_payload` array before accessing it.
+
+Detailed Description of the Fix:
+
+In the given diff file, the following changes have been made to fix the vulnerability:
+
+1. In the `ndpi_check_tinc` function,
+   - Lines 55-71: Previously, multiple loop conditions did not check if the current index (`i`) was within the bounds of the `packet_payload` array before accessing it. The fix adds checks to ensure that `i` is less than `payload_len` before accessing the `packet_payload` array.
+   
+The fixed code snippet is as follows:
+
+```c
+case 2:
+case 3:
+  if (payload_len > 11 && memcmp(packet_payload, "1 ", 2) == 0 && packet_payload[2] != ' ') {
+    u_int16_t i = 3;
+    u_int8_t numbers_left = 4;
+    while (numbers_left) {
+      while (i < payload_len && packet_payload[i] >= '0' && packet_payload[i] <= '9') {
+        i++;
+      }
+
+      if (i < payload_len && packet_payload[i++] == ' ') {
+        numbers_left--;
+      } else {
+        break;
+      }
+    }
+
+    if (numbers_left) {
+      break;
+    }
+
+    while (i < payload_len &&
+           ((packet_payload[i] >= '0' && packet_payload[i] <= '9') ||
+            (packet_payload[i] >= 'A' && packet_payload[i] <= 'Z'))) {
+      i++;
+    }
+
+    if (i < payload_len && packet_payload[i] == '\n') {
+      if (++flow->tinc_state > 3) {
+        if (ndpi_struct->tinc_cache == NULL) {
+          ndpi_struct->tinc_cache = cache_new(TINC_CACHE_MAX_SIZE);
+        }
+
+        cache_add(ndpi_struct->tinc_cache, &(flow->tinc_cache_entry), sizeof(flow->tinc_cache_entry));
+        NDPI_LOG_INFO(ndpi_struct, "found tinc tcp connection\n");
+        ndpi_set_detected_protocol(ndpi_struct, flow, NDPI_PROTOCOL_TINC, NDPI_PROTOCOL_UNKNOWN, NDPI_CONFIDENCE_DPI);
+      }
+      return;
+    }
+  }
+  break;
+```
+
+These changes ensure that the loop conditions in the `ndpi_check_tinc` function now check if the current index (`i`) is within the bounds of the `packet_payload` array before accessing it, preventing any out-of-bounds read issues.

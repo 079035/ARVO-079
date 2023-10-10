@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability patched in this diff file is a double free of the node id.
+
+Summary of the fix:
+The fix for this vulnerability is to change the assignment of the `typeId` to `dst->content.encoded.typeId` from a direct assignment to using the function `UA_NodeId_copy()`. 
+
+Detailed description of the fix:
+In the original code, the `typeId` is assigned directly to `dst->content.encoded.typeId`. This means that if `typeId` is modified or freed later on, it will also affect `dst->content.encoded.typeId`. This can lead to a double free vulnerability if `typeId` is freed after the assignment. 
+
+The fix modifies the code to use the `UA_NodeId_copy()` function instead of a direct assignment. This function creates a new copy of the node id, ensuring that it is allocated separately from `typeId`. This way, even if `typeId` is later modified or freed, it will not affect `dst->content.encoded.typeId`. This prevents a double free vulnerability.

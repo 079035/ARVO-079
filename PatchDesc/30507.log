@@ -1,0 +1,23 @@
+Vulnerability:
+The vulnerability in the given diff file is a read buffer overflow in the interlaced GIF decode function in the LibGfx library.
+
+Summary of Fix:
+The fix in the given diff file aims to correct the buffer overflow issue by incorporating the necessary boundary checks to prevent the overflow.
+
+Detailed Description of Fix:
+1. The fix begins by adding a boundary check before updating the "row" variable in the interlaced loop of the decode_frame function. It checks if the updated value of "row + INTERLACE_ROW_STRIDES[interlace_pass]" exceeds the image's height. If it does, the interlace pass counter is incremented, and the "row" variable is set to the offset for the next interlace pass.
+
+Updated code snippet:
+```cpp
+if (interlace_pass < 4) {
+    if (row + INTERLACE_ROW_STRIDES[interlace_pass] >= image.height) {
+        ++interlace_pass;
+        if (interlace_pass < 4)
+            row = INTERLACE_ROW_OFFSETS[interlace_pass];
+    } else {
+        row += INTERLACE_ROW_STRIDES[interlace_pass];
+    }
+}
+```
+
+2. By implementing this change, the fix ensures that the row value is correctly updated within the bounds of the image height, preventing any potential buffer overflow. The fix addresses the vulnerability and prevents the read buffer overflow in the interlaced GIF decode functionality in the LibGfx library.

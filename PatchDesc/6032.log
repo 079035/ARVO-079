@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given diff file is a potential buffer overflow that can occur when formatting the property string into the header. 
+
+Summary of the fix:
+The fix for this vulnerability is to use a maximum field width specifier (`%.*s`) when formatting the property string into the header. This limits the number of characters copied from the property string to `MagickPathExtent - 3` to prevent buffer overflow.
+
+Detailed description of the fix:
+In the vulnerable code, the `FormatLocaleString` function is used to format the property string into the `header` buffer. The `header` buffer has a fixed size of `MagickPathExtent` and is filled with spaces at the beginning using `ResetMagickMemory`. The `property` string is then copied into the `header` buffer using `%s` format specifier.
+
+The fix introduced a change in the `FormatLocaleString` call by using the maximum field width specifier `%.*s` instead of `%s`. The maximum field width is calculated as `MagickPathExtent - 3`, which leaves room for the newline character and null terminator in the resulting formatted string. This ensures that the formatted string doesn't overflow the `header` buffer.
+
+By limiting the number of characters copied from the `property` string to the size of `header` buffer, the fix prevents a potential buffer overflow vulnerability.

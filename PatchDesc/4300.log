@@ -1,0 +1,8 @@
+Vulnerability: Double Free
+
+Summary of the fix:
+The fix addresses a double free vulnerability. It prevents freeing the memory for the variable `typeId` twice.
+
+Detailed description of the fix:
+In the original code, the extension object's encoded typeId is assigned to `dst->content.encoded.typeId`, which is a direct reference to `typeId`. This means that when `dst` is freed, `typeId` is freed as well. However, later in the code, the function `ByteString_decodeBinary` may call `UA_NodeId_copy`, which assigns a new value to `dst->content.encoded.typeId`, causing a double free of `typeId`.
+To fix this issue, instead of directly assigning `typeId` to `dst->content.encoded.typeId`, the fix uses `UA_NodeId_copy` to create a new copy of `typeId` and assigns the copied value to `dst->content.encoded.typeId`. This way, when `dst` is freed, only the memory allocated for the copied `typeId` will be freed, preventing the double free vulnerability.

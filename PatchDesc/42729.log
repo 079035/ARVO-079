@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is a potential out-of-bounds memory access. Specifically, there is a missing check for the validity of the sensitivity value (`sl->sens`) before performing a lookup in the `p_sens_val_to_name` name array. This vulnerability can lead to a read memory access signal.
+
+Summary of the Fix:
+
+The fix involves adding a check for the validity of the sensitivity value (`sl->sens`) before performing the lookup in the `p_sens_val_to_name` name array. If the sensitivity value is invalid (greater than the number of primary levels or the corresponding name is not available), the code returns with an error (`-1`).
+
+Detailed Description of the Fix:
+
+In the original code, the sensitivity value (`sl->sens`) is assigned to `l->sens` without any validation. After that, a lookup is done using the sensitivity value as an index in the `p_sens_val_to_name` name array. However, there is no check to ensure that the sensitivity value is within a valid range and that the corresponding name exists in the `p_sens_val_to_name` array. This missing check can lead to an out-of-bounds memory access.
+
+In the fixed code, a check is added to validate the sensitivity value before performing the lookup. The check ensures that the sensitivity value is not greater than the number of primary levels (`p->p_levels.nprim`) and that the corresponding name exists in the `p_sens_val_to_name` array (`p->p_sens_val_to_name[sl->sens - 1]`). If either of these conditions is not met, the code returns with an error (`-1`).
+
+This fix prevents the potential out-of-bounds memory access and ensures that only valid sensitivity values are used for the lookup operation.

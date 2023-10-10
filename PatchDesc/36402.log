@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in the given diff file is the use of an unsorted binary search when finding a table index. This vulnerability could potentially result in incorrect table indices being returned.
+
+Summary of the Fix:
+The fix in this diff file is to use a linear search instead of a binary search for fonts with a small number of entries. This change allows for tables with unsorted entries to be tolerated.
+
+Detailed Description of the Fix:
+1. In the function `find_table_index`, a check is added to determine if the number of tables is less than 16 (`if (tables.len < 16)`).
+2. If the number of tables is less than 16, a linear search using `lfind` function is performed to find the table index. The parameters passed to `lfind` are the tag, table index, `HB_NOT_FOUND_STORE`, and `Index::NOT_FOUND_INDEX`.
+3. If the number of tables is greater than or equal to 16, the existing binary search using `bfind` function is used.
+4. This change allows for small fonts with unsorted table entries to be handled correctly, while still maintaining the faster binary search for larger fonts.
+5. The issue that this fix addresses is documented in the comment above the code change: "Use lfind for small fonts; there are fonts that have unsorted table entries; those tend to work in other tools, so tolerate them."
+6. The fix resolves a GitHub issue (https://github.com/harfbuzz/harfbuzz/issues/3065).

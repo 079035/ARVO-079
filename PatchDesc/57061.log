@@ -1,0 +1,17 @@
+The vulnerability patched in the given diff file is a double free issue in the function `xsltCompMatchAdd` in the `pattern.c` file of the `libxslt` library.
+
+Summary of the fix: The fix involves eliminating the double free vulnerability by removing two `xmlFree` calls on `value` and `value2` variables.
+
+Detailed description of the fix:
+1. The fix starts at line 30 of the diff, where the `xmlFree` calls on `value` and `value2` variables are removed. These `xmlFree` calls are not necessary and were causing a double free vulnerability.
+
+```c
+-    if (value)
+-        xmlFree(value);
+-    if (value2)
+-        xmlFree(value2);
+```
+
+2. By removing these `xmlFree` calls, the code no longer attempts to free `value` and `value2` pointers, which prevents the double free vulnerability.
+
+The fix ensures that the double free vulnerability is resolved, preventing potential crashes or memory corruption issues.

@@ -1,0 +1,15 @@
+Vulnerability:
+
+#59 Resolve troublesome macros hiding parser struct membership and dereferencing that pointer
+
+Summary of fix:
+
+The fix resolves an issue with troublesome macros that were hiding the membership of the parser struct and causing incorrect dereferencing of the pointer.
+
+Detailed description of fix:
+
+The fix addresses a problem with macros that were causing issues with the parser struct. These macros were hiding the membership of the struct and leading to incorrect dereferencing of the pointer. This vulnerability could have potentially caused memory corruption or unexpected behavior in the code.
+
+The fix likely involved modifying or removing the troublesome macros to ensure that the membership of the parser struct is correctly accessed and dereferenced. This would help prevent any potential issues with memory corruption or unexpected behavior.
+
+By resolving the problematic macros, the fix ensures that the parser struct is correctly accessed and any potential vulnerabilities or issues related to incorrect dereferencing are mitigated.

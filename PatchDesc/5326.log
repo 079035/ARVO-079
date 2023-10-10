@@ -1,0 +1,10 @@
+Vulnerability: Arbitrary Image Size
+
+Summary of Fix: The fix limits the maximum width and height of the image to 2048 pixels.
+
+Detailed Description of Fix:
+1. In the diff file, the fix is made in the `utils.cc` file.
+2. The vulnerable code is at line 8 and 9, where the width and height of the image are not limited.
+3. The fix is made at line 12 and 13, where the `Magick::ResourceLimits::width()` and `Magick::ResourceLimits::height()` functions are called to set the maximum width and height of the image to 2048 pixels, respectively.
+4. By limiting the image size, the potential vulnerability of processing images with very large width or height is mitigated.
+5. This fix ensures that any images with a width or height greater than 2048 pixels will not be processed, reducing the risk of resource exhaustion or other potential security issues.

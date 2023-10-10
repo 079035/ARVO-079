@@ -1,0 +1,40 @@
+Vulnerability: The vulnerability patched in this diff file is a potential use-after-move (UAM) bug. 
+
+Summary of the fix: The fix prevents the UAM bug by checking if the source object being moved is the same as the destination object before performing the move assignment. If the objects are the same, the function returns without making any changes.
+
+Detailed description of the fix: 
+1. The fix first checks if the source `KResultOr` object (`other`) being moved is the same as the destination (`this`) by comparing their addresses using the `&` operator. If they are the same, it means the move assignment is being performed from the object itself, and no action is taken.
+```cpp
+if (&other == this)
+    return *this;
+```
+2. If the objects are not the same, the fix proceeds with the move assignment. It first checks if the destination `KResultOr` object has a stored value (`m_have_storage`) and if it is not an error (`!m_is_error`).
+```cpp
+if (!m_is_error && m_have_storage) {
+    value().~T();
+    m_have_storage = false;
+}
+```
+3. The fix then updates the status flags (`m_is_error` and `m_error`) based on the source `KResultOr` object's status. If the source is an error, the error code is assigned to the destination. Otherwise, if the source has a stored value, it is move-constructed into the destination storage while destroying the source value. The `m_have_storage` flag is updated accordingly.
+```cpp
+m_is_error = other.m_is_error;
+if (m_is_error)
+    m_error = other.m_error;
+else {
+    if (other.m_have_storage) {
+        new (&m_storage) T(move(other.value()));
+        m_have_storage = true;
+        other.value().~T();
+        other.m_have_storage = false;
+    }
+}
+```
+4. The fix then sets the status of the source object to indicate that it is now an error with a default success code.
+```cpp
+other.m_is_error = true;
+other.m_error = KSuccess;
+```
+5. Finally, the fix returns a reference to the updated destination `KResultOr` object.
+```cpp
+return *this;
+```

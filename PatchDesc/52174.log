@@ -1,0 +1,7 @@
+Vulnerability: Heap Buffer Overflow
+Summary of the Fix: The fix in this commit addresses a heap buffer overflow vulnerability in the IRC protocol implementation.
+Detailed Description of the Fix:
+1. The code first checks if the detected protocol stack is not equal to NDPI_PROTOCOL_IRC and the packet counter is less than 20, and the payload packet length is greater than or equal to 8.
+2. If the condition is true, the code performs various checks and operations on the packet payload.
+3. One of the checks is done on the packet payload where it checks for specific strings like "USER ", "NICK ", "PASS ", ":", and various others. If any of these strings are found, it extracts the part of the payload after the string and stores it in a buffer.
+   - There is a vulnerability here where the snprintf() function is used to copy the extracted payload into a fixed-sized buffer without checking

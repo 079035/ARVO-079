@@ -1,0 +1,10 @@
+Vulnerability:
+There is a heap buffer overflow vulnerability in the function `_bfd_error_handler` in the `coffgen.c` file. The vulnerability occurs when printing the error message "unrecognized storage class" for a symbol error. If the symbol name is the last string in its section and is not terminated, the code runs off the end of the buffer.
+
+Summary of Fix:
+The fix for this vulnerability involves terminating the section with an extra 0 in the `build_debug_section` function.
+
+Detailed Description of Fix:
+In the `build_debug_section` function, the fix modifies the allocation and reading of the debug section. It adds 1 to the `sec_size` variable when allocating memory using `_bfd_alloc_and_read` to ensure that there is enough space for the extra 0-byte termination. This prevents the buffer overflow when the symbol name is the last string in its section and is not terminated. Additionally, the fix sets the last byte of the `debug_section` array to 0, effectively terminating the section with an extra 0-byte.
+
+After applying the fix, the buffer is properly terminated, preventing any potential heap buffer overflow.

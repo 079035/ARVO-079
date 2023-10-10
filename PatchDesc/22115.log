@@ -1,0 +1,24 @@
+Vulnerability Description:
+- There is a potential vulnerability in the ReadTXTImage function in txt.c file.
+- The code does not handle the case where the pointer 'q' is NULL, leading to a possible null pointer dereference.
+
+Summary of Fix:
+- The fix ensures that if 'q' is NULL, the function returns a destroyed image instead of attempting to access it.
+
+Detailed Fix Description:
+1. In the ReadTXTImage function, locate the following code block:
+```C
+if (q == (Quantum *) NULL)
+  continue;
+```
+2. Replace the code block with the following code:
+```C
+if (q == (Quantum *) NULL)
+{
+  status=MagickFalse;
+  break;
+}
+```
+3. Save and rebuild the code.
+
+After the fix, if 'q' is NULL, the function will set 'status' to false and break the loop, returning a destroyed image. This prevents the possibility of a null pointer dereference and ensures the code operates correctly.

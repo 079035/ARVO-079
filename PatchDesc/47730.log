@@ -1,0 +1,22 @@
+Vulnerability:
+There is a stack-buffer-overflow vulnerability in the `tlsCheckUncommonALPN` function in the `tls.c` file. The vulnerability occurs when the `alpn_len` is greater than or equal to 64, causing a stack buffer overflow in the `strncpy` function.
+
+Summary of the fix:
+The fix for the vulnerability avoids zeroing the entire string and ensures that even if `alpn_len` is greater than or equal to 64, the stack buffer overflow will not occur.
+
+Detailed description of the fix:
+In the original code, the `str` array is defined with a size of 64 and is zeroed out. Then, the `alpn_start` string is copied to the `str` array using `strncpy`. However, if `alpn_len` is greater than or equal to 64, the `strncpy` function writes past the end of the `str` array, causing the stack buffer overflow.
+
+To fix the vulnerability, the code has been modified as follows:
+
+1. The `str` array is no longer zeroed out during declaration.
+
+2. The `str_len` variable of type `size_t` is introduced to store the length of the string to be copied.
+
+3. The `str_len` is assigned the minimum value between `alpn_len` and the size of the `str` array.
+
+4. If `str_len` is greater than 0, the `alpn_start` string is copied to the `str` array using `strncpy` with `str_len` as the length parameter.
+
+5. The last character of the `str` array is set to '\0' to ensure proper string termination.
+
+By performing these changes, the fix ensures that even if the `alpn_len` is greater than or equal to 64, the stack buffer overflow will not occur. The `strncpy` function is used safely, and the `str` array is properly terminated as a string.

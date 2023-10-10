@@ -1,0 +1,21 @@
+Vulnerability:
+Use-of-uninitialized-value in LibRaw::parse_fuji_compressed_header function. The `uchar header[16];` array is not initialized and contains garbage values when the input stream reaches the end of file (eof).
+
+Summary of the fix:
+The fix in this patch ensures that the `header` array is properly initialized before reading data into it from the input stream. If the read operation fails because the file is at the end of the stream, the function returns early.
+
+Detailed description of the fix:
+1. Previously, the `header` array was declared but not initialized.
+```cpp
+uchar header[16];
+```
+The uninitialized array could contain garbage values.
+
+2. After the fix, the read operation is guarded with a condition to handle the case when the input stream is at the end of the file (eof).
+```cpp
+if (libraw_internal_data.internal_data.input->read(header, 1, sizeof(header)) != sizeof(header))
+    return;
+```
+It checks if the return value of the `read` operation is not equal to the expected size of `header` (16 bytes). If so, the function returns early, preventing further processing with uninitialized values.
+
+The fix ensures that the `header` array is properly initialized when reading data from the input stream, preventing the use of uninitialized values later in the function.

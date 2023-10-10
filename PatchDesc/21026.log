@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in the code is caused by an out-of-bounds memory access. Specifically, in the function `is_valid()` within the `tuple_iterator_t` struct, there is an incorrect memory range check. The code checks if the `var_data_bytes` ranges are valid for both the `current_tuple` and the current tuple's data size. However, the size of the current tuple's data is not correctly bounded, potentially leading to accessing memory beyond the valid range.
+
+Fix Summary:
+The fix ensures that the memory range check in the `is_valid()` function takes into account the maximum size between the current tuple's data size and the tuple's size calculated based on the axis count.
+
+Detailed Fix Description:
+To fix the vulnerability, the following changes were made:
+1. In the `is_valid()` function within the `tuple_iterator_t` struct, the line `var_data_bytes.check_range(current_tuple, current_tuple->get_data_size())` was modified to `var_data_bytes.check_range(current_tuple, hb_max(current_tuple->get_data_size(), current_tuple->get_size(axis_count)))`. This change ensures that the memory range check accounts for the maximum size between the current tuple's data and the calculated tuple size based on the axis count.
+2. The fix also updates the condition in the `is_valid()` function to include a check for the current tuple's size. The condition `current_tuple->get_size(axis_count)` is added to verify that the size of the current tuple is valid.
+3. Additionally, the return type of the `get_serialized_data()` function was updated to `const HBUINT8*` to correctly return the serialized data pointer.
+
+The fix ensures that the memory access is within the valid range and prevents potential out-of-bounds memory access vulnerabilities.

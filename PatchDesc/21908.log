@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability in the given diff file is a potential use-after-free.
+
+Summary of the fix:
+The fix ensures that the raw pointer to "descendent_uuids" is reset when the owned vector is freed.
+
+Detailed description of the fix:
+In the original code, when resolving parent tracks recursively, a vector "descendent_uuids" is used to keep track of the ancestors seen in the recursion. This vector is initially owned by a unique pointer "owned_descendent_uuids". If the input data contains loops or extremely long ancestor track chains, the size of the "descendent_uuids" vector can exceed a certain limit (kMaxAncestors) or a loop can be detected. In such cases, the fix frees the "owned_descendent_uuids" vector and resets the raw pointer to "descendent_uuids" to nullptr.
+
+This fix ensures that the raw pointer is not accessed after it has been freed, thus preventing a potential use-after-free vulnerability.

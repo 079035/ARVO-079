@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability in the code is a heap-buffer-overflow error when decoding the variable literal length. This occurs when copying literals to the output buffer.
+
+Summary of the fix:
+The fix for this vulnerability involves adding overflow detection checks before the literal length calculation and the copying of literals to the output buffer.
+
+Detailed description of the fix:
+1. Overfl

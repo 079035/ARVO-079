@@ -1,0 +1,12 @@
+Vulnerability:
+There is a vulnerability in the `ndpi_strncasestr()` function in the `ndpi_main.c` file. The code uses an unsigned integer (`size_t`) variable `i` to iterate over a loop and compare substrings. However, the loop condition and the calculation of the loop limit result in a signed comparison, potentially leading to unexpected behavior.
+
+Summary of the Fix:
+The fix changes the type of the variable `i` from `size_t` to `int` to use a signed integer for the loop counter, allowing for a proper comparison with the loop limit.
+
+Detailed Description of the Fix:
+In the vulnerable code, the variable `i` is declared as `size_t` and is used to iterate over a loop in the `ndpi_strncasestr()` function. The loop condition `i < (str1_len - str2_len + 1)` compares an unsigned value (`i`) with a signed value (`str1_len - str2_len + 1`), potentially leading to unexpected behavior. This vulnerability was reported and partially fixed in a previous commit.
+
+The fix replaces the type of the `i` variable from `size_t` to `int`, making it a signed integer. This change ensures that the loop counter and the loop limit are of the same signedness, preventing any unexpected behavior.
+
+By using a signed integer for `i`, the loop now iterates correctly and compares substrings as intended. This fix addresses the memory access issue in the `ndpi_strncasestr()` function, ensuring correct and predictable behavior.

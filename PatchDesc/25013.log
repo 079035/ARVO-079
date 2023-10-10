@@ -1,0 +1,8 @@
+Vulnerability:
+Access to uninitialized memory.
+
+Summary of the fix:
+The fix in this commit ensures that if the `serialize()` call fails to write the object, the `varstore_prime` fields cannot be safely read.
+
+Detailed description of the fix:
+The patch updates the `subset()` function in the `VariationStore` struct. In the original code, the function returned a trace based on the truthiness of `varstore_prime->dataSets`. However, the `varstore_prime` object was accessible even if the `serialize()` call failed, potentially leading to a use of uninitialized memory. The fix adds an additional check to return a trace only if the `serialize()` call was successful and the `c->serializer` object is not in an error state. This ensures that `varstore_prime` can only be accessed safely if the serialization is successful.

@@ -1,0 +1,9 @@
+Vulnerability: Insufficient data check for UDP header
+
+Summary of the fix: The fix adds a conditional check to ensure that there is enough data available for the UDP header before processing it.
+
+Detailed description of the fix:
+1. In the "if" condition on line 1677, a check is added to verify if the captured packet has enough data for the UDP header. 
+2. If the condition fails, the function returns the current value of `nproto`, indicating that the packet processing failed due to insufficient data for the UDP header.
+
+The fix ensures that the code checks for sufficient data before attempting to process the UDP header, preventing potential memory access errors or incorrect processing due to insufficient data.

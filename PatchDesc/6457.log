@@ -1,0 +1,30 @@
+Vulnerability:
+
+The vulnerability in the given diff file is a memory leak. In the function `WritePCDImage`, if the condition `if (image->columns < image->rows)` is true, the image is rotated and assigned to `rotate_image`. However, after rotating the image, the original `rotate_image` is not destroyed, resulting in a memory leak.
+
+Summary of the fix:
+
+The fix for this vulnerability is to destroy the `rotate_image` after rotating it, and assign the blob of the original image to the rotated image.
+
+Detailed description of the fix:
+
+1. After rotating the image, add the following line to destroy the `rotate_image`:
+
+```c
+DestroyImage(rotate_image);
+```
+
+2. Assign the blob of the original image to the rotated image by replacing the following line:
+
+```c
+pcd_image=rotate_image;
+```
+
+with:
+
+```c
+pcd_image=rotate_image; 
+pcd_image->blob=ReferenceBlob(image->blob);
+```
+
+These changes ensure that the rotated image is properly destroyed to avoid memory leaks, and the blob reference is updated to the original image's blob.

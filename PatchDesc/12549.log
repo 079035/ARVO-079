@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is related to the value of the macro `AOM_DEC_BORDER_IN_PIXELS` being set to an incorrect value of 64 instead of the original value of 288.
+
+Summary of fix:
+The fix changes the value of the `AOM_DEC_BORDER_IN_PIXELS` macro back to the original value of 288.
+
+Detailed description of fix:
+In the original code, the `AOM_DEC_BORDER_IN_PIXELS` macro was defined with a value of 288. However, in a previous commit identified as `2fd0077fe14aa1b6dbcd30f3acc95c5eba5c76bb`, the value of `AOM_DEC_BORDER_IN_PIXELS` was mistakenly changed to 64. This change caused several oss-fuzz bugs.
+
+To fix these bugs, the commit `b46542180d551d5e4eb666cf35dd62395ba43f3e` changes the value of `AOM_DEC_BORDER_IN_PIXELS` back to the original value of 288. This change ensures that the macro is set to the correct value, resolving the issues reported by oss-fuzz.
+
+The fix is necessary to address the reported oss-fuzz bugs and restore the functionality of the code to its intended state.

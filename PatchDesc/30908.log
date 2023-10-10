@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is a heap buffer overflow.
+
+Summary of the fix:
+The fix addresses the heap buffer overflow issue found by a fuzzer.
+
+Detailed description of the fix:
+1. In the `LigatureArray::subset` function, a check is added to ensure that `ligature_count` is within the bounds of the array before accessing `this->arrayZ`.
+2. If `ligature_count` is greater than or equal to the length of the `this` object, the loop is terminated using a `break` statement.
+3. This prevents an out-of-bounds access to `this->arrayZ` and avoids the heap buffer overflow.
+4. The fix also includes necessary code changes for serialization and subset generation.
+
+No additional information is provided in the diff file.

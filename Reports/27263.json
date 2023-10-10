@@ -1,0 +1,110 @@
+{
+    "fix": "https://github.com/fluent/fluent-bit//commit/df2af999105cd6c94ec8b533bcca498664b1aa16",
+    "verify": "0",
+    "localId": 27263,
+    "project": "fluent-bit",
+    "fuzzer": "honggfuzz",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow WRITE 8",
+    "severity": "High",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27263,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1604709179,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=4901088177946624\n\nProject: fluent-bit\nFuzzing Engine: honggfuzz\nFuzz Target: flb-it-fuzz-utils_fuzzer_OSSFUZZ\nJob Type: honggfuzz_asan_fluent-bit\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow WRITE 8\nCrash Address: 0x7f4673c025c1\nCrash State:\n  tdefl_compress_lz_codes\n  tdefl_compress_block\n  tdefl_flush_block\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: High\n\nRegressed: https://oss-fuzz.com/revisions?job=honggfuzz_asan_fluent-bit&range=202011050624:202011060613\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=4901088177946624\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27263,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1604779555,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2021-02-05"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27263,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1611949912,
+                "content": "This bug is approaching its deadline for being fixed, and will be automatically derestricted within 7 days. If a fix is planned within 2 weeks after the deadline has passed, a grace extension can be granted.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Deadline-Approaching"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27263,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1612554464,
+                "content": "This bug has exceeded our disclosure deadline. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit -deadline-approaching Deadline-Exceeded"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27263,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "1355924921",
+                    "displayName": "da...@adalogics.com"
+                },
+                "timestamp": 1614075299,
+                "content": "Fixed in https://github.com/fluent/fluent-bit/pull/3101"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 27263,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1614093493,
+                "content": "ClusterFuzz testcase 4901088177946624 is verified as fixed in https://oss-fuzz.com/revisions?job=honggfuzz_asan_fluent-bit&range=202102220606:202102230611\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "df2af999105cd6c94ec8b533bcca498664b1aa16",
+    "repo_addr": "https://github.com/fluent/fluent-bit/"
+}

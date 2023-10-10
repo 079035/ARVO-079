@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability patched in the provided diff file is related to parsing IPv6 extension headers. The code does not check if the `ipsize` is sufficient to contain the IPv6 header and its extension headers, which could lead to accessing memory beyond the input buffer.
+
+Summary of the Fix:
+The fix introduced in the patch adds a check to ensure that the `ipsize` is large enough to contain the IPv6 header and its extension headers. If the `ipsize` is not sufficient, the function returns early, indicating that the parsing cannot continue.
+
+Detailed Description of the Fix:
+The following code was added to fix the vulnerability:
+
+```c
+if(ipsize < sizeof(struct ndpi_ipv6hdr) + ip_len)
+  return(NULL);
+```
+
+This check verifies if the length of the input packet (`ipsize`) is less than the minimum required size, which is the sum of the size of the IPv6 header (`sizeof(struct ndpi_ipv6hdr)`) and the payload length (`ip_len`). If the length is insufficient, the function returns `NULL`, indicating that the parsing cannot proceed safely.
+
+This check ensures that the code will only attempt to parse the extension headers if the received packet is large enough to contain them. By returning `NULL` early, potential out-of-bounds memory access and subsequent vulnerabilities are prevented.

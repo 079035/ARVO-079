@@ -1,0 +1,24 @@
+Vulnerability Description:
+In the given diff file, the vulnerability is a null-dereference write in the function `MqttProps_Free`. 
+
+Summary of the Fix:
+The fix addresses the null-dereference write vulnerability in the `MqttProps_Free` function.
+
+Detailed Description of the Fix:
+The fix includes the following changes:
+
+1. Previously, in the function `MqttProps_Free`, there was no null check before accessing the `properties` pointer. This could lead to a null-dereference write error if the `properties` pointer was null.
+   - Before the fix:
+     ```c
+     MqttProp_Free(properties);
+     ```
+
+2. The fix adds a null check before accessing the `properties` pointer. If the `properties` pointer is null, it will skip the `MqttProp_Free` operation to avoid the null-dereference write error.
+   - After the fix:
+     ```c
+     if (properties != NULL) {
+         MqttProp_Free(properties);
+     }
+     ```
+
+The fix ensures that the `MqttProps_Free` function does not cause a null-dereference write error.

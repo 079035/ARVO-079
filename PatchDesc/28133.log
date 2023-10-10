@@ -1,0 +1,31 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is related to the parsing and validation of PNG files in the LibGfx library. Specifically, the PNG files with invalid compression method and filter method were accepted during parsing, which could lead to issues later in the code.
+
+Summary of the fix:
+
+The fix introduced two new helper functions, `is_valid_compression_method()` and `is_valid_filter_method()`, to validate the compression and filter methods of the PNG file. These functions check if the provided method values are valid before accepting the file. This change ensures that only valid PNG files are processed.
+
+Detailed description of the fix:
+
+1. Two new helper functions, `is_valid_compression_method()` and `is_valid_filter_method()`, are introduced to validate the compression and filter methods respectively.
+
+2. The `is_valid_compression_method()` function checks if the provided compression method value is equal to 0, which is the only valid value for compression in PNG files.
+
+3. The `is_valid_filter_method()` function checks if the provided filter method value is less than or equal to 4, which is the valid range of filter method values in PNG files.
+
+4. In the `process_IHDR()` function, these new helper functions are called to validate the compression and filter methods of the PNG file.
+
+5. If the compression method is not valid, an error message is printed and the file is rejected.
+
+6. If the filter method is not valid, an error message is printed and the file is rejected.
+
+7. By performing these validations during the parsing of the IHDR chunk (header chunk), the code ensures that only PNG files with valid compression and filter methods are processed further.
+
+8. The fix also includes debug print statements to display the parsed PNG attributes, such as width, height, color type, compression method, filter method, and interlace method, for debugging purposes.
+
+9. Additionally, there is a check for unknown interlace methods, and if encountered, an error message is printed and the file is rejected.
+
+10. The fix also includes additional checks for the validity of the color type and bit depth combinations, based on the PNG specification, to ensure that only valid combinations are accepted.
+
+11. If any of the validations fail, the function returns false, indicating that the PNG file is invalid and should not be processed further.

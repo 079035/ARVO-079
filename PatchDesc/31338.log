@@ -1,0 +1,12 @@
+Vulnerability:
+There is a redundant cursor update in the `move_one_down` function in the `EditingEngine.cpp` file of the LibGUI library.
+
+Summary of the Fix:
+The redundant cursor update has been removed.
+
+Detailed Description of the Fix:
+In the original code, the function `move_one_down` checks if the cursor is below the last line of the editor or if wrapping is enabled. If either condition is true, the function proceeds to update the cursor position.
+
+However, there is a redundant cursor update in the code. 
+
+The fix removes the redundant cursor update. Now, the code correctly checks if the cursor is below the last line or if wrapping is enabled, and then performs the necessary cursor movement logic.

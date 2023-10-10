@@ -1,0 +1,11 @@
+Vulnerability: In the given diff file, the vulnerability being patched is the incomplete language mappings in the `mov_mdhd_language_map` table in the `libavformat/isom.c` file.
+
+Summary of the Fix: The fix involves adding ISO 639 language codes to the `mov_mdhd_language_map` table for languages that were previously missing.
+
+Detailed Description of the Fix:
+1. Several languages were missing ISO 639 codes in the `mov_mdhd_language_map` table, causing incomplete language mappings.
+2. To fix this, the developer added ISO 639 codes for the missing languages in the `mov_mdhd_language_map` table.
+3. The added ISO 639 codes provide complete mappings between the numeric codes from the `mdhd` atom and the respective languages.
+4. The added language mappings ensure accurate language identification and compatibility within the context of the codebase.
+5. This fix addresses the issue reported in ticket #9743, where certain languages were missing ISO 639 mappings.
+6. The fix is signed off by the author and is included in the commit with the given hash (58880a8ea8d1aa0497e88f0da4e88455db9ba723).

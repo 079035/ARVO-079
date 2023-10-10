@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability that is patched in this diff file is an out-of-array access bug.
+
+Summary of the fix:
+The fix checks the size of the packet more completely to prevent out-of-array access.
+
+Detailed description of the fix:
+In the previous code, the number of samples in the frame (`frame->nb_samples`) was calculated by multiplying the packet size by 8 and dividing it by the number of channels (`ctx->ch_layout.nb_channels`). However, this calculation did not include a check to ensure that the result is a multiple of the number of channels. This could lead to an out-of-array access issue.
+
+To fix the vulnerability, the code now includes a check before calculating the number of samples. If the result of `packet->size * 8LL % ctx->ch_layout.nb_channels` is non-zero, indicating that the division is not exact, the function returns with `AVERROR_PATCHWELCOME`. This effectively prevents out-of-array access.
+
+Additionally, the `frame->nb_samples` calculation has been modified to use `packet->size * 8LL` instead of `packet->size * 8` to ensure that the calculation is done with 64-bit integers to avoid integer overflow.
+
+Overall, these changes ensure that the packet size is checked more completely and that the number of samples calculation is accurate, fixing the out-of-array access vulnerability.

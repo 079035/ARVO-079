@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in the given code is that there is a potential buffer overflow in the function `Uart::ReceiveTask()`. If the received buffer length `aBufLength` is equal to the maximum buffer size `kRxBufferSize`, the code will attempt to write a NULL terminator to `mRxBuffer` even if there is no space left in the buffer to accommodate it.
+
+Summary of the fix:
+The fix for this vulnerability is to modify the condition `if (mRxLength < kRxBufferSize)` to `if (mRxLength < kRxBufferSize - 1)` in order to ensure that there is always space for the NULL terminator in the buffer `mRxBuffer`.
+
+Detailed description of the fix:
+1. The code makes use of a circular buffer `mRxBuffer` to store the received characters. The buffer has a maximum size of `kRxBufferSize`.
+2. Previously, the condition `if (mRxLength < kRxBufferSize)` was used to check if there is space left in the buffer to store the received character. If there is space, the character is stored in the buffer and the buffer size `mRxLength` is incremented.
+3. However, this condition does not account for the space needed for the NULL terminator character.
+4. To fix this, the condition is modified to `if (mRxLength < kRxBufferSize - 1)`. This ensures that there is always space for the NULL terminator in the buffer.
+5. Now, if the received character is within the buffer size limit and there is space for the NULL terminator, the character is stored in the buffer and the buffer size `mRxLength` is incremented.
+6. This fix prevents a potential buffer overflow vulnerability by ensuring that the buffer is not overflowed when attempting to write the NULL terminator.

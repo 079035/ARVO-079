@@ -1,0 +1,36 @@
+Vulnerability:
+The vulnerability in the code can be described as follows:
+- The `skip_name()` function is used to skip the name part of a contact in a Contact HF (Header Field).
+- Inside the function, there is a check for special characters ':' and ';'. If either of these characters is found, the function stops and returns prematurely.
+- However, there is a bug in the code where the length of the name part is not properly adjusted when ';' is encountered. As a result, the length of the name part may be incorrect.
+
+Fix Summary:
+The fix in the code can be summarized as follows:
+- Update the code to properly adjust the length of the name part when encountered with both ':' and ';'.
+- This ensures that the length of the name part is correctly calculated, avoiding any potential incorrect behavior.
+
+Detailed Fix Description:
+1. In the `skip_name()` function, update the following lines:
+```c
+if (*p == ':' || *p == ';') {
+    if (last_wsp) {
+        _s->s = last_wsp;
+        _s->len -= last_wsp - _s->s + 1;
+    }
+    return 0;
+}
+```
+to:
+```c
+if (*p == ':' || *p == ';') {
+    if (last_wsp) {
+        _s->s = last_wsp;
+        _s->len -= last_wsp - _s->s;
+    } else {
+        _s->len -= i;
+    }
+    return 0;
+}
+```
+2. After making the above changes, recompile and test the code to ensure that the length of the name part is correctly adjusted when encountered with ':' or ';'.
+3. The fix ensures that the length of the name part is accurately calculated, avoiding any potential incorrect behavior related to the length of the name part.

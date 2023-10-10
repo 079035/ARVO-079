@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in this code is a misspelled flag name in the CMakeLists.txt file. The option for enabling the Nightfall filter is defined with the name "FLB_FILTER_Nightfall" instead of "FLB_FILTER_NIGHTFALL".
+
+Summary of the fix:
+The fix in this code is to correct the misspelled flag name by changing "FLB_FILTER_Nightfall" to "FLB_FILTER_NIGHTFALL" in the CMakeLists.txt file.
+
+Detailed description of the fix:
+The fix in this code is a simple correction of the misspelled flag name. The original line of code has the option defined as "FLB_FILTER_Nightfall" with a capital 'N'. The fix changes it to "FLB_FILTER_NIGHTFALL" with all capital letters, which is consistent with the naming convention used for other flags.
+
+By correcting the flag name, the code aligns with the intended usage of the Nightfall filter. This fix ensures that the Nightfall filter can be enabled and used correctly in the codebase.
+
+The fix also ensures consistency in the codebase by following the established naming convention for flags in the CMakeLists.txt file.

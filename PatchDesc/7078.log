@@ -1,0 +1,19 @@
+Vulnerability:
+The vulnerability fixed in this diff file is related to a potential memory leak. In the function `DrawClipPath`, if the `clone_info->clip_mask` variable is not NULL, it is not being freed before assigning it a new value.
+
+Summary of Fix:
+The fix consists of adding a check to see if `clone_info->clip_mask` is not NULL before freeing its memory in the `DrawClipPath` function.
+
+Detailed Description of Fix:
+In the `DrawClipPath` function, the code previously did not check if `clone_info->clip_mask` was NULL before freeing its memory. The fix adds a check to ensure that `clone_info->clip_mask` is not NULL before freeing its memory. This prevents a potential memory leak.
+
+Fixed code:
+```diff
+-  clone_info->clip_mask=(char *) NULL;
++  if (clone_info->clip_mask != (char *) NULL)
++    clone_info->clip_mask=DestroyString(clone_info->clip_mask);
+```
+
+Initially, `clone_info->clip_mask` is set to `NULL` to indicate that no clip mask is specified. Before setting a new value to `clone_info->clip_mask`, the fixed code checks if it is not NULL, and if so, it calls `DestroyString` to free the memory.
+
+This fix ensures that there is no memory leak in the `DrawClipPath` function.

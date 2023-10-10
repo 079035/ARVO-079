@@ -1,0 +1,17 @@
+Vulnerability:
+
+The vulnerability in the given code patch is an out-of-bound read in the ASN parsing logic. This can lead to memory corruption or information disclosure.
+
+Summary of the fix:
+
+The fix prevents the out-of-bound read issue by adding checks for the buffer boundaries before accessing the data.
+
+Detailed description of the fix:
+
+1. The fix adds checks for buffer boundaries after parsing the CertStatus in the DecodeSingleResponse function. It checks if the index (idx) is greater than or equal to the size of the input data. If it is, the function returns BUFFER_E to indicate a buffer error.
+
+2. In addition to the previous check, the fix also checks the buffer boundaries for the "thisDateParsed" data. It verifies if the index (idx) plus the localIdx is greater than or equal to the size of the input data. If it is, the function returns BUFFER_E.
+
+3. Similarly, the fix adds checks for the buffer boundaries for the "nextDateParsed" data. It verifies if the index (idx) plus the localIdx is greater than or equal to the size of the input data. If it is, the function returns BUFFER_E.
+
+Overall, the fix adds buffer boundary checks at critical points in the code to prevent out-of-bound reads and potential memory corruption or information disclosure.

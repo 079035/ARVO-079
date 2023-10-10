@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to accessing memory out of bounds. In the function `SamsungV2Decompressor::decompressRow()`, there is a check for the motion offset of the reference pixel. However, for the last 16 pixels of the row, the motion offset can result in the `refpixel` pointing out of the row bounds.
+
+Summary of the fix:
+The fix added an additional check for the last 16 pixels of the row to ensure that the `refpixel` does not go beyond the row bounds.
+
+Detailed description of the fix:
+The fix introduced two checks for the last 16 pixels of the row:
+1. If `col + 16 == width` (i.e., if we are at the last 16 pixels of the row), then the `refpixel` is compared with `img_up2 + 16` to ensure it does not go beyond the upper bound of the row.
+2. Additionally, if the `doAverage` flag is true and the `refpixel + 2` (next pixel) is compared with `img_up2 + 16` to ensure it does not go beyond the upper bound of the row.
+
+If any of these checks fail, an exception is thrown indicating a bad motion at the end of the row. This fix ensures that the `refpixel` does not point to memory outside the row bounds, preventing potential memory access violations.

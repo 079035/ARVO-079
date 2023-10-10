@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the given diff file is that the `sanitize_records` function is not being called in the `sanitize` function.
+
+Summary of the Fix:
+The fix sanitizes the name records by calling the `sanitize_records` function in the `sanitize` function.
+
+Detailed Description of the Fix:
+1. In the `sanitize` function, a new line is added to call the `sanitize_records` function, like this: `sanitize_records (c)`
+2. The `sanitize_records` function is defined. It takes a `hb_sanitize_context_t` pointer `c`, and a `const void*` `string_pool` pointer. It returns a boolean value.
+3. The `sanitize_records` function is called with the parameters `c` and `(this+stringOffset).arrayZ`.
+4. The `sanitize_records` function then calls the `sanitize` function of the `nameRecordZ` object, passing the `c`, `count`, and `string_pool` parameters.
+5. The `sanitize` function of the `nameRecordZ` object performs the actual sanitization of the name records, returning a boolean value indicating whether the sanitization was successful or not.
+6. The `sanitize_records` function returns the value returned by the `sanitize` function, indicating whether the sanitization of the name records was successful or not.
+7. The `sanitize` function of the `name` struct now includes the check for the sanitization of name records in its return statement.

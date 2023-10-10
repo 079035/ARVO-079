@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is an out-of-bounds read in the `cil_print_recursive_blockinherit` function in `cil_resolve_ast.c`. This vulnerability leads to a heap buffer overflow when the CIL compiler tries to report a recursive blockinherit with an optional block.
+
+Summary of the fix:
+The fix adds support for other block kinds in the `cil_print_recursive_blockinherit` function. It uses the `cil_node_to_string` function to correctly show the other block kinds, thus preventing the out-of-bounds read vulnerability.
+
+Detailed description of the fix:
+1. In the function `cil_print_recursive_blockinherit`, a new condition is added to handle block nodes with flavor `CIL_OPTIONAL`. If the `curr` node has `CIL_OPTIONAL` flavor, the `cil_tree_log` function is called with the message `"optional %s"`, where `%s` is the name of the optional block.
+
+2. Another new condition is added to handle all other block kinds. If the `curr` node does not have flavors `CIL_BLOCK`, `CIL_BLOCKINHERIT`, or `CIL_OPTIONAL`, the `cil_tree_log` function is called with the message `"%s"`, where `%s` represents the string representation of the `curr` node obtained using the `cil_node_to_string` function.
+
+These modifications allow the `cil_print_recursive_blockinherit` function to correctly handle all block kinds, avoiding the out-of-bounds read vulnerability.

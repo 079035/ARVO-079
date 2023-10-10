@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to a potential error in disassembling functions. Specifically, the issue is that symbols that end up in the ".text" section, which are not actually functions but data, are being disassembled as if they were functions.
+
+Summary of the Fix:
+The fix adds a check to ensure that the disassembling process is only performed for the x86 architecture. If the architecture is not x86, the function returns early and no disassembling is performed.
+
+Detailed Description of the Fix:
+1. The fix begins by adding a conditional check to the code, specifically checking if the `info.arch` is not equal to `CS_ARCH_X86`. This condition checks if the disassembling is being performed for an architecture other than x86.
+2. If the condition is true (i.e., the architecture is not x86), the function returns early using the `return` statement. This ensures that no disassembling is performed for non-x86 architectures.
+3. If the condition is false (i.e., the architecture is x86), the disassembling process continues as before. The rest of the code remains unchanged.
+
+This fix prevents the erroneous disassembling of symbols in the ".text" section that are not actually functions. By checking the architecture beforehand, the code ensures that disassembling is only performed for the x86 architecture, eliminating the error.

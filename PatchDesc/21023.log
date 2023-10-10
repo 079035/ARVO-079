@@ -1,0 +1,24 @@
+Vulnerability:
+The vulnerability in the code is a buffer overflow in the `magick` array. The `magick` array is declared to have a size of 13, but in the code, it is being written to up to index 12. This means that if the ICC profile length is greater than or equal to 13, writing to `magick[12]` will cause a buffer overflow.
+
+Summary of fix:
+The fix for this vulnerability is to initialize `magick[12]` with the null character '\0' after the loop that reads characters into `magick`.
+
+Detailed description of fix:
+To fix the vulnerability, the following code should be added after the for loop that reads characters into the `magick` array:
+
+```c
+magick[i] = '\0';
+```
+
+This will ensure that the `magick` array is properly null-terminated, preventing any buffer overflow.
+
+After the fix, the relevant code snippet should look like this:
+
+```c
+for (i = 0; i < 12; i++)
+  magick[i] = (char) GetCharacter(jpeg_info);
+magick[i] = '\0'; // <-- Fix: null-terminate the magick array
+```
+
+This fix ensures that even if the length of the ICC profile is greater than 12, the `magick` array will not overflow and cause undefined behavior.

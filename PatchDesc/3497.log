@@ -1,0 +1,11 @@
+The vulnerability that was patched in this diff file is the catching of `IOException` in the `decodeOldFormat()` function of the `Cr2Decoder` class.
+
+Summary of the fix:
+The fix involves removing the `try-catch` block that catches `IOException` and setting the error message of the `mRaw` object.
+
+Detailed description of the fix:
+In the original code, the `decodeOldFormat()` function attempts to decode the image using the `l.decode()` call. If an `IOException` is thrown during the decoding process, it is caught and the error message is set for the `mRaw` object.
+
+However, in the fixed code, the `try-catch` block has been removed. The `l.decode()` call is made directly without catching any exceptions. This means that if an `IOException` occurs during the decoding process, it will no longer be caught and the error message will not be set for the `mRaw` object.
+
+This fix assumes that the calling code of the `decodeOldFormat()` function will handle any potential exception that may occur during the decoding process.

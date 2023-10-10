@@ -1,0 +1,20 @@
+Vulnerability:
+The vulnerability that is patched in this diff file is a potential crash on startup when using a mixed configuration of default and non-default listeners.
+
+Summary of the Fix:
+The fix ensures that the configuration supports mixed default/non-default listeners without causing a crash on startup.
+
+Detailed Description of the Fix:
+1. The code first initializes a variable `def_listener` to -1.
+2. It then checks if the `config->default_listener` is set.
+3. If `config->default_listener` is set, the code iterates through each listener in the `config->listeners` array and checks if it matches the default listener.
+4. If a match is found, the index of the default listener in the `config->listeners` array is stored in the `def_listener` variable.
+5. Next, the code increments the `config->listener_count` to account for the new listener that will be added.
+6. The code then reallocates memory for the `config->listeners` array to accommodate the increased number of listeners.
+7. If the reallocation fails due to insufficient memory, an error message is logged, and the function returns `MOSQ_ERR_NOMEM` to indicate the failure.
+8. Once the memory allocation is successful, the code accesses the newly added listener by setting the `listener` pointer to point to the last element in the `config->listeners` array.
+9. The `listener` structure is then zero-initialized to ensure all its members are properly initialized.
+10. Memory is allocated for the `listener->security_options` structure and zero-initialized.
+11. If the memory allocation for `listener->security_options` fails, an error message is logged, and the function returns `MOSQ_ERR_NOMEM`.
+12. Finally, if `def_listener` is not equal to -1, it means a default listener was found in the previous step. The code then assigns the pointer to the default listener in the `config->listeners` array to `config->default_listener`.
+13. The function returns `MOSQ_ERR_SUCCESS` to indicate that the listener addition was successful.

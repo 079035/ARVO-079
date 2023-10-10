@@ -1,0 +1,11 @@
+Vulnerability: Use-of-uninitialized-value in LibRaw::phase_one_flat_field
+Summary of the fix: The fix initializes the output `pixel` buffer when `LibRaw::read_shorts` fails to read from the stream because it is already at the end-of-file (eof).
+Detailed description of the fix: 
+1. In the given code, there is a line `if (ifp->eof())return LIBRAW_DATA_ERROR;` which checks if the stream is at the end-of-file (eof). If it is, it returns `LIBRAW_DATA_ERROR` value.
+2. Before this line, the output `pixel` buffer is not initialized if `ifp->eof()` is true. This means that the buffer is uninitialized and can lead to undefined behavior.
+3. To fix this, the fix initializes the output `pixel` buffer when `ifp->eof()` is true, by adding the line `memset(pixel, 0, sizeof(pixel));` before `if (ifp->eof())return LIBRAW_DATA_ERROR;`.
+
+Fixed code snippet:
+```cpp
+if (ifp->eof()) {
+    memset(pixel, 0, sizeof

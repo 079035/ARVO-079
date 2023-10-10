@@ -1,0 +1,10 @@
+Vulnerability:
+There is a vulnerability in the code that allows for potential parsing errors. The vulnerability is specifically related to the `AddService` function in the `network_data_leader_ftd.cpp` file. 
+
+Summary of the fix:
+The fix adds length validation to the Service TLV in order to prevent parsing errors.
+
+Detailed description of the fix:
+The fix introduced in the code adds a length validation check for the `ServiceTlv` object. This validation is performed using the `IsValid()` function. If the `ServiceTlv` object is found to be invalid, an error of type `OT_ERROR_PARSE` is returned. 
+
+By adding this length validation, the code ensures that the `ServiceTlv` object is properly formatted and avoids potential parsing errors.

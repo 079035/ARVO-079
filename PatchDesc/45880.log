@@ -1,0 +1,9 @@
+Vulnerability: Heap-buffer-overflow WRITE 2 in the function `do_fileid` in the file "src/pkcs15init/profile.c" is fixed.
+
+Summary of the Fix: The fix addresses a vulnerability that could cause a heap buffer overflow during the execution of the `do_fileid` function.
+
+Detailed Description of the Fix: The fix involves adding input checking to prevent a heap buffer overflow. Prior to the fix, the code did not check the length of the file path before copying the contents of `temp.value` to `path->value`. This vulnerability could be triggered by providing an excessively long file path as the input.
+
+To mitigate the issue, the fix includes the addition of an input length check before the memcpy operation. Specifically, the code now checks whether the length of `path->len` (representing the current length of the file path) combined with the length of `temp` (2 bytes) exceeds the size of the buffer `path->value`. If the combined length is too long, an error message is displayed, and the function returns with an error code. This prevents the buffer overflow condition from occurring.
+
+Overall, the fix ensures that the file path is properly validated and prevents a heap buffer overflow vulnerability in the `do_fileid` function.

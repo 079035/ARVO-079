@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the code is a stack-buffer-overflow in the function `ndpi_check_http_server()`. This vulnerability is caused by reading more data into the `buf` array than its size allows, potentially resulting in overwriting adjacent memory.
+
+Summary of the fix:
+The fix for this vulnerability is to update the loop condition in the `for` loop inside the `ndpi_check_http_server()` function. The new condition ensures that the loop only processes characters up to the second-to-last element of the `buf` array.
+
+Detailed description of the fix:
+In the original code, the loop condition in the `for` loop was `(i<server_len) && (j<sizeof(buf))`, which allowed the loop to continue as long as there were more characters in the `server` string and there was still space in the `buf` array. However, this condition did not consider the size of the `buf` array, leading to a potential stack-buffer-overflow.
+
+To fix this vulnerability, the condition has been updated to `(i<server_len) && (j<sizeof(buf)-1)`. This change ensures that the loop stops when the second-to-last element of the `buf` array is filled, leaving space for the null terminator `'\0'` at the end.
+
+The updated loop prevents potential stack-buffer-overflow by guaranteeing that the `buf` array does not overrun its bounds. This ensures the program behaves correctly and avoids accessing memory beyond the allocated buffer.

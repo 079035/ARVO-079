@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given code is a typo in line 142 of the `heif_colorconversion.cc` file. It incorrectly assigns the variable `cr` to the value of `cb` instead of the correct variable `cr`.
+
+Fix Summary:
+The fix corrects the typo in line 142 by replacing `cb` with `cr`. This ensures that the correct value is assigned to the `cr` variable.
+
+Detailed Fix Description:
+In the vulnerable code, the `cb` and `cr` values are calculated in lines 134-135 by applying the RGB to YCbCr conversion coefficients to the input pixel values. After that, in the following lines (137-138), if the `full_range_flag` is false, the `cb` value is incorrectly assigned to `cr`, and both values are then further processed and assigned to the output planes.
+
+To fix this issue, in line 142, the typo `cb = (cb * 224) / 256;` is corrected to `cr = (cr * 224) / 256;`. This ensures that the correct value calculated for the `cr` variable is assigned to it.
+
+This fix ensures that the RGB to YCbCr color conversion is performed correctly and that the correct values are assigned to the `cb` and `cr` variables, avoiding any incorrect color computations or output.

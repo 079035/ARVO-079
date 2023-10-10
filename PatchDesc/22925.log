@@ -1,0 +1,10 @@
+Vulnerability: Index-out-of-bounds
+
+Summary of fix: Ensure that the correct number of bytes are written to the buffer based on the value of the code.
+
+Detailed description of fix:
+In the original code, there is a potential index-out-of-bounds vulnerability. The code checks the value of `code` and based on its value, writes the corresponding byte(s) to the buffer `buf`. However, there is a missing check which leads to potential index-out-of-bounds access. 
+
+In the fixed code, the missing check has been added. The code now checks if the first two bytes should be written to the buffer based on the value of `code` (`(code & 0xff0000) != 0`). If this condition is true, the first two bytes are written to the buffer. Additionally, if the first condition is false but the second two bytes should still be written (`(code & 0xff00) != 0`), the second byte is written to the buffer. Finally, the last byte is always written to the buffer.
+
+This fix ensures that the correct number of bytes are written to the buffer `buf` based on the value of `code`, thereby preventing any index-out-of-bounds vulnerabilities.

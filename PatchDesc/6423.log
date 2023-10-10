@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability being patched in this diff file is related to the SIGCOMP dissection and decompression in the Wireshark network protocol analyzer. The default preference for dissecting the UDVM code and decompressing the message is set to TRUE, which means that the dissection and decompression are enabled by default.
+
+Summary of the Fix:
+The fix disables the UDVM dissection and decompression by setting the default preference values to FALSE. Additionally, warnings are added to inform users about the potential risks of enabling these features.
+
+Detailed Description of the Fix:
+1. The default preference for displaying the bytecode in UDVM operands is set to FALSE by changing the value of the "display_udvm_bytecode" variable to FALSE.
+2. The default preference for dissecting the UDVM code is set to FALSE by changing the value of the "dissect_udvm_code" variable to FALSE. This is accompanied by a warning comment stating that enabling this feature may result in the entire dissector being disabled or removed.
+3. The default preference for decompressing the message is set to FALSE by changing the value of the "decompress" variable to FALSE. This is also accompanied by a warning comment stating that enabling this feature may result in the entire dissector being disabled or removed.
+4. The fix includes comments explaining the different levels of debug information that can be printed during the execution of the UDVM. This part is unrelated to the vulnerability but is part of the diff file.

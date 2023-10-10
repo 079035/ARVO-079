@@ -1,0 +1,17 @@
+Vulnerability:
+There is a vulnerability in the code where an uninitialized pointer `prop->data` is being freed without checking if it has been allocated memory or not. This can lead to a use-after-free vulnerability.
+
+Summary of the fix:
+The fix for this vulnerability is to check if `prop->data` has been allocated memory before freeing it using `RelinquishMagickMemory`.
+
+Detailed description of the fix:
+In the given code, the fix is made by adding a conditional statement to check if `prop->data` is not equal to `NULL` before freeing it using `RelinquishMagickMemory`. This prevents a use-after-free vulnerability by ensuring that only valid allocated memory is freed.
+
+The modified code is as follows:
+
+```c
+if (prop->data != (uint8_t *) NULL)
+  prop->data = (uint8_t *) RelinquishMagickMemory(prop->data);
+```
+
+With this fix, before freeing `prop->data`, it is first checked if it has been allocated memory or not. If it has not been allocated memory (`prop->data` is `NULL`), then it will not be freed. This ensures that only valid allocated memory is freed, preventing a use-after-free vulnerability.

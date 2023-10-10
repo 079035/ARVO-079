@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability being patched in this diff file is related to the handling of Unicode properties for certain codepoints in the `info` structure. 
+
+Summary of the fix:
+The fix addresses several issues related to the identification and categorization of specific codepoints. It ensures that the correct Unicode properties are set for these codepoints, including default ignition, non-ignorables, hidden characters, and combining grapheme joiner.
+
+Detailed description of the fix:
+1. The fix introduces the `props` variable to store the Unicode properties for a given codepoint. Initially, it is set to the general category of the codepoint.
+2. If the codepoint is greater than or equal to 0x80, indicating a non-ASCII character, the `scratch_flags` of the `buffer` are updated to indicate the presence of non-ASCII characters.
+3. If the codepoint is default ignorable, as determined by the `is_default_ignorable` function, the appropriate flags are set in the `scratch_flags` to indicate the presence of default-ignorables. Additionally, specific codepoints, such as 0x200Cu, 0x200Du, and the Mongolian Free Variation Selectors, have their properties and flags modified to handle their special cases.
+4. If the codepoint is a modifier symbol or a non-enclosing mark, the `props` variable is updated with the modified combining class of the codepoint multiplied by 256.
+5. Emoji skin-tone modifiers, which are originally classified as modifier symbols, are recategorized as Unicode marks to ensure correct behavior in non-native directionality.
+6. Finally, the `props` variable is assigned to the `unicode_props` field of the `info` structure, ensuring that the correct Unicode properties are set for the codepoint.

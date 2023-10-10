@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is an out-of-bounds read caused by not copying the full key when decoding from JSON. This occurs when keys contain null bytes (\u0000).
+
+Summary of Fix:
+The fix in this patch is to replace the use of `strdup` with `memcpy` to copy the key. It also allocates memory for the key in case it contains null bytes.
+
+Detailed Description of Fix:
+Before the fix, when copying the key in `ucl_object_copy_internal`, the code checks if the `trash_stack[UCL_TRASH_KEY]` is not null and then directly uses `strdup` to copy the key. However, if the key contains null bytes, the `strdup` function will only copy up to the first null byte, resulting in an incomplete key and potential out-of-bounds reads.
+
+In the fix, the code first sets `new->trash_stack[UCL_TRASH_KEY]` to NULL. Then, it checks if the `trash_stack[UCL_TRASH_KEY]` is the same as `other->key`. If yes, it allocates memory for `new->trash_stack[UCL_TRASH_KEY]` using `malloc` and copies the key using `memcpy`, ensuring the full key is copied.
+
+This fix prevents the out-of-bounds read vulnerability by using `memcpy` instead of `strdup` to copy the key, taking into account the possibility of null bytes in the key.

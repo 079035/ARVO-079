@@ -1,0 +1,10 @@
+Vulnerability:
+In the function `htmlParseHTMLAttribute` in the file `HTMLparser.c`, there is a vulnerability related to memory allocation. If the allocation of the `buffer` fails, the function returns NULL without freeing the previously allocated memory. This can lead to a memory leak.
+
+Summary of the fix:
+The fix adds an error check after the allocation of the `buffer`. If the allocation fails, the previously allocated `buffer` is freed and the function returns NULL.
+
+Detailed description of the fix:
+The fix modifies the code in the `htmlParseHTMLAttribute` function in the file `HTMLparser.c`. After the allocation of the `buffer`, an error check is added to verify if the allocation was successful. If the allocation fails, the function calls the `xmlFree` function to release the previously allocated memory and returns NULL.
+
+This fix prevents a memory leak by properly freeing the memory in case of allocation failure.

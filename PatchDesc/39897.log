@@ -1,0 +1,12 @@
+Vulnerability Description:
+The vulnerability in the given code is related to the function `parse_to_param()` in the `parse_to.c` file. The issue allows for unexpected behavior when parsing the header parameters. The vulnerability was discovered during the OpenSIPS Security Audit in 2021.
+
+Fix Summary:
+The fix for this vulnerability is to handle the unexpected end of the header when the status is in the `PARA_VALUE_QUOTED` state. If the status is `PARA_VALUE_QUOTED` at the end of the header, an error is logged, and the parsing process goes to the "parse error" label.
+
+Detailed Fix Description:
+The fix adds an additional check at the end of the header to handle the `PARA_VALUE_QUOTED` status. If the status is `PARA_VALUE_QUOTED`, it means that the end of the header is unexpected, and an error is logged using `LM_ERR()`. Then, the parsing process goes to the `parse_error` label, where the appropriate action can be taken to handle the error.
+
+Additionally, the fix includes a debug log statement `LM_DBG()` to indicate that the end of the header has been reached and display the current state of the parser (the `status` variable).
+
+With this fix, the code is able to handle the unexpected end of the header when in the `PARA_VALUE_QUOTED` state and properly log an error message.

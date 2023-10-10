@@ -1,0 +1,14 @@
+Vulnerability:
+Heap-buffer-overflow in bpf_elf_generic_reloc
+
+Summary of the fix:
+The fix handles bitpos offset relocation range checking in the "bpf_elf_generic_reloc" function.
+
+Detailed description of the fix:
+The code fix introduces a check to ensure that the address of the relocation entry is within the range of the input section. It calculates the end address of the input section using "bfd_get_section_limit_octets" and compares it against the relocation entry address plus the size of the relocation. If the address is out of range, the function returns "bfd_reloc_outofrange". This prevents a heap-buffer-overflow vulnerability.
+
+The fix also adjusts the calculation of the relocation size based on the type of relocation. For the R_BPF_INSN_64 type, the relocation size is set to 16. Otherwise, it is calculated based on the bitsize and bitpos specified in the relocation entry.
+
+After the range checking and size calculation, the fix proceeds to install the relocation by updating the appropriate memory locations with the relocated value.
+
+Overall, the fix ensures that the relocation process in the "bpf_elf_generic_reloc" function is handled correctly, addressing the heap-buffer-overflow vulnerability and preventing potential out-of-bounds memory access.

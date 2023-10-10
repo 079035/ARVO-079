@@ -1,0 +1,11 @@
+Vulnerability: Off-by-one error in the `GetFillAlpha` function.
+
+Summary of Fix: The fix addresses an off-by-one error in the `GetFillAlpha` function.
+
+Detailed Description of Fix: 
+In the `GetFillAlpha` function, there is an off-by-one error in the for loop condition. The loop iterates from `i` equal to the highwater mark of the current edge up to the number of points in the edge minus one. However, it should iterate up to the number of points in the edge.
+
+To fix this issue, the loop condition is changed from `i < (ssize_t) p->number_points` to `i < (ssize_t) (p->number_points-1)`. This ensures that the loop iterates over all the points in the edge.
+
+By fixing the loop condition, the off-by-one error is resolved and the `GetFillAlpha` function behaves as intended without any potential vulnerabilities.
+

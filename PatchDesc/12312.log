@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability being patched in this diff file is related to an issue with accessing the offset for ContextualSubtable in the hb-aat-layout-morx-table.hh file. The bug report associated with this patch can be found at https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=12312.
+
+Summary of the fix:
+The fix addresses the issue by correcting the offset access for ContextualSubtable in order to prevent a potential memory access violation.
+
+Detailed description of the fix:
+1. The `sanitize` function in the ContextualSubtable class is modified to include proper offset sanitization for the `substitutionTables` member variable when `Types::extended` is false.
+2. The fix ensures that if `Types::extended` is false, the `substitutionTables` offset is correctly sanitized using the `sanitize` function.
+3. The `sanitize` function also calculates the maximum number of lookups required based on the `markIndex` and `currentIndex` values in each entry of the `machine` object, and correctly sanitizes the `substitutionTables` offset using the calculated value.
+4. The fix also includes the necessary changes in comments and whitespace formatting.
+
+End of description.

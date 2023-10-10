@@ -1,0 +1,19 @@
+Vulnerability:
+The vulnerability in this code is that there is a mismatch between the size of the variable being sanitized and the size being checked for sanitization. Specifically, the code was previously sanitizing a 2-byte variable `u.major`, but it should have been sanitizing a 4-byte variable `u.version32`. This inconsistency could lead to the failure of proper sanitization and potential security issues.
+
+Summary of Fix:
+The fix corrects the size of the variable being sanitized. The code now sanitizes the correct 4-byte variable `u.version32` instead of the previous 2-byte variable `u.major`.
+
+Detailed Description of Fix:
+The code change in this patch modifies the `sanitize` function inside the `kern` struct. Previously, the code was incorrectly sanitizing the `u.major` variable, which is a 2-byte size union member. The fix updates the code to properly sanitize the `u.version32` variable, which is a 4-byte size union member.
+
+The specific change in the code is as follows:
+```
+if (!u.major.sanitize (c)) return_trace (false);
+```
+is updated to:
+```
+if (!u.version32.sanitize (c)) return_trace (false);
+```
+
+This change ensures that the correct variable `u.version32` is sanitized, which is a 4-byte size union member. Having the correct size for sanitization ensures the proper handling of the data and prevents potential security vulnerabilities that may arise due to inconsistent size checks.

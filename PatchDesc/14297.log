@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in this code is that the function `parse_if_modified_since` is not properly checking the size of the `if_modified_since` header before parsing it. This can lead to a buffer overflow or other memory corruption issues if the header size is not correct.
+
+Summary of Fix:
+The fix in this commit is to add a check for the correct size of the `if_modified_since` header before parsing it. If the size is not correct, the function returns and the header is not parsed.
+
+Detailed Description of Fix:
+1. A static constant `header_len` is declared and initialized with the correct size of the `if_modified_since` header ("Wed, 17 Apr 2019 13:59:27 GMT" without the null termination).
+2. The `if_modified_since` header size is checked with the `header_len` constant using the `!=` operator.
+3. If the header size is not equal to `header_len`, the function returns immediately without parsing the header.
+4. If the header size is correct, the header is parsed and the parsed value is assigned to `helper->if_modified_since.parsed`.
+
+This fix ensures that the `if_modified_since` header is only parsed if its size is correct, preventing potential buffer overflows or memory corruption issues.

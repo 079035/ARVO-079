@@ -1,0 +1,18 @@
+Vulnerability:
+There is a potential memory leak vulnerability in the `LLVMFuzzerTestOneInput` function in the `tests/internal/fuzzers/utils_fuzzer.c` file. The variable `null_terminated` is allocated memory using `malloc`, but there are multiple return paths where the memory is not freed.
+
+Summary of the fix:
+The fix for the vulnerability is to properly free the `null_terminated` variable before returning from the function in all possible paths.
+
+Detailed description of the fix:
+1. Before the first `return 0` statement, add `free(null_terminated);` to free the memory allocated for `null_terminated`.
+
+2. In the `if (flb_utils_write_str_buf(null_terminated, size, &new_dst, &new_size) == 0)`, add `flb_free(new_dst);` to free the memory allocated for `new_dst` if the condition is met.
+
+3. In the `if (list != NULL)`, add `flb_utils_split_free(list);` to free the memory allocated for `list` if the condition is met.
+
+4. In the `if (flb_utils_url_split(null_terminated, &prot, &host, &port, &uri) == 0)`, add `flb_free(prot);`, `flb_free(port);`, `flb_free(host);`, and `flb_free(uri);` to free the memory allocated for `prot`, `port`, `host`, and `uri` if the condition is met.
+
+5. In the `if (flb_utils_proxy_url_split(null_terminated, &split_protocol, &split_username, &split_password, &split_host, &split_port) == 0)`, add `if (split_protocol) flb_free(split_protocol);`, `if (split_username) flb_free(split_username);`, `if (split_password) flb_free(split_password);`, `if (split_host) flb_free(split_host);`, and `if (split_port) flb_free(split_port);` to free the memory allocated for `split_protocol`, `split_username`, `split_password`, `split_host`, and `split_port` if the condition is met.
+
+6. At the end of the function, add `flb_free(null_terminated);` to free the memory allocated for `null_terminated` before returning 0.

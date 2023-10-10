@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability fixed in this patch is a double free vulnerability in the `bin_art.c` file of the codebase.
+
+Summary of the fix:
+The fix involves removing the call to `sdb_free(obj->kv)` in the `destroy` function.
+
+Detailed description of the fix:
+In the original code, the `destroy` function in `bin_art.c` was responsible for freeing the allocated memory for the `ArtObj` object. This function attempted to free the `kv` member of `obj` using the `sdb_free` function. However, the ownership of `kv` had been moved to `RBin` through the `get_sdb` method of `RBinPlugin`, so the plugins were not responsible for freeing it.
+
+The fix involved removing the call to `sdb_free(obj->kv)` in the `destroy` function. This ensures that the `kv` object is not double freed, preventing the potential for memory corruption or use-after-free vulnerabilities.

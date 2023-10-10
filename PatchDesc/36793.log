@@ -1,0 +1,9 @@
+Vulnerability: Bounds overflow in JPGLoader
+
+Summary of the fix: The fix involves adding a check to prevent overflow when calculating bounds in the `bounds_okay` function.
+
+Detailed description of the fix: The code change in the provided diff file fixes a bounds overflow issue in the `JPGLoader` module of the LibGfx library. The vulnerability was identified through fuzzing done by Taotao Gu using their custom fuzzer. 
+
+The specific fix is made in the `bounds_okay` function which is responsible for checking if the bounds are within acceptable limits. In the provided diff, a new check is added to prevent overflow when calculating the bounds. The `Checked<size_t>::addition_would_overflow` function is used to determine if the addition of `delta` and `cursor` would result in an overflow. If an overflow is detected, the function returns false to indicate that the bounds are not okay. This prevents potential buffer overflows or other issues caused by invalid bounds.
+
+By adding this additional check, the code ensures that the calculated bounds are within acceptable limits, preventing potential vulnerabilities that could be exploited by attackers.

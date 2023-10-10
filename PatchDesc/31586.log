@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability in the given diff file is an ASAN (AddressSanitizer) heap-buffer-overflow when reading the chunk offset in the frame.
+
+Summary of the fix:
+The fix addresses the ASAN heap-buffer-overflow by adding boundary checks to prevent reading outside the frame boundary.
+
+Detailed description of the fix:
+1. The code checks if the `frame->coffsets` is already set. If it is, the code proceeds with further checks. Otherwise, it moves to the next step.
+2. If `frame->cframe` is not NULL, it calculates the offset position within the frame and checks if it is within the frame boundaries. If it is outside the boundaries, an error is returned. Otherwise, the buffer containing the offsets is obtained.
+3. If `off_cbytes` (pointer to chunk_cbytes) is not NULL, it retrieves the chunk_cbytes and assigns it to `*off_cbytes`. It also checks if `*off_cbytes` is within the frame boundaries. If it is outside the boundaries, an error is returned.
+4. Finally, if `frame->coffsets` is not NULL, the function returns `frame->coffsets`. Otherwise, it continues to the next step.
+5. The function calculates the `trailer_offset` using the `get_trailer_offset` function, and performs boundary checks on the trailer to ensure it is within the frame.
+6. The function then calculates the `coffsets_cbytes`, which represents the size of the coffsets buffer.
+   - For `frame->sframe`, the `coffsets_cbytes` is calculated as `(trailer_offset - (header_len + 0))`.
+   - For other cases, the `coffsets_cbytes` is calculated as `(trailer_offset - (header_len + cbytes))`.
+7. If `off_cbytes` is not NULL, the function assigns `coffsets_cbytes` to `*off_cbytes`.
+8. The function then proceeds to open the file, based on the type of `frame` (sframe or regular frame), and seeks to the appropriate position in the file to read the coffsets.
+9. The coffsets buffer is allocated using `malloc`, and the `fread` function is used to read the coffsets from the file into the buffer.
+10. After reading, the file is closed, and the function checks if the number of bytes read (`rbytes`) matches the expected `coffsets_cbytes`. If they don't match, an error is returned.
+11. Finally, the `frame->coffsets` pointer is assigned to the `coffsets` buffer, and the coffsets buffer is returned.
+
+This fix ensures that boundary checks are performed at various stages to prevent reading outside the frame boundaries, taking into account the different possibilities based on the type of frame and the presence of existing coffsets.

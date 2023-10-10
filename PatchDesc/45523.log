@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability fixed in this code change is related to the validation of conditional expressions in the libsepol library. Prior to the fix, the code did not properly validate the conditional expressions, including the values of the booleans within them.
+
+Summary of Fix:
+The fix implemented in this code change adds a new function called `validate_cond_expr` to validate the conditional expressions. This function iterates over each expression and performs checks based on the type of expression encountered. It ensures that the validation is done correctly and rejects invalid expressions.
+
+Detailed Description of Fix:
+1. The code change adds a new static function `validate_cond_expr` to validate the conditional expressions in the `policydb_validate.c` file of the libsepol library.
+2. The `validate_cond_expr` function takes three parameters: `handle` (sepol handle), `expr` (pointer to the current cond_expr), and `bool` (pointer to the validate_t struct representing the boolean values).
+3. The function initializes a variable `depth` with a value of -1.
+4. It then starts iterating over the cond_expr linked list using a for loop. For each cond_expr node, it checks the `expr_type` to determine the type of expression.
+5. If the expression type is `COND_BOOL`, it calls the `validate_value` function to validate the boolean value within the expression using the `bool` validate_t struct. If the value is invalid, it jumps to the `bad` label, indicating an invalid expression.
+6. If the `depth` reaches the maximum depth (COND_EXPR_MAXDEPTH - 1), the function also jumps to the `bad` label, as this indicates an invalid depth for the expression.
+7. If the expression type is `COND_NOT`, it checks if the current depth is less than 0 (depth < 0). If it is, the function jumps to the `bad` label, indicating an invalid expression.
+8. If the expression type is any of the binary operators (`COND_OR`, `COND_AND`, `COND_XOR`, `COND_EQ`, `COND_NEQ`), it checks if the current depth is less than 1 (depth < 1). If it is, the function jumps to the `bad` label, indicating an invalid expression.
+9. If the expression type is not one of the recognized types, the function also jumps to the `bad` label, indicating an invalid expression.
+10. After iterating over all cond_expr nodes, the function checks if the final `depth` value is not equal to 0. If it is not, it jumps to the `bad` label, indicating an invalid expression.
+11. If the function completes without jumping to the `bad` label, it returns 0 to indicate a successful validation of the conditional expression.
+12. If the function jumps to the `bad` label at any point, it logs an error message using the `ERR` macro and returns -1 to indicate a validation failure.
+13. The `validate_cond_list` function, which is responsible for validating a list of cond_expr, calls the `validate_cond_expr` function for each cond_expr node in the given cond_list.
+14. If the `validate_cond_expr` function returns a non-zero value, indicating a validation failure, the `validate_cond_list` function also jumps to the `bad` label and returns -1, indicating a validation failure for the entire list.
+15. If the `validate_cond_expr` function and subsequent validations complete without errors for all cond_expr nodes, the `validate_cond_list` function returns 0 to indicate successful validation.

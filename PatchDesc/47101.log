@@ -1,0 +1,10 @@
+Vulnerability:
+There is a heap buffer overflow vulnerability in the function `assign_file_to_slot` in the file `dwarf2dbg.c`. The vulnerability occurs when assigning a file to a slot in the `files` array. 
+
+Summary of fix:
+The fix for the vulnerability involves making the `i` parameter of the function `assign_file_to_slot` an unsigned integer, to prevent integer overflow. 
+
+Detailed description of fix:
+Previously, the `i` parameter of the `assign_file_to_slot` function was of type `unsigned long`, which allowed for the possibility of integer overflow. The fix changes the type of the `i` parameter to `unsigned int`, limiting the range of values and preventing overflow. Additionally, the fix adds extra checks to ensure that the `files_allocated` value does not wrap around or exceed the maximum value of `unsigned int`. If the `files_allocated` value is found to be too big, an error message is displayed, indicating that the file number is too large.
+
+This fix avoids heap buffer overflow by preventing incorrect memory allocation and ensures that the `files` array is properly resized to accommodate the new file entry.

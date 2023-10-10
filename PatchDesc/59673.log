@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability in this code is an out-of-array read.
+
+Summary of the fix:
+
+The fix improves the logic of the "edge emulation check" to prevent the out-of-array read vulnerability.
+
+Detailed description of the fix:
+
+The fix modifies the condition in the if statement on line 87 to correctly handle the edge cases. The original condition was causing an out-of-array read when the `src_y` value was greater than `h_edge_pos`. The fixed condition now checks if `src_y` is greater than `FFMAX((v_edge_pos >> field_based) - (!!sy) - FFMAX(h, hc<<s->chroma_y_shift), 0)`. This ensures that the array read is always within bounds.
+
+The fix also introduces a new variable `hc` on line 32, which is calculated based on the value of `s->chroma_y_shift`. This variable is used in the condition to handle chroma components.
+
+Overall, the fix improves the array bounds checking and ensures that the edge emulation check is performed correctly, addressing the out-of-array read vulnerability.

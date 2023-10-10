@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability in the given code is a missing check on the variable `val` that can lead to an overflow.
+
+Summary of the fix:
+The fix adds a check to ensure that `val` is not negative. If `val` is negative, the function returns an error (`FLB_HTTP_ERROR`).
+
+Detailed description of the fix:
+In the function `process_chunked_data()`, after converting the hexa string to decimal and storing it in the variable `val`, the fix adds the following code:
+
+```c
+if (val < 0) {
+    return FLB_HTTP_ERROR;
+}
+```
+
+This check ensures that `val` is not negative. If `val` is negative, it means an invalid value was obtained from the hexa string, indicating a potential overflow. In such case, the function returns `FLB_HTTP_ERROR` to indicate that there is an error processing the chunked data.
+
+This fix prevents the vulnerability by verifying the validity of the value before further processing, mitigating the risk of an overflow.

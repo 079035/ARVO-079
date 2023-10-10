@@ -1,0 +1,5 @@
+Vulnerability: Negative array index with malformed .aff
+
+Summary of Fix: The fix addresses the issue of negative array index with malformed .aff files.
+
+Detailed Description of Fix: In the given diff file, the fix can be seen in the `else` block of the `else` condition for the `suffix` case. The vulnerability is caused by accessing `cond[j]` without checking if `j` is greater than 0. The fix adds an additional condition `if (j > 0)` before accessing `cond[j]`. This ensures that the index is valid and prevents the negative array index vulnerability.

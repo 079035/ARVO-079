@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to the improper reinitialization of the `sysctl` list after clearing it in the `lxc_clear_sysctls` function.
+
+Summary of the Fix:
+The fix ensures that the `sysctl` list is properly reinitialized after clearing it by calling the `lxc_list_init` function if all sysctls are being cleared.
+
+Detailed Description of the Fix:
+1. In the `lxc_clear_sysctls` function, a check is performed to determine if all sysctls are being cleared (`all = true;`).
+2. If all sysctls are being cleared, the `sysctl` list is reinitialized by calling `lxc_list_init(&c->sysctls);`. This ensures that the list is empty and ready to be populated again.
+3. The fix ensures that the `lxc_list_for_each_safe` loop is executed only if the appropriate conditions are met (either all sysctls are being cleared or the key matches).
+4. Within the loop, the selected `sysctl` entry is removed from the list, and the associated memory for the key, value, and the element itself is freed using `free()`.
+5. Finally, the `it` element (the current list entry) is also freed using `free()`.
+
+By reinitializing the `sysctl` list after clearing it, the fix ensures that subsequent operations involving the list will not encounter any invalid or dangling references.

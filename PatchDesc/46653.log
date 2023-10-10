@@ -1,0 +1,12 @@
+Vulnerability:
+Heap-buffer-overflow READ in sc_pkcs15init_delete_by_path function.
+
+Summary of the fix:
+The fix addresses an input checking issue in the `sc_pkcs15init_delete_by_path` function.
+
+Detailed description of the fix:
+The code fix in this diff file enhances the input checking in the `sc_pkcs15init_delete_by_path` function to prevent a heap-buffer-overflow vulnerability. 
+
+Previously, when selecting the file to delete, the code did not properly check the length of the file path before accessing the path value. This could lead to a heap-buffer-overflow when the file_path length is less than 2. 
+
+The fix introduces a check to ensure that the file_path length is at least 2 before accessing the path value. If the length is less than 2, the function returns with an invalid argument error. This prevents the heap-buffer-overflow vulnerability from occurring.

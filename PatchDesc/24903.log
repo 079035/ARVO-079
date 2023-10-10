@@ -1,0 +1,9 @@
+Vulnerability:
+The vulnerability fixed by this patch is an integer wrap around bug in the `ntfs_dinode_lookup` function. Specifically, there is a check on the value of `upd_cnt` which is an `uint16_t` variable. If the value of `upd_cnt` is 0 or greater than `(((a_ntfs->mft_rsize_b) / 2) + 1)`, it would result in an integer wrap around.
+
+Summary of the Fix:
+The fix in this patch is to add an additional check to prevent the integer wrap around. The check ensures that `upd_cnt` is not 0 and is not greater than `(((a_ntfs->mft_rsize_b) / 2) + 1)`.
+
+Detailed Description of the Fix:
+1. The patch introduces two new variables, `upd_cnt` and `upd_off`, to store the values of `tsk_getu16(fs->endian, mft->upd_cnt)` and `tsk_getu16(fs->endian, mft->upd_off)` respectively.
+2. The fix adds a check to prevent the integer wrap around by verifying that `upd_cnt` is not 0 and is not greater than `(((a_ntfs->mft_rsize_b) / 2) + 1)`. If the check fails, an error is set and the function returns `TSK_COR` (corruption error).

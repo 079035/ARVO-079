@@ -1,0 +1,10 @@
+Vulnerability: 
+The vulnerability patched in this diff file is an out-of-bounds read.
+
+Summary of the fix:
+The fix addresses an issue where the code does not check if the data vector has enough elements before reading from it. This can lead to an out-of-bounds read and potentially cause undefined behavior or crash the program.
+
+Detailed description of the fix:
+1. The patch adds a check before accessing the `data` vector in the loop that iterates through the `region_count`. It checks if the size of `data` is less than or equal to `dataOffset`.
+2. If the check fails and the size of `data` is invalid, an `Error` object is returned with the error code `heif_error_Invalid_input` and `heif_suberror_Invalid_region_data`. The error message states that the region data is incomplete.
+3. This ensures that the code does not read beyond the bounds of the `data` vector and avoids potential memory access issues.

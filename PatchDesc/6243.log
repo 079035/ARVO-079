@@ -1,0 +1,12 @@
+Vulnerability:
+This diff file patches a vulnerability related to a memory leak in the `AcquireImage()` function in the `image.c` file of the ImageMagick library. The patch fixes the memory leak by initializing the `geometry` structure with zeros using `ResetMagickMemory()` before using it.
+
+Summary of the fix:
+The fix initializes the `geometry` structure with zeros using `ResetMagickMemory()` before using it.
+
+Detailed description of the fix:
+In the original code, the `geometry` structure is used before being initialized, which can cause memory leaks or undefined behavior. The fix addresses this issue by adding the following line before using the `geometry` structure:
+```c
+(void) ResetMagickMemory(&geometry,0,sizeof(geometry));
+```
+This line initializes the `geometry` structure with zeros, which ensures that all its fields are properly initialized before being used. This fix prevents memory leaks and ensures predictable behavior in the subsequent code.

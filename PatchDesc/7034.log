@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in this diff file is an Integer Overflow.
+
+Summary of the Fix:
+The fix modifies the allocation size when allocating memory for the `dash_polygon` array in the `DrawDashPolygon` function.
+
+Detailed Description:
+The `DrawDashPolygon` function in the `draw.c` file is responsible for drawing a dashed polygon (line, rectangle, ellipse) on the image while respecting the dash offset and dash pattern attributes. 
+
+In the previous version of the code, the memory allocation for the `dash_polygon` array was incorrect. It allocated memory for `2UL * (number_vertices + 3UL) + 1UL` elements of `PrimitiveInfo` structure. However, due to an integer overflow vulnerability, this calculation can result in a smaller memory allocation than necessary.
+
+To fix this vulnerability, the fix modifies the memory allocation size to `2UL * (number_vertices + 3UL) + 3UL` elements of `PrimitiveInfo` structure. This change ensures that the correct amount of memory is allocated for the `dash_polygon` array, fixing the integer overflow vulnerability.
+
+After the fix, the `dash_polygon` array is correctly allocated with enough memory to hold the desired number of elements, eliminating the possibility of an integer overflow.

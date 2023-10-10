@@ -1,0 +1,9 @@
+Vulnerability: Incorrect handling of the strip size in the SfxEntry::add() function.
+Summary of the fix: The fix addresses the issue of handling the strip size. It ensures that the length of the word is greater than or equal to the strip size before performing a comparison with the strip string.
+Detailed description of the fix: In the original code, the condition `(strcmp(word + len - strip.size(), strip.c_str()) == 0)` is used to check if the suffix strip matches with the end of the word. However, the code does not validate if the length of the word is greater than or equal to the strip size before performing the comparison. This can result in accessing memory beyond the word's boundaries, leading to incorrect behavior or potential vulnerabilities.
+
+The fix modifies the condition to `(len >= strip.size() && strcmp(word + len - strip.size(), strip.c_str()) == 0)`. This new condition has two parts: 
+1. `(len >= strip.size())` ensures that the length of the word is greater than or equal to the strip size.
+2. `strcmp(word + len - strip.size(), strip.c_str()) == 0` compares the suffix of the word with the strip string only when the length condition is satisfied.
+
+By adding the `len >= strip.size()` check, the fix prevents memory access issues and ensures that the comparison with the strip string is performed only when it is safe to do so.

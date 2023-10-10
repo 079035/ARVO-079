@@ -1,0 +1,12 @@
+Vulnerability:
+There is a vulnerability related to an overflow condition in the `cmscgats.c` file. Specifically, the code does not check for the null character (`0`) when parsing string symbols, which can lead to a buffer overflow when an ill-formed CGATS file is encountered.
+
+Summary of the Fix:
+The fix addresses the overflow condition by checking for the null character (`0`) in addition to newline and carriage return characters (`\n` and `\r`) when parsing string symbols.
+
+Detailed Description of the Fix:
+The fix modifies the `InStringSymbol` function in the `cmscgats.c` file. Previously, the code only checked for newline and carriage return characters when parsing string symbols. However, this left the possibility of an overflow condition if the string symbol did not contain any of these characters and ended with a null character (`0`).
+
+The fix adds an additional check to the while loop in order to prevent the buffer overflow. The code now checks for newline, carriage return, and null characters. If any of these characters are encountered during the parsing of the string symbol, the loop will be broken and the correct handling will be taken.
+
+This fix ensures that the code can handle ill-formed CGATS files correctly without causing a buffer overflow and potentially compromising the stability or security of the program.

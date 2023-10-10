@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in this code is that the `serialize_clip_records` function does not check if each glyph ID in `gids` has a corresponding offset value in the `gid_offset_map`. It only checks if `gids` is empty, but it does not ensure that all the glyph IDs have valid offset values.
+
+Summary of the fix:
+The fix ensures that each glyph ID in `gids` has a corresponding offset value in the `gid_offset_map`. It adds a new condition in the `serialize_clip_records` function to check if the population of the `gid_offset_map` is equal to the population of `gids`.
+
+Detailed description of the fix:
+The fix modifies the `serialize_clip_records` function in the following way:
+1. It adds a new condition in the `if` statement: `gid_offset_map.get_population() != gids.get_population()`. This condition checks if the population (number of elements) in the `gid_offset_map` is not equal to the population of `gids`. If this condition is true, it immediately returns 0 (indicating an error) from the function.
+2. By adding this condition, the function ensures that all the glyph IDs in `gids` have a corresponding offset value in the `gid_offset_map`.
+3. This fix prevents the serialization of invalid clip records and ensures that only valid clip records are serialized.
+
+The fix also adds a new test case file `clusterfuzz-testcase-minimized-hb-subset-fuzzer-6254792024915968` to the project. This file is a binary file and it differs from `/dev/null`. The purpose of this file is not clear from the provided diff.

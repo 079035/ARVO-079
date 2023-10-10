@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is an out-of-array access vulnerability in the vqc_decode_init() function of the vqcdec.c file. 
+
+Summary of the fix:
+
+The fix involves checking whether the width of the AVCodecContext is divisible by 15 before allocating memory and initializing the decoding context. If the width is not divisible by 15, the function returns an error.
+
+Detailed description of the fix:
+
+The vulnerability arises from the assumption in various parts of the code that the width (avctx->width) can be divided by various powers of 2 without rounding. This assumption leads to out-of-array access, which can result in undefined behavior and potentially exploitable crashes.
+
+To fix this vulnerability, the code is modified to perform a check on the width of the AVCodecContext before proceeding with memory allocation and context initialization. The check is done using the expression "if (avctx->width & 15)". The bitwise AND operation with 15 checks if the least significant 4 bits of the width are set (i.e., if the width is not divisible by 15). If the condition is true, the function returns AVERROR_PATCHWELCOME, indicating that the code is open to improvement or patching.
+
+With this fix, the code ensures that the width is divisible by 15 before proceeding with memory allocation and avoids out-of-array access vulnerabilities.

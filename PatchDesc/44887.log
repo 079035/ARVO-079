@@ -1,0 +1,13 @@
+Vulnerability: Buffer read overflow with whitespace input
+
+Summary of the fix: The fix addresses the possible buffer read overflow issue when parsing a message with whitespace input.
+
+Detailed description of the fix: 
+
+In the given code diff, the vulnerability is fixed in the `parse_msg` function. Before the fix, there was a potential buffer read overflow issue caused by the loop that eats the carriage return and line feed characters (`\r` and `\n`) from the beginning of the input buffer. In the original code, the loop condition checked if the current character is a carriage return or line feed character first and then checked if the offset is less than the length of the input buffer. If the offset was greater than or equal to the length of the input buffer, the loop would stop executing, but if the offset was less than the length of the input buffer, only then the condition to check for carriage return or line feed character would be evaluated. This means that if the offset reached the length of the input buffer, the loop would continue to execute without performing the check, leading to a buffer read overflow.
+
+The fix modifies the loop condition to first check if the offset is less than the length of the input buffer and then check if the current character is a carriage return or line feed character. This ensures that the loop condition is evaluated correctly and prevents the buffer read overflow issue.
+
+By making this modification, the fix ensures that the loop stops executing when either the offset reaches the length of the input buffer or a non-carriage return/line feed character is encountered. This prevents any buffer read overflow with whitespace input.
+
+Overall, the fix addresses the vulnerability by correctly handling the loop condition and preventing any potential buffer read overflow.

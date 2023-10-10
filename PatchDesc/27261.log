@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability being patched in this diff file is a bug in the calculation of the maximum output buffer size for compression in the `flb_gzip_compress` function. The calculation `out_size = in_len + 32` does not account for the worst-case expansion of the GZIP algorithm and can result in buffer overflow or incorrect compression size.
+
+Summary of the fix:
+The fix updates the calculation of the `out_size` variable to correctly account for the worst-case expansion of the GZIP algorithm. It calculates the maximum input expansion based on the input length and adds it to the size of the header, footer, and input data.
+
+Detailed description of the fix:
+1. A new variable `max_input_expansion` is introduced to calculate the worst-case expansion of the GZIP algorithm. It is calculated as `((int)(in_len / 32000) + 1) * 5`, where 32000 is the chunk size used in the expansion calculation and 5 is the worst-case expansion factor per 32KB of data.
+
+2. The `out_size` calculation is updated to include the size of the GZIP header (10 bytes), footer (8 bytes), maximum input expansion, and size of the input data. The new calculation is `out_size = 10 + 8 + max_input_expansion + in_len`.
+
+3. The `out_buf` allocation is updated to use the `out_size` variable instead of the fixed value of 32.
+
+4. The fix ensures that the maximum size calculation accurately reflects the worst-case expansion of the GZIP algorithm and avoids potential buffer overflow or incorrect compression size.
+
+5. Other parts of the code remain unchanged, focusing solely on fixing the vulnerability related to compression size calculation in the GZIP module.

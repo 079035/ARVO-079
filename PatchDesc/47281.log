@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability patched in this diff file is an out-of-range access vulnerability.
+
+Summary of the fix:
+The fix adds a check to ensure that the index `i` being accessed in the `get_offset` function is within the range of valid indices. If the index `i` is greater than `glyphCount`, the function returns 0 instead of accessing the corresponding array element.
+
+Detailed description of the fix:
+In the `get_offset` function of the `gvar` struct, the fix adds the following code snippet before accessing the array elements:
+
+```cpp
+if (unlikely (i > glyphCount)) return 0;
+```
+
+This check ensures that if the index `i` is greater than `glyphCount`, the function returns 0 and prevents access to out-of-range array elements.
+
+By adding this check, the fix protects against out-of-range access and eliminates the possibility of a crash or undefined behavior due to accessing invalid indices.

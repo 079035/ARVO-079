@@ -1,0 +1,21 @@
+Vulnerability:
+The vulnerability that is patched in this diff file is an out-of-bounds access. 
+
+Summary of the fix:
+The fix limits the scrolling to the line, preventing the out-of-bounds access.
+
+Detailed description of the fix:
+- The fix initializes several variables for scrolling, including `color`, `hscmd`, `vscmd`, `h_off`, `v_off`, `hinc`, `vinc`, `y`, `stride`, `in`, and `out`.
+- The fix then checks the vertical command (`vscmd`) and horizontal command (`hscmd`) to determine the direction of scrolling.
+- The fix calculates the horizontal and vertical offsets (`h_off` and `v_off`) based on the data values.
+- The fix calculates the difference between the current scroll position and the new scroll position (`hinc` and `vinc`).
+- The fix updates the scroll position to the new position (`cc->hscroll` and `cc->vscroll`).
+- The fix checks the vertical command and adjusts the vertical offset (`vinc`) accordingly.
+- The fix checks the horizontal command and adjusts the horizontal offset (`hinc`) accordingly.
+- The fix checks if there is no horizontal or vertical movement and returns if so.
+- The fix then copies the palette data from the current frame to the new frame.
+- The fix updates the new frame data by copying the pixel data from the current frame with the appropriate offsets and sizes, taking into account the stride.
+- The fix fills the missing areas in the new frame caused by vertical scrolling, using the `cdg_fill_wrapper` function.
+- The fix fills the missing areas in the new frame caused by horizontal scrolling, using the `cdg_fill_wrapper` function.
+
+By limiting the scrolling to the line and properly calculating the offsets and sizes, the fix prevents the out-of-bounds access and resolves the vulnerability.

@@ -1,0 +1,39 @@
+Vulnerability:
+In the given diff file, the vulnerability that was patched is a null-dereference WRITE in the function `MqttProps_Free`.
+
+Summary of the Fix:
+The fix in this patch addresses a null-dereference issue in the `MqttClient_WaitType` function.
+
+Detailed Description of the Fix:
+1. The `MqttClient_WaitType` function is responsible for waiting for a specific packet type and processing it.
+2. Prior to the fix, there was a null-dereference vulnerability in the following code:
+```c
+if (MqttClient_RespList_Find(client, (MqttPacketType)wait_type, wait_packet_id, &pendResp)) {
+    if (pendResp->packetDone) {
+        /* pending response is already done, so return */
+        rc = pendResp->packet_ret;
+        MqttClient_RespList_Remove(client, pendResp);
+        wm_SemUnlock(&client->lockClient);
+        wm_SemUnlock(&client->lockRecv);
+        return rc;
+    }
+}
+```
+3. In the above code, the function `MqttClient_RespList_Find` searches for a pending response in the response list based on the packet type and ID.
+4. If a pending response is found and `pendResp->packetDone` is true, the code tries to access the `pendResp` structure without checking if it is `NULL`.
+5. This can lead to a null-dereference WRITE, which is a security vulnerability.
+6. To fix the issue, the patch modifies the vulnerable code as follows:
+```c
+if (MqttClient_RespList_Find(client, (MqttPacketType)wait_type, wait_packet_id, &pendResp)) {
+    if (pendResp != NULL && pendResp->packetDone) {
+        /* pending response is already done, so return */
+        rc = pendResp->packet_ret;
+        MqttClient_RespList_Remove(client, pendResp);
+        wm_SemUnlock(&client->lockClient);
+        wm_SemUnlock(&client->lockRecv);
+        return rc;
+    }
+}
+```
+7. The fix adds a check for `pendResp != NULL` before accessing the `pendResp` structure to prevent the null-dereference WRITE vulnerability.
+8. With this fix, the null-dereference issue in the `MqttClient_WaitType` function is resolved.

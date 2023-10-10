@@ -1,0 +1,31 @@
+Vulnerability:
+The vulnerability in the given code is that the check for `HeaderSize` being lower than `Icc->IOhandler->ReportedSize` is incorrect. This allows `HeaderSize` to be equal to `Icc->IOhandler->ReportedSize`, allowing the possibility of accessing memory outside the bounds of the profile.
+
+Summary of the fix:
+The fix updates the check for `HeaderSize` to be lower than `Icc->IOhandler->ReportedSize` as intended, ensuring that `HeaderSize` is always less than the reported size of the profile.
+
+Detailed description of the fix:
+1. Previously, the code contained an incorrect check for `HeaderSize`:
+   ```
+   if (HeaderSize >= Icc->IOhandler->ReportedSize)
+           HeaderSize = Icc->IOhandler->ReportedSize;
+   ```
+   This check allows `HeaderSize` to be equal to `Icc->IOhandler->ReportedSize`, which can lead to accessing memory outside the bounds of the profile.
+   
+2. The fix updates the check for `HeaderSize`:
+   ```
+   if (HeaderSize > Icc->IOhandler->ReportedSize)
+           HeaderSize = Icc->IOhandler->ReportedSize;
+   ```
+   This ensures that `HeaderSize` is always less than the reported size of the profile. If `HeaderSize` is equal to or greater than the reported size, it is updated to be equal to the reported size, preventing any potential out-of-bounds access.
+   
+3. Additionally, the code now includes an error check for the case when no tags are found in the profile:
+   ```
+   if (Icc->TagCount == 0) {
+       cmsSignalError(Icc->ContextID, cmsERROR_RANGE, "Corrupted profile: no tags found");
+       return FALSE;
+   }
+   ```
+   If `TagCount` is zero, indicating no tags were found in the profile, an error is signaled, and the function returns `FALSE`. This prevents further processing on a corrupted profile.
+
+Overall, the fix ensures that `HeaderSize` is properly checked and updated, and includes an error check for an empty tag count to handle corrupted profiles.

@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in this code patch is that it does not properly handle the out-of-memory (OOM) condition when packing the settings payload. If the nghttp2_pack_settings_payload function fails and returns a binlen of 0, the code fails to free the req buffer and returns CURLE_FAILED_INIT without cleaning up properly.
+
+Summary of the Fix:
+The fix in this patch is to add the necessary code to clean up the request buffer (req) when the nghttp2_pack_settings_payload function fails. This ensures that resources are properly freed and prevents a potential memory leak.
+
+Detailed Description of the Fix:
+1. The fix starts by adding the line `Curl_add_buffer_free(req);` after the failf statement. This line is responsible for freeing the request buffer (req) in case of a failure. This ensures that the buffer is cleaned up and there is no memory leak.
+
+2. Next, the code checks if the result of the nghttp2_pack_settings_payload function is 0 (meaning failure). If it is, the code immediately returns CURLE_FAILED_INIT without performing any further operations. The addition of `Curl_add_buffer_free(req);` ensures that the request buffer is freed before returning.
+
+3. The code also adds a check for the result of the Curl_add_bufferf function. If the result is non-zero (indicating failure), the code again frees the request buffer (req) using `Curl_add_buffer_free(req);` before returning the error result.
+
+This fix ensures that the request buffer is always properly freed, both in the case of a failure in the nghttp2_pack_settings_payload function and in case of a failure in the Curl_add_bufferf function. By properly freeing resources, the fix prevents potential memory leaks and improves the handling of the out-of-memory condition.

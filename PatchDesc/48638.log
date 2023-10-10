@@ -1,0 +1,10 @@
+Vulnerability: Zero-sized Sample
+
+Summary of the Fix: The fix disallows the presence of zero-sized samples in the trun atoms. This is done to prevent the generation of zero-sized packets and the creation of huge index tables unnecessarily.
+
+Detailed Description of the Fix:
+1. The fix checks if the sample size is zero using the condition `if (!sample_size)`. 
+2. If the sample size is zero, the function returns an error with the code `AVERROR_INVALIDDATA`.
+3. By disallowing zero-sized samples, the fix ensures that the code does not proceed with creating invalid index entries and avoids any potential issues in downstream processing.
+
+Note: This fix is part of a larger codebase and may require additional context to fully understand its implications and integration within the overall code.

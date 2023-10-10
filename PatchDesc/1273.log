@@ -1,0 +1,41 @@
+Vulnerability:
+The vulnerability in the given code is a potential buffer overflow in the "60 (Vendor class identifier)" option. The option is fetched using the tvb_get_ptr() function which does not ensure that the string is null-terminated, leading to a potential buffer overflow if the string length is not correctly determined.
+
+Summary of the fix:
+The potential buffer overflow issue is fixed by using the tvb_get_string_enc() function instead of tvb_get_ptr(). The tvb_get_string_enc() function ensures that the string is null-terminated and avoids any potential buffer overflow.
+
+Detailed description of the fix:
+In the fixed code, the tvb_get_ptr() function is replaced with the tvb_get_string_enc() function. The tvb_get_string_enc() function takes additional parameters for the encoding and returns a null-terminated string. This ensures that the Vendor class Identifier is properly null-terminated, preventing any potential buffer overflow.
+
+Here is the fixed code:
+
+```diff
+@@ -1770,6 +1770,7 @@ bootp_option(tvbuff_t *tvb, packet_info *pinfo, proto_tree *bp_tree, int voff,
+ 	            guint8 *overload_p)
+ {
+     struct opt_info *opt;
++    gchar *vendor_class_id_str;
+     guchar code = tvb_get_guint8(tvb, voff);
+     int optlen;
+     int i, consumed;
+@@ -1838,8 +1839,9 @@ bootp_option(tvbuff_t *tvb, packet_info *pinfo, proto_tree *bp_tree, int voff,
+                 *vendor_class_id_p =
+                     tvb_get_string_enc(wmem_packet_scope(), tvb, voff+2, consumed-2, ENC_ASCII);
+                 break;
+             case 119:
+                 rfc3396_dns_domain_search_list.total_number_of_block++;
+                 break;
+             case 120:
+                 rfc3396_sip_server.total_number_of_block++;
+                 break;
+         }
+     }
+ 
+     /*
+      * We don't do anything else here.
+      */
+     return consumed;
+ }
+```
+
+In the fixed code, the `vendor_class_id_str` variable is introduced to store the null-terminated string obtained from tvb_get_string_enc(). The `vendor_class_id_str` is then assigned to `*vendor_class_id_p`, ensuring that the Vendor class Identifier is correctly null-terminated. This prevents any potential buffer overflow vulnerability.

@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability that is being patched in this diff file is a potential buffer overflow when setting the PSK (Preshared Key) and client ID in the `coaps set psk` command.
+
+Summary of the fix:
+The fix adds length checks before copying the PSK and client ID strings, ensuring that they do not exceed the maximum allowed length.
+
+Detailed description of the fix:
+1. The fix modifies the code block in the `coaps set psk` command where the PSK and client ID strings are being copied.
+2. It introduces a new variable `length` of type `size_t` to store the length of the PSK and client ID strings.
+3. The length of the PSK string is checked using the `strlen` function, and then compared against the maximum allowed length using the `VerifyOrExit` macro. If the length exceeds the allowed length, the function exits with an error.
+4. If the PSK length check passes, the PSK string is copied using the `memcpy` function.
+5. The length of the client ID string is checked in a similar manner, and if it passes the check, the client ID string is copied using `memcpy`.
+6. The `otCoapSecureSetPsk` function is then called with the validated PSK and client ID strings.
+7. The `mUseCertificate` flag is set to `false` to indicate that a PSK is being used instead of a certificate.
+8. The patched code also includes error handling for invalid arguments, ensuring that the function exits with an error if necessary.
+
+Overall, the fix adds length checks before copying the PSK and client ID strings, ensuring that no buffer overflow occurs when setting the PSK.

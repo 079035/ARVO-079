@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is an out-of-bounds read caused by not copying the full key when keys have null bytes.
+
+Summary of the fix:
+The fix involves replacing the use of `strdup` with `memcpy` and `malloc` to ensure that the full key is copied without any null byte truncation.
+
+Detailed description of the fix:
+1. The code change is made in the function `ucl_object_copy_internal` in the file `ucl_util.c`.
+2. Initially, the code checks if the `trash_stack[UCL_TRASH_KEY]` is not equal to `NULL`.
+3. Previously, the code used `strdup` to copy the `other->trash_stack[UCL_TRASH_KEY]` into `new->trash_stack[UCL_TRASH_KEY]`. This could result in truncation of the key if it contained null bytes.
+4. The fix modifies the code to set `new->trash_stack[UCL_TRASH_KEY]` to `NULL` before further processing.
+5. If the `other->key` is equal to `other->trash_stack[UCL_TRASH_KEY]`, indicating that the key needs to be copied, the code dynamically allocates memory for `new->trash_stack[UCL_TRASH_KEY]` using `malloc` and then uses `memcpy` to copy the contents from `other->trash_stack[UCL_TRASH_KEY]` to `new->trash_stack[UCL_TRASH_KEY]`.
+6. This ensures that the full key is copied without any truncation caused by null bytes.
+7. By replacing `strdup` with `memcpy` and `malloc`, the fix prevents the out-of-bounds reads that could occur when keys with null bytes were not properly copied.

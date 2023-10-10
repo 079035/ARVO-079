@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability patched in the given diff file is that finalizers can be called with an invalid stack. The call to 'checkstackGC' can run finalizers, which will find an inconsistent CallInfo, as 'ci' is half updated at the point of call.
+
+Summary of fix:
+The fix involves adding a check to 'checkstackGC' to ensure that the stack size is sufficient (fsize - delta). This check ensures that the stack is not in an inconsistent state when finalizers are called.
+
+Detailed description of fix:
+In the function 'luaD_pretailcall', after the case where a Lua function is identified, the fix adds a call to 'checkstackGCp'. This function takes the Lua state (L), the required stack size (fsize - delta), and the current function (func) as parameters. 
+
+The 'checkstackGCp' function ensures that there is enough space in the stack for the frame of the new function being prepared for the tail call. It checks if the current stack size plus the required size is greater than the maximum stack size allowed for the Lua state (L). If the stack size is not sufficient, it triggers a garbage collection to free up additional stack space.
+
+After the 'checkstackGCp' call, the stack is guaranteed to have enough space for the frame of the new function. The fix removes the previously existing call to 'checkstackGC' because the stack size has already been ensured by 'checkstackGCp'.
+
+The fix also adjusts the indices and positions of the function and arguments in the stack to properly move them down and accommodate the new function frame. It sets the top of the call info (ci->top) to the position after the moved-down function. The fix also ensures that the top of the Lua stack (L->top) is set to the position after the last fixed argument.
+
+Additionally, the fix sets the call status of the call info (ci->callstatus) to indicate that it is a tail call (CIST_TAIL).
+
+Overall, the fix ensures that the stack remains in a consistent state when finalizers are called during a tail call. It properly adjusts the stack and call info to prepare for the new function being called.

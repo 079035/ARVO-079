@@ -1,0 +1,33 @@
+Vulnerability:
+The vulnerability in this code is that the variable `ecpoint_data` is not properly initialized. It is used to store an EC point value, but it is not initialized to any specific value. This can lead to unpredictable behavior when the code tries to free `ecpoint_data` in case of an error.
+
+Summary of the Fix:
+The fix initializes the variable `ecpoint_data` to NULL before its first use. This ensures that if an error occurs during the ASN.1 decoding or when checking the EC point value, the code can safely free the variable.
+
+Detailed Description of the Fix:
+1. In the original code, the `ecpoint_data` variable is declared without any initialization.
+```c
+u8 *ecpoint_data;
+```
+
+2. In the fixed code, the `ecpoint_data` variable is initialized to NULL.
+```c
+u8 *ecpoint_data = NULL;
+```
+
+3. Prior to the fix, the code checks if `ecpoint_data` is not NULL before freeing it, but since it is not initialized, it may contain a garbage value. After the fix, `ecpoint_data` is guaranteed to be initialized to NULL, so it can be safely freed even if an error occurs during the ASN.1 decoding or when checking the EC point value.
+```c
+if (r < 0) {
+    free(ecpoint_data);
+    LOG_TEST_RET(ctx, r, "ASN.1 decoding failed");
+}
+
+...
+
+if (ecpoint_len == 0 || *ecpoint_data != 0x04) {
+    free(ecpoint_data);
+    LOG_TEST_RET(ctx, SC_ERROR_NOT_SUPPORTED, "Supported only uncompressed EC pointQ value");
+}
+```
+
+4. This fix ensures that the `ecpoint_data` variable is always properly initialized and can be safely freed in case of errors. Properly initializing variables is important for preventing undefined behavior and potential memory errors.

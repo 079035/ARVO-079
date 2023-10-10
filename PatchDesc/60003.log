@@ -1,0 +1,3 @@
+Vulnerability: Heap-buffer-overflow
+Summary of the fix: The patch fixes a heap-buffer-overflow error in the line.c file.
+Detailed description of the fix: The patch modifies the code in the `ndpi_search_line` function to prevent a heap-buffer-overflow vulnerability. The vulnerability occurs when processing Line IP addresses in IPv4 packets. The patch provides checks for the length and content of the packet payload before performing any operations on it to avoid overflowing the buffer. It also includes additional checks for the payload length and specific byte patterns to ensure the correct identification of Line packets. The fix also addresses potential false positives and improves the detection of RTP packets in the flow.

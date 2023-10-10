@@ -1,0 +1,7 @@
+Vulnerability: The vulnerability in the given diff file is a build error in the function `Handle_Props`. 
+
+Summary of the fix: The fix in the diff file resolves the build error in the `Handle_Props` function.
+
+Detailed description of the fix: In the `Handle_Props` function, the code checks for the presence of properties (`props != NULL`). If properties are present, an if condition checks for the availability of a property callback function (`client->property_cb != NULL`). However, if the macro `WOLFMQTT_PROPERTY_CB` is not defined, the `client` variable is not used, which could result in an unused variable warning during compilation. 
+
+To fix this build error, the fix in the diff file adds a `(void)client;` statement inside the `else` block of the `#ifdef WOLFMQTT_PROPERTY_CB` condition. This statement effectively casts the `client` variable to the `void` type, indicating that the variable is intentionally unused and preventing the build error. After this fix, the build error in the `Handle_Props` function should be resolved.

@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability fixed in this code patch is a bad cast to `BarewordLiteral`. This vulnerability was discovered by oss-fuzz.
+
+Summary of the Fix:
+The fix corrects the type casting in the code to ensure that the correct types are used.
+
+Detailed Description of the Fix:
+- In the original code, there is a line that attempts to cast `glob_after` to `BarewordLiteral` using `static_cast<AST::BarewordLiteral*>(glob_after.ptr())`.
+- However, the correct type for `glob_after` in this context is not `BarewordLiteral`, but `Glob`. This incorrect cast leads to a type mismatch.
+- To fix this, the code patch corrects the cast to `Glob` using `static_cast<AST::Glob*>(glob_after.ptr())`, which ensures that the correct type is used.
+- With this fix, the code correctly handles different types of nodes, such as `Glob`, `BarewordLiteral`, and `Tilde`, when constructing the `textbuilder` string.

@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is a heap overflow in the function `coap_pdu_parse_opt()`.
+
+Summary of the fix:
+The fix involves calling the `next_option_safe()` function instead of `coap_opt_length()` to avoid out-of-bound reads for malformed options.
+
+Detailed description of the fix:
+1. Before the fix, the code was using the `coap_opt_length()` function to determine the length of an option. However, this function could cause out-of-bound reads for malformed options, leading to a heap overflow vulnerability.
+2. The fix introduces a change in the code where the `next_option_safe()` function is called instead of `coap_opt_length()`. This change ensures that the option is properly checked for validity before accessing its length.
+3. The `next_option_safe()` function returns the size of the current option in bytes and updates the pointer to the next option. It performs necessary checks to ensure the option is valid before returning its size.
+4. With the fix in place, the code now checks if the return value of `next_option_safe()` is non-zero. If the return value is zero, it indicates that the option is malformed, and the function returns 0 to indicate failure.
+5. If the option is valid, the code proceeds to parse the option based on its type and length, ensuring that the length is within expected bounds. If the length is out of bounds, the code jumps to the `bad` label, indicating failure.
+6. The fix provides specific length limits for different options to ensure that they are within acceptable ranges and to prevent any potential heap overflow vulnerabilities.
+7. Overall, the fix addresses the vulnerability by using the `next_option_safe()` function to properly handle options and perform necessary checks to avoid out-of-bound reads and potential heap overflow.

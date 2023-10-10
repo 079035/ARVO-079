@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability patched in this diff file is a missing return statement in the `FLB_INPUT_RETURN` macro in the `flb_input.h` header file.
+
+Summary of Fix:
+The fix adds a missing return statement in the `FLB_INPUT_RETURN` macro, ensuring that the execution flow returns after calling `flb_input_return_do(x)`.
+
+Detailed Description of Fix:
+1. In the patch, a new inline function `flb_input_return_do(int ret)` is added. This function takes an integer `ret` as an argument.
+2. Inside `flb_input_return_do()`, the function `flb_coro_get()` is called to get the current coroutine.
+3. The `flb_input_return()` function is then called with the obtained coroutine as an argument. This function handles the cleanup and finalization of the input coroutine.
+4. After calling `flb_input_return()`, the function `flb_coro_yield()` is called with the obtained coroutine and `FLB_TRUE` as arguments. This function yields the execution flow to the scheduler, allowing other tasks to be executed.
+5. The `FLB_INPUT_RETURN` macro is defined as follows:
+    a. It calls `flb_input_return_do(x)`, passing the provided parameter `x` to the function.
+    b. It then appends a `return` statement, ensuring that the execution flow returns after calling `flb_input_return_do(x)`.
+
+By adding the missing `return` statement in the `FLB_INPUT_RETURN` macro, the fix ensures that the code returns after performing the necessary cleanup and yielding the execution flow to the scheduler.

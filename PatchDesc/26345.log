@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability patched in this diff file is an inconsistent memory allocation in the parser creation function (`flb_parser_create`). Specifically, the function `flb_parser_destroy` is called to free memory provided by the caller, but certain memory allocations are not freed.
+
+Summary of the fix:
+The fix ensures consistent memory allocation in the parser creation function by properly freeing all aspects of the parser that are provided by the caller, except for `parser.types` and `parser.decoders`.
+
+Detailed description of the fix:
+1. A new function `flb_interim_parser_destroy` is added. This function is intended to be used only in parser creation routines. It is used to free all aspects of a parser provided by the caller, except for `parser.types` and `parser.decoders`.
+   - The function first checks the type of the parser (`parser->type`). If it is `FLB_PARSER_REGEX`, it destroys the regex object (`parser->regex`) and frees the memory allocated for the pattern (`parser->p_regex`).
+   - It then frees other fields of the parser, such as `parser->name`, `parser->time_fmt`, `parser->time_fmt_full`, `parser->time_fmt_year`, and `parser->time_key`.
+   - The function also removes the parser from the global parser list (`config->parsers`) by deleting the corresponding list entry.
+   - Finally, it frees the memory allocated for the parser itself.
+   
+2. In the `flb_parser_create` function, when a parser is successfully created, the `flb_interim_parser_destroy` function is called to free any inconsistent memory allocations before returning the parser.
+   - After successfully creating the parser and adding it to the global parser list, various fields of the parser are checked and processed.
+   - If any error condition is encountered during the processing, the `flb_interim_parser_destroy` function is called to free the partially created parser and any associated memory.
+   - This ensures consistent memory allocation and prevents memory leaks.

@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability fixed in this diff file is a potential heap-based buffer overflow in the `ReadTXTImage` function in `txt.c`. This vulnerability can be exploited by providing a specially crafted text file, which can lead to a crash or potentially arbitrary code execution.
+
+Summary of the fix:
+The fix in this diff file adds two lines of code to initialize variables `x_offset` and `y_offset` to -1. These variables are used later in the code to store coordinates read from the input text file. By initializing these variables to -1, the fix ensures that the program will not use uninitialized or garbage values when processing the text file, mitigating the possibility of a heap-based buffer overflow.
+
+Detailed description of the fix:
+In the original code, the variables `x_offset` and `y_offset` were used without being initialized. These variables are later used in a loop to store coordinates read from the input text file. However, if the input file does not contain valid coordinate values, these variables could be left uninitialized, potentially leading to undefined behavior.
+
+The fix initializes these variables to -1 before the loop that reads coordinates from the file. This ensures that the variables have a known value even if no valid coordinates are found in the file. By doing so, the fix prevents the possibility of uninitialized or garbage values being used later in the code, thus preventing a potential heap-based buffer overflow.

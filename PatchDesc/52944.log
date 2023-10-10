@@ -1,0 +1,36 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential out-of-bounds memory access. Specifically, in the `applyOP` function of the `PixelOpcode` class, the loop boundaries for iterating over pixels are calculated incorrectly. The original code uses the variables `x` and `y` as loop counters, incrementing them by `colPitch` and `rowPitch` respectively. However, the correct approach is to calculate the number of affected pixels in each dimension by dividing the ROI dimensions by the respective pitch values, and then loop over these calculated values. This fix ensures that the loop boundaries are correctly calculated and prevents the possibility of accessing pixels outside the valid range.
+
+Summary of the fix:
+The fix involves correcting the loop boundaries in the `applyOP` function of the `PixelOpcode` class. Instead of using the `x` and `y` loop counters, the fix calculates the number of affected pixels in each dimension by dividing the ROI dimensions by the respective pitch values. The fixed loop then iterates over the calculated values, ensuring that the loop boundaries are correctly calculated and preventing out-of-bounds memory access.
+
+Detailed description of the fix:
+1. In the `applyOP` function of the `PixelOpcode` class, the original code had the following loop boundaries:
+   ```
+   for (auto y = 0; y < ROI.getHeight(); y += rowPitch) {
+     for (auto x = 0; x < ROI.getWidth(); x += colPitch) {
+   ```
+   These loop boundaries incremented the variables `x` and `y` by `colPitch` and `rowPitch` respectively, which was incorrect and could potentially lead to out-of-bounds memory access.
+
+2. The fix involves calculating the number of affected pixels in each dimension by dividing the ROI dimensions by the respective pitch values. This is achieved using the following code:
+   ```
+   const iPoint2D numAffected(roundUpDivision(getRoi().dim.x, colPitch),
+                              roundUpDivision(getRoi().dim.y, rowPitch));
+   ```
+
+3. The fixed loop then iterates over the calculated values of `numAffected`, ensuring that the loop boundaries are correctly calculated and preventing out-of-bounds memory access. The updated loop code is as follows:
+   ```
+   for (int y = 0; y < numAffected.y; ++y) {
+     for (int x = 0; x < numAffected.x; ++x) {
+       // ...
+     }
+   }
+   ```
+
+4. Within the loop, the pixel coordinates are adjusted based on the correct pitch values:
+   ```
+   T& pixel = img(ROI.getTop() + rowPitch * y,
+                  firstPlane + (ROI.getLeft() + colPitch * x) * cpp + p);
+   ```
+
+5. Overall, the fix ensures that the loop boundaries are correctly calculated based on the pitch values, preventing out-of-bounds memory access and ensuring the correct application of the operation to each pixel within the ROI.

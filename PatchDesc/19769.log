@@ -1,0 +1,19 @@
+Vulnerability:
+
+This patch fixes a potential vulnerability related to a null termination issue in the `IsFxFunction` function in the `fx.c` file of the MagickCore library.
+
+Summary of Fix:
+
+The fix introduces a check for null termination before accessing the character `c` in the `IsFxFunction` function.
+
+Detailed Description of Fix:
+
+The `IsFxFunction` function is used to determine if a given function name exists in an expression. It checks if the function name matches the provided expression up to its length and if the character after the length is either a space or an opening parenthesis.
+
+Before the fix, the function did not check for null termination in the expression, which could lead to out-of-bounds memory access if the function name was not null-terminated or if the expression was not properly formatted.
+
+The fix adds a check for null termination before accessing the character `c`. If the character `c` is null, the function returns `MagickFalse`, indicating that the expression does not contain the given function name.
+
+This fix ensures that the function does not access memory beyond the expression length and prevents potential security vulnerabilities related to null termination issues.
+
+Overall, this patch enhances the safety and reliability of the `IsFxFunction` function by addressing the null termination issue.

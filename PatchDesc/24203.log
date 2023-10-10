@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in the given diff file is that the null terminator ('\0') is not being set correctly when creating a `SIZED_STRING` in the `yr_re_ast_extract_literal` function of the `re.c` file in the `libyara` library.
+
+Fix Summary:
+The fix sets the null terminator ('\0') correctly at the end of the `SIZED_STRING` in the `yr_re_ast_extract_literal` function.
+
+Detailed Fix Description:
+1. In the `yr_re_ast_extract_literal` function, a `SIZED_STRING` struct is created using `yr_malloc` with a size of `sizeof(SIZED_STRING) + length`.
+2. Before the fix, the null terminator was not being set after the characters in `string->c_string`.
+3. After the fix, at line 67, the null terminator is set correctly by assigning `'\0'` to `string->c_string[length]`.
+4. This ensures that the `SIZED_STRING` is properly terminated with a null character, making it usable as a C-style string.
+
+Note: Without knowing the entire codebase and the context of this fix, it is not possible to ascertain the impact or the exact consequences of this vulnerability.

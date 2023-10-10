@@ -1,0 +1,17 @@
+Vulnerability: Allowing Extended TLVs in the Operational Dataset
+
+Summary of the Fix: The fix prevents the code from allowing Extended TLVs in the Operational Dataset.
+
+Detailed Description of the Fix:
+1. The code snippet is from the file `dataset.cpp` in the `src/core/meshcop` directory.
+2. The vulnerability being fixed is related to Extended TLVs in the Operational Dataset.
+3. In the `IsValid()` function, a loop iterates through the TLVs in the dataset.
+4. Previously, the code did not check if the TLV was an Extended TLV, which could potentially cause issues.
+5. The fix adds a check to ensure that the current TLV is not an Extended TLV before performing further checks.
+6. The line `VerifyOrExit(!cur->IsExtended() && (cur + 1) <= end && cur->GetNext() <= end && Tlv::IsValid(*cur), rval = false);` implements the fix.
+   1. `!cur->IsExtended()` checks if the TLV is not an Extended TLV.
+   2. `(cur + 1) <= end` ensures that the next TLV is within the dataset boundaries.
+   3. `cur->GetNext() <= end` also ensures the next TLV is within the dataset boundaries.
+   4. `Tlv::IsValid(*cur)` performs additional validity checks on the TLV.
+   5. If any of these conditions fail, `rval` is set to `false`.
+7. The fix ensures that only valid TLVs are considered in the dataset by excluding Extended TLVs.

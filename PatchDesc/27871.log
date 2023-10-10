@@ -1,0 +1,9 @@
+Vulnerability: Unbounded operation
+
+Summary of the fix: The fix omits the file validation in the zip_fuzzer code.
+
+Detailed description of the fix: In the given diff file, there is a commit that removes the line of code that performs file validation in the zip_fuzzer code. The line "mz_zip_validate_file(&zip, i, 0);" has been commented out using a "-" character at the start of the line. 
+
+This file validation operation has been identified as an unbounded operation, which means that the operation does not have any limit set and can potentially consume a large amount of resources for large input sizes. Removing this operation helps to prevent any potential resource exhaustion or denial of service issues that may arise due to unbounded operations.
+
+By omitting the file validation, the code avoids performing unnecessary validation on each file in the zip archive, reducing the potential for performance and resource issues. The omission of this operation does not affect the functionality of the zip_fuzzer code as it continues with the extraction of the file without validation.

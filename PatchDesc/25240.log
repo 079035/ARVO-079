@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability patched in the given diff file is a crash in the function `Assimp::ObjFileMtlImporter::getFloatValue` in the file `ObjFileMtlImporter.cpp`. The crash occurs when the `m_pModel->m_pCurrentMaterial` pointer is null, but the function attempts to access members of this pointer.
+
+Summary of the fix:
+The fix involves adding a null check before accessing members of the `m_pModel->m_pCurrentMaterial` pointer.
+
+Detailed description of the fix:
+The fix adds `if` statements to perform a null check before accessing members of the `m_pModel->m_pCurrentMaterial` pointer. The null check ensures that the pointer is not null before attempting to access its members. If the pointer is null, the function skips the respective code block using `continue` or `break`.
+
+The added null checks are as follows:
+1. Before calling `getColorRGBA(&m_pModel->m_pCurrentMaterial->ambient)`, `diffuse`, `specular`, and `emissive` functions, a null check is added to ensure that the `m_pModel->m_pCurrentMaterial` pointer is not null.
+2. Before calling `getColorRGBA(&m_pModel->m_pCurrentMaterial->transparent)`, a null check is added.
+3. Before assigning `m_pModel->m_pCurrentMaterial->alpha`, a null check is added.
+4. Before calling `getColorRGBA(&m_pModel->m_pCurrentMaterial->sheen)`, a null check is added.
+5. Before assigning values to `m_pModel->m_pCurrentMaterial->roughness`, `metallic`, `clearcoat_roughness`, `clearcoat_thickness`, `illumination_model`, and `anisotropy`, a null check is added.
+
+These null checks ensure that the program does not crash when the `m_pModel->m_pCurrentMaterial` pointer is null and avoids accessing invalid memory.

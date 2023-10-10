@@ -1,0 +1,44 @@
+Vulnerability:
+The vulnerability in the given code can be described as a potential memory leak. 
+
+Summary of the fix:
+The fix in this code patch addresses the memory leak by properly freeing the allocated memory before returning from the function.
+
+Detailed description of the fix:
+In the original code, there are multiple cases where memory is allocated but not properly freed before returning from the `add_word` function. This leads to memory leaks. The fix in the code patch addresses these cases by adding proper `delete` statements and `free` calls to deallocate the memory before returning.
+
+1. In the case where the word length exceeds the max limit, the fix adds the following code:
+```cpp
+delete desc_copy;
+delete word_copy;
+free_flag(aff, al);
+```
+These statements delete the `desc_copy` and `word_copy` objects and call the `free_flag` function to free the memory allocated for `aff`. This ensures that the allocated memory is properly freed before returning from the function.
+
+2. In the case where `malloc` fails to allocate memory for `hp`, the fix adds the following code:
+```cpp
+delete desc_copy;
+delete word_copy;
+free_flag(aff, al);
+```
+These statements delete the `desc_copy` and `word_copy` objects and call the `free_flag` function to free the memory allocated for `aff`. This ensures that any previously allocated memory is properly freed before returning from the function.
+
+3. In the case where a homonym is found, the fix adds the following code:
+```cpp
+delete[] dp->astr;
+dp->astr = hp->astr;
+dp->alen = hp->alen;
+free(hp);
+delete desc_copy;
+delete word_copy;
+```
+These statements delete the `dp->astr` array, assign `hp->astr` to `dp->astr`, update `dp->alen` with `hp->alen`, and then free the memory allocated for `hp`. The `desc_copy` and `word_copy` objects are also deleted. This ensures that the memory allocated for `hp` and the temporary objects is properly freed.
+
+4. Finally, in the last part of the code, where `dp->next` is not NULL, the fix adds the following code:
+```cpp
+delete desc_copy;
+delete word_copy;
+```
+These statements delete the `desc_copy` and `word_copy` objects before returning from the function. This ensures that any remaining temporary objects are properly deleted.
+
+By adding these fix statements, the code addresses the memory leak vulnerabilities and ensures that all dynamically allocated memory is properly freed before returning from the `add_word` function.

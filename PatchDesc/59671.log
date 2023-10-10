@@ -1,0 +1,24 @@
+Vulnerability:
+The vulnerability patched in this diff file is a NULL pointer dereference.
+
+Summary of the Fix:
+The fix adds NULL pointer checks to the function `MPV_motion_lowres()` to prevent the NULL pointer dereference.
+
+Detailed Description of the Fix:
+1. The fix adds the following check before line 111:
+```c
+if (!ref_picture[0]) {
+    ref_picture = s->current_picture_ptr->f->data;
+}
+```
+This check ensures that `ref_picture[0]` is not a NULL pointer. If it is NULL, then `ref_picture` is set to `s->current_picture_ptr->f->data`.
+
+2. The fix also adds a NULL pointer check in line 105:
+```c
+if (!ref_picture[0]) {
+    ref_picture = s->current_picture_ptr->f->data;
+}
+```
+This check ensures that `ref_picture[0]` is not a NULL pointer. If it is NULL, then `ref_picture` is set to `s->current_picture_ptr->f->data`.
+
+These NULL pointer checks prevent the NULL pointer dereferences that could occur when accessing `ref_picture`. By assigning `ref_picture` to a non-NULL value (`s->current_picture_ptr->f->data`) when necessary, the fix ensures that the code functions correctly and does not result in a NULL pointer dereference.

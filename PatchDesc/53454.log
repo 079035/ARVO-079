@@ -1,0 +1,23 @@
+Vulnerability:
+
+The vulnerability patched in this diff file is an out-of-bounds access issue.
+
+Summary of the fix:
+
+The fix checks the number of metadata blocks before adding a new block. If the number of metadata blocks is less than the maximum allowed number, the new block is added. Otherwise, the new block is not added.
+
+Detailed description of the fix:
+
+1. The fix adds a new constant `MAX_NUM_METADATA_BLOCKS` with a value of 2048, representing the maximum number of metadata blocks allowed.
+
+2. In the `FuzzerDecoder` class, the declaration of the `metadata_blocks` array is updated to use the `MAX_NUM_METADATA_BLOCKS` constant as the size of the array.
+
+3. The `num_metadata_blocks` variable is initialized to 0.
+
+4. In the `metadata_callback` function, before adding a new metadata block, a check is performed to ensure that the number of metadata blocks is less than `MAX_NUM_METADATA_BLOCKS`.
+
+5. If the check passes, the new metadata block is added to the `metadata_blocks` array and the `num_metadata_blocks` variable is incremented.
+
+6. If the check fails, the new metadata block is not added.
+
+The fix prevents an out-of-bounds access vulnerability by ensuring that the number of metadata blocks stays within the allowed limit.

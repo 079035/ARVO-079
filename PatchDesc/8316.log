@@ -1,0 +1,21 @@
+Vulnerability: The vulnerability in the code is that the `mActiveRouterCount` variable is not properly validated when updating the router table. 
+
+Summary of the Fix: The fix validates the `mActiveRouterCount` variable to ensure that it does not exceed the maximum number of routers allowed.
+
+Detailed Description of the Fix: 
+
+1. The fix adds a condition to validate the `mActiveRouterCount` variable in the loop iterating through the router IDs. Before adding a router to the `indexMap`, it checks if the `mActiveRouterCount` is less than the maximum number of routers allowed (`Mle::kMaxRouters`). This ensures that only a valid number of routers are counted.
+
+2. The fix also adds a condition to skip the shifting process if the router ID is greater than `Mle::kMaxRouterId` or if the corresponding index in the `indexMap` is `Mle::kInvalidRouterId`. This ensures that only valid router IDs are considered for shifting.
+
+3. The fix initializes the `newIndex` variable with the index value from the `indexMap` for a specific router ID.
+
+4. The fix checks if the new index is greater than the current index in the first shifting loop. If it is, the router entry at the new index is overwritten with the router entry from the current index. This shift ensures that the routers are correctly rearranged in ascending order based on their IDs.
+
+5. The fix also checks if the new index is less than the current index in the second shifting loop. If it is, the router entry at the new index is overwritten with the router entry from the current index. This shift ensures that the routers are correctly rearranged in descending order based on their IDs.
+
+6. The fix iterates through the `indexMap` to fix the replaced entries. For each index, it checks if the index is valid (not equal to `Mle::kInvalidRouterId`). If it is valid, it retrieves the router entry at that index. If the router ID of the retrieved router entry does not match the expected ID `i`, it means that there was a replacement. In this case, the router entry is reset to initial values using `memset` function, and the `Rloc16` and `NextHop` values are updated with valid values based on the expected ID `i`.
+
+7. The fix also clears the unused entries in the router table. It iterates from the `mActiveRouterCount` value to `Mle::kMaxRouters`. For each index in this range, it retrieves the router entry and resets it to initial values using `memset` function, and sets the `Rloc16` value to `0xffff` (a marker for an unused entry).
+
+By adding the validation and correcting the shifting and replacement logic, the fix ensures that the router table is properly updated, maintaining the correct order and assigning valid values to the router entries.

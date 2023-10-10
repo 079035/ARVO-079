@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability in this code can be described as a missing check for a key frame (RAP - Random Access Point) in the `decoder_peek_si_internal` function. The code does not properly handle the case where the first OBU is a key frame, which can lead to incorrect parsing and decoding of the video stream.
+
+Summary of fix:
+The fix in this code is to add proper checks for the key frame (RAP) and ensure that the parsing and decoding process handles key frames correctly.
+
+Detailed description of fix:
+1. The code adds a variable `got_sequence_header` to keep track of whether a sequence header has been processed. This is necessary to correctly interpret the key frame (RAP) information.
+2. A new variable `found_keyframe` is added to indicate whether a key frame has been found or not. This variable is initially set to 0.
+3. The code enters a loop that checks each OBU header in the bitstream.
+4. Within the loop, if a sequence header is encountered, the code reads various values from the sequence header payload using a bit buffer. It checks if it is a still picture and if the reduced still picture header flag is set, in which case it returns an error. If the check passes, it calls the `parse_operating_points` function to parse the operating points and returns an error if it fails. It then reads the frame width and height from the bit buffer and assigns them to the `si` structure.
+5. If an OBU header of type `OBU_FRAME_HEADER` or `OBU_FRAME` is encountered, the code checks if a sequence header has been processed and if the reduced still picture header flag is set. If both conditions are met, it sets `found_keyframe` to 1 and breaks out of the loop, as no further OBUs will change the outcome.
+6. After each OBU processing, the code updates the `data` and `data_sz` variables to skip to the next OBU in the bitstream.
+7. The loop continues until there are no more OBUs left in the bitstream or an error is encountered.
+8. Finally, if a sequence header has been processed and a key frame (RAP) has been found (`got_sequence_header` is true and `found_keyframe` is true), the `is_kf` flag in the `si` structure is set to 1.
+
+This fix ensures that the `decoder_peek_si_internal` function correctly identifies and handles key frames in the video stream.

@@ -1,0 +1,25 @@
+Vulnerability: 
+The vulnerability in the given code is a potential buffer overflow when resizing the header buffer. 
+
+Summary of the fix: 
+The fix ensures that when resizing the header buffer, the correct size is used and the buffer is reallocated accordingly.
+
+Detailed description of the fix: 
+In the original code, when checking for enough space for the ending CRLF in the header buffer, the new size of the buffer is calculated by adding 2 to the current header size. However, when reallocating the buffer, the new size is mistakenly assigned to `c->header_len` instead of `c->header_size`. This results in a potential buffer overflow if the `header_len` is greater than the new buffer size.
+
+The fix corrects this issue by assigning the new size to `c->header_size` instead of `c->header_len`:
+
+```diff
+ if (header_available(c, crlf) != 0) {
+     new_size = c->header_size + 2;
+     tmp = flb_realloc(c->header_buf, new_size);
+     if (!tmp) {
+         return -1;
+     }
+     c->header_buf = tmp;
+-    c->header_len = new_size;
++    c->header_size = new_size;
+ }
+```
+
+Now, when resizing the header buffer, the correct size is used and the buffer is reallocated accordingly, ensuring that no buffer overflow can occur.

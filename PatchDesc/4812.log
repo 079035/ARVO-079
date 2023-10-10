@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given diff file is that the `FujiDecompressor` class constructor does not properly sanitize the `cpp`, `bpp`, and `dataType` values before processing them. This can lead to unexpected behavior or crashes if the component count, data type, or bits per pixel are not as expected.
+
+Summary of the fix:
+The fix adds an if statement to check if the `cpp`, `dataType`, and `bpp` values are not equal to the expected values (1, TYPE_USHORT16, and 2 respectively). If any of these conditions are true, an exception is thrown with an error message indicating that the component count or data type is unexpected.
+
+Detailed description of the fix:
+The fix is implemented in the `FujiDecompressor` class constructor. Before performing any operations or processing the input, the fix checks the `cpp` (component count), `dataType`, and `bpp` (bits per pixel) values of the `mRaw` object. The expected values are 1 for `cpp`, TYPE_USHORT16 for `dataType`, and 2 for `bpp`.
+
+If any of these values are not equal to the expected values, an exception of type `ThrowRDE` is thrown with the error message "Unexpected component count / data type".
+
+This fix ensures that the `FujiDecompressor` class constructor only proceeds if the component count, data type, and bits per pixel are as expected, preventing any unexpected behavior or crashes.

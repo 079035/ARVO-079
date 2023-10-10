@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential out-of-bounds memory access issue. 
+
+Summary of the Fix:
+The fix addresses the memory boundary checks issue in the `internal_huf_decompress` function.
+
+Detailed Description of the Fix:
+The fix introduces a new variable `hufInfoBlockSize` which is set to `5 * sizeof(uint32_t)`. This variable represents the size of the header information in the compressed data. 
+
+In the original code, the pointer `ptr` was initialized to `compressed + 20`, assuming that the header size is always 20 bytes. However, the fix replaces this hardcoded value with `hufInfoBlockSize`, making it a dynamic value based on the size of the header information.
+
+The fix also modifies the condition for checking if there are enough bytes remaining in the buffer. It changes from `ptr + nBytes > compressed + nCompressed` to `hufInfoBlockSize + nBytes > nCompressed`. This new condition ensures that there are enough bytes remaining in the buffer after accounting for the header size.
+
+Additionally, in the fast decoder section, the fix adds an extra check to ensure that there are `nBytes` remaining in the buffer before performing the fasthuf_decode. This check is `if ((uint64_t)(ptr - compressed) + nBytes > nCompressed)`.
+
+These changes ensure that the function performs proper memory boundary checks and avoids potential out-of-bounds memory access issues.

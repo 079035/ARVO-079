@@ -1,0 +1,93 @@
+{
+    "fix": "https://github.com/darktable-org/rawspeed/commit/98678627c8cd074524c68dc62aa2cdc07d01ad7b",
+    "verify": "0",
+    "localId": 3166,
+    "project": "librawspeed",
+    "fuzzer": "afl",
+    "sanitizer": "asan",
+    "crash_type": "UNKNOWN READ",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 3166,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1503790441,
+                "content": "Detailed report: https://oss-fuzz.com/testcase?key=6718927029665792\n\nProject: librawspeed\nFuzzer: afl_librawspeed_FiffParserFuzzer-GetDecoder-Decode\nFuzz target binary: FiffParserFuzzer-GetDecoder-Decode\nJob Type: afl_asan_librawspeed\nPlatform Id: linux\n\nCrash Type: UNKNOWN READ\nCrash Address: 0x7f1f6bd8fdc0\nCrash State:\n  void rawspeed::Cr2Decompressor::decodeN_X_Y<2, 1, 1>\n  rawspeed::Cr2Decompressor::decodeScan\n  rawspeed::AbstractLJpegDecompressor::decode\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=afl_asan_librawspeed&range=201706211855:201706240502\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6718927029665792\n\nIssue filed automatically.\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for more information.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.\n\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you have questions for the OSS-Fuzz team, please file an issue at https://github.com/google/oss-fuzz/issues.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 3166,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1503791136,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "OS-Linux"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 3166,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1504077135,
+                "content": "ClusterFuzz has detected this issue as fixed in range 201708280512:201708291830.\n\nDetailed report: https://oss-fuzz.com/testcase?key=6718927029665792\n\nProject: librawspeed\nFuzzer: afl_librawspeed_FiffParserFuzzer-GetDecoder-Decode\nFuzz target binary: FiffParserFuzzer-GetDecoder-Decode\nJob Type: afl_asan_librawspeed\nPlatform Id: linux\n\nCrash Type: UNKNOWN READ\nCrash Address: 0x7f1f6bd8fdc0\nCrash State:\n  void rawspeed::Cr2Decompressor::decodeN_X_Y<2, 1, 1>\n  rawspeed::Cr2Decompressor::decodeScan\n  rawspeed::AbstractLJpegDecompressor::decode\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=afl_asan_librawspeed&range=201706211855:201706240502\nFixed: https://oss-fuzz.com/revisions?job=afl_asan_librawspeed&range=201708280512:201708291830\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6718927029665792\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for more information.\n\nIf you suspect that the result above is incorrect, try re-doing that job on the test case report page."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 3166,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1504079164,
+                "content": "ClusterFuzz testcase 6718927029665792 is verified as fixed, so closing issue as verified.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 3166,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "4164592774",
+                    "displayName": "sheriffbot@chromium.org"
+                },
+                "timestamp": 1506690336,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "98678627c8cd074524c68dc62aa2cdc07d01ad7b",
+    "repo_addr": "https://github.com/darktable-org/rawspeed.git"
+}

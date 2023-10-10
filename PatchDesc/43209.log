@@ -1,0 +1,25 @@
+Vulnerability:
+The vulnerability patched in this diff file is an issue where the code does not properly check if a class is a kernel class before associating it with a common class.
+
+Summary of Fix:
+The fix ensures that the class in a classcommon is a kernel class before associating it with a common class. If the class is not a kernel class, an error is returned.
+
+Detailed Description of Fix:
+The fix involves adding an additional check before associating a class with a common class. It checks the flavor of the class datum to ensure that it is a kernel class. If the class is not a kernel class, an error message is logged and the function returns an error. This ensures that only kernel classes can be associated with commons.
+
+Here is the modified code:
+```c
+rc = cil_resolve_name(current, clscom->class_str, CIL_SYM_CLASSES, extra_args, &class_datum);
+if (rc != SEPOL_OK) {
+    goto exit;
+}
+if (NODE(class_datum)->flavor != CIL_CLASS) {
+    cil_log(CIL_ERR, "Class %s is not a kernel class and cannot be associated with common %s\n", clscom->class_str, clscom->common_str);
+    rc = SEPOL_ERR;
+    goto exit;
+}
+
+// Rest of the code remains unchanged
+```
+
+This fix ensures that classes other than kernel classes cannot be associated with a common class, preventing potential issues and maintaining the integrity of the code.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is an inconsistency in the installation directory for the "rpcapd" binary. 
+
+Summary of the fix:
+The fix ensures consistency with the autoconf installation by changing the installation directory for rpcapd on non-Windows systems to sbin instead of bin.
+
+Detailed description of the fix:
+Before the fix, CMake was installing the "rpcapd" binary into the bin directory on non-Windows systems. However, the logic of recent changes in tcpslice and tcpdump is consistent with the autoconf installation, which installs rpcapd into the sbin directory. 
+
+The fix addresses this inconsistency by checking if the system is not Windows and then installing the rpcapd binary into the sbin directory. Additionally, it checks the size of the void pointer (CMAKE_SIZEOF_VOID_P) to determine whether the installation should be in the bin or bin/amd64 directory on Windows systems. 
+
+This fix ensures that the installation directory for rpcapd is consistent with other related software and follows standard conventions.

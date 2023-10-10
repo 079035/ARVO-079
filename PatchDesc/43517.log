@@ -1,0 +1,50 @@
+1. Vulnerability:
+The vulnerability in this code can be summarized as follows:
+- The `allocCompositeData` function is called to allocate memory for composite data if there are multiple tiles. However, there is a missing check to ensure that the dimensions of the output component are valid before allocating memory for it.
+- In the `if(!canAllocInterleaved(cp))` condition, for each component (`destComp`) with invalid dimensions (`destComp->w == 0` or `destComp->h == 0`), it attempts to allocate memory for the component using the `GrkImage::allocData` function.
+- The vulnerability lies in the fact that the `GrkImage::allocData` function is called without setting the `zero` flag to `true`. As a result, the allocated memory for the component will contain uninitialized data, leading to potential security issues.
+
+2. Summary of the Fix:
+The fix aims to ensure that the composite data is properly initialized by zeroing out the allocated memory for the components with invalid dimensions.
+
+3. Detailed Description of the Fix:
+To fix the vulnerability, the following changes were made in the `GrkImage.cpp` file:
+
+```cpp
+bool GrkImage::allocCompositeData(CodingParams* cp)
+{
+  // only allocate data if there are multiple tiles. Otherwise, the single tile data
+  // will simply be transferred to the output image
+  if(!multiTile)
+    return true;
+
+  if(!canAllocInterleaved(cp))
+  {
+    for(uint32_t i = 0; i < numcomps; i++)
+    {
+      auto destComp = comps + i;
+      if(destComp->w == 0 || destComp->h == 0)
+      {
+        GRK_ERROR("Output component %d has invalid dimensions %u x %u", i, destComp->w,
+                  destComp->h);
+        return false;
+      }
+      if(!destComp->data)
+      {
+        if(!GrkImage::allocData(destComp, true)) // Set the 'zero' flag to true
+        {
+          GRK_ERROR(
+            "Failed to allocate pixel data for component %d, with dimensions %u x %u",
+            i, destComp->w, destComp->h);
+          return false;
+        }
+      }
+    }
+  }
+
+
+  return true;
+}
+```
+
+The fix involves adding the `true` argument to the `GrkImage::allocData(destComp, true)` function call to ensure that the allocated memory is zeroed out. By doing so, the composite data will be properly initialized, preventing any uninitialized pixel values in the output image.

@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability being patched in this diff file is a misinterpretation of the existing_frame_idx variable. The code mistakenly uses existing_frame_idx to access the frame_bufs array, causing incorrect buffer access.
+
+Summary of the fix:
+The fix addresses the misinterpretation of existing_frame_idx by using the correct ref_frame_map index to access the frame_bufs array.
+
+Detailed description of the fix:
+1. The fix first initializes the BufferPool and RefCntBuffer variables, pool and frame_bufs respectively, using the cm->buffer_pool field.
+2. The assert statement checks if cm->show_existing_frame is true, indicating that an existing frame is being shown.
+3. The current_frame is set to a KEY_FRAME, indicating that it is a key frame.
+4. The refresh_frame_flags variable is set to (1 << REF_FRAMES) - 1, representing all reference frames.
+5. The for loop iterates over the INTER_REFS_PER_FRAME array in cm->current_frame.frame_refs[] and sets each buf element to NULL.
+6. If pbi->need_resync is true, the reset_ref_frame_map() function is called to reset the reference frame map in cm.
+7. The intra_only flag is set to 1, indicating that the frame is an intra frame.
+8. If cm->seq_params.frame_id_numbers_present_flag is true, the code updates the reference frame id values and marks frames as valid for reference based on the refresh_frame_flags bitmask and display_frame_id.
+9. The refresh_frame_context is set to REFRESH_FRAME_CONTEXT_DISABLED, indicating that the frame context will not be refreshed.
+10. The generate_next_ref_frame_map() function is called to generate the next reference frame map.
+11. The fix reloads the adapted CDFs (Context Dependent Frequencies) from when the keyframe was originally coded by assigning the frame_context of the corresponding reference frame in frame_bufs to cm->fc.

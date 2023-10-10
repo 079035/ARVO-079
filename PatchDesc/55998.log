@@ -1,0 +1,7 @@
+Vulnerability: The cryptographic mechanism field in the `capdu_eac_mse` structure is not marked as optional, even though it should be.
+
+Summary of Fix: The fix marks the cryptographic mechanism field as optional in the `capdu_eac_mse` structure.
+
+Detailed Description of Fix: In the given diff file, the vulnerability is fixed by modifying the `capdu_eac_mse` structure's definition. Previously, the "Cryptographic mechanism reference" field was defined without the `SC_ASN1_OPTIONAL` flag, indicating that it is a required field. However, the fix adds the `SC_ASN1_OPTIONAL` flag to this field, making it optional.
+
+By marking the "Cryptographic mechanism reference" field as optional, the fix allows for more flexibility in encoding the MSE (Manage Security Environment) command data. This means that the field can now be omitted if not needed, improving interoperability with different cryptographic mechanisms.

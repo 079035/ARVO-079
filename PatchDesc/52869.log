@@ -1,0 +1,9 @@
+Vulnerability: Memory leak when fuzzing
+Summary of the fix: The fix addresses a memory leak issue that occurs when fuzzing in the xinclude.c file.
+Detailed description of the fix:
+1. The fix introduced an `#ifdef` directive to differentiate the fix behavior based on the `FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION` flag. This indicates that the memory leak issue only affects the fuzzing build mode.
+2. Inside the conditional block, the code previously returned -1 if `ctxt->incTotal` was greater than or equal to 20, which would exit the function. The fix replaces this return statement with a `break` statement, ensuring that loop execution continues.
+3. After the loop, the code then moves on to the second phase of the XInclude processing. Any includes that need to be replaced are handled accordingly and their `replace` flag is reset to 0.
+4. Finally, a counter `ret` is incremented for each include processed, and the function returns the total count.
+
+The fix resolves the memory leak issue by properly handling the conditions for replacing includes and resetting the replace flag after processing. It ensures that memory is not leaked during fuzzing in the xinclude.c file.

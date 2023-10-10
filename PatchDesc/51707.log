@@ -1,0 +1,13 @@
+Vulnerability: Uninitialized string termination
+
+Summary of Fix: The fix involves adding code to explicitly terminate a string with a null character ('\0').
+
+Detailed Description of Fix: In the given code, there is a vulnerability related to uninitialized string termination. The issue occurs in the `QuickTimeVideo::userDataDecoder` function where a string is read from the buffer `buf` and stored in `xmpData_`. However, the string is not explicitly terminated with a null character ('\0') before being used.
+
+To fix this vulnerability, the following changes have been made:
+
+1. Line 86: `buf.resize(tv_size + 1);` - This line increases the size of the buffer `buf` by 1 to accommodate the null character.
+
+2. Line 88: `buf.write_uint8(tv_size, 0);` - This line writes the null character ('\0') at the end of the string stored in `buf`.
+
+By adding these two lines, the string stored in `buf` is properly terminated with a null character, ensuring correct behavior when the string is used later in the code.

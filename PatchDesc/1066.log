@@ -1,0 +1,13 @@
+Vulnerability:
+
+The vulnerability that is being patched in this diff file is a memory leak. 
+
+Summary of the fix:
+
+The fix ensures that if adding the new `CData` node fails, the allocated memory is freed. 
+
+Detailed description of the fix:
+
+In the code before the fix, a new `CData` node is created using `xmlNewCDataBlock()` and added as a child to the `ctxt->node` using `xmlAddChild()`. However, in case `xmlAddChild()` fails to add the child node, the allocated memory for the `CData` node is not freed, resulting in a memory leak.
+
+To fix this, a check is added after calling `xmlAddChild()`. If `xmlAddChild()` returns `NULL`, indicating that the addition failed, the code calls `xmlFreeNode()` to free the memory allocated for the `CData` node. This ensures that the memory is properly released in case of a failure to add the child node.

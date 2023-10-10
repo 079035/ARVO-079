@@ -1,0 +1,20 @@
+Vulnerability:
+The vulnerability addressed by this patch is a potential buffer underflow caused by iterating beyond the start of an invalid UTF-8 sequence.
+
+Summary of fix:
+The fix aims to avoid going past the start of an invalid UTF-8 sequence when iterating over the characters of a word.
+
+Detailed description of fix:
+1. In the original code, there is a loop where the variable `p` is initialized to `word + pos - 1`, and then it iterates backward until it reaches the start of the string or the current character is not part of a UTF-8 sequence (`(*p & 0xc0) == 0x80`).
+   ```
+   for (p = word + pos - 1; p > word && (*p & 0xc0) == 0x80; p--)
+   ```
+
+2. The fix modifies the loop condition to also check that `p` is greater than `word` before accessing the current character. This ensures that the loop terminates before going past the start of the string.
+   ```
+   for (p = word + pos - 1; p > word && (*p & 0xc0) == 0x80; p--)
+   ```
+
+3. By making this change, the fix prevents potential buffer underflows that could occur when iterating over invalid UTF-8 sequences.
+
+This fix mitigates the risk of accessing memory outside the bounds of the `word` string and helps maintain correct behavior while working with UTF-8 encoded strings.

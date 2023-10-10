@@ -1,0 +1,12 @@
+Vulnerability:
+Index-out-of-bounds in WelsDec::WelsInitRefList
+
+Summary of the fix:
+The fix ensures that the index to access the array `pRefPic->pLongRefList[LIST_0]` is within bounds by checking if `pRefPic->uiLongRefCount[LIST_0]` is less than `MAX_REF_PIC_COUNT` before incrementing it.
+
+Description of the fix:
+In the original code, the variable `pRefPic->uiLongRefCount[LIST_0]` was incremented without checking if it exceeded the bounds of the array `pRefPic->pLongRefList[LIST_0]`. This could lead to an index-out-of-bounds issue when accessing the array. 
+
+The fix adds a check before incrementing `pRefPic->uiLongRefCount[LIST_0]` to ensure that it is less than `MAX_REF_PIC_COUNT`, the maximum number of elements in the array. If the check is true, the variable is incremented. This prevents the index-out-of-bounds vulnerability by ensuring that the array is not accessed beyond its bounds.
+
+By performing the check, the fix ensures that the array index is always within the valid range, preventing any potential index-out-of-bounds issues.

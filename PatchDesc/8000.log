@@ -1,0 +1,12 @@
+1. Vulnerability:
+The vulnerability that was patched in this code is a potential buffer overflow vulnerability. The function `strcpy_url` is used to copy a URL into an output buffer and URL-encode any spaces in the source URL. However, the code does not perform proper input validation and encoding for characters with a value greater than or equal to 0x80 (128 in decimal). This can lead to buffer overflows when encoding these characters since the function uses `snprintf` with a size of 4 to encode them, potentially writing more than 4 characters to the output buffer.
+
+2. Summary of the fix:
+The fix addresses the vulnerability by ensuring that only values greater than or equal to 0x80 are URL-encoded, while properly handling characters within the printable range. This prevents buffer overflows in the `strcpy_url` function.
+
+3. Detailed description of the fix:
+In the original code, the condition `if(!ISPRINT(*iptr))` is used to check if a character is not printable, and if true, it is URL-encoded using `snprintf`. The fix replaces this condition with `if(*iptr >= 0x80)`, ensuring that only values greater than or equal to 0x80 are considered for URL-encoding. This change ensures that only non-printable and non-ASCII characters are URL-encoded, preventing buffer overflows.
+
+Additionally, the code comments have been updated to clarify the purpose of the URL encoding and its relevance to IDN resolution. The comment explains that URL encoding should be skipped for host names to avoid IDN resolution failures.
+
+Overall, the fix provides proper handling and encoding of characters within the URL, preventing buffer overflows and ensuring the correctness of the `strcpy_url` function.

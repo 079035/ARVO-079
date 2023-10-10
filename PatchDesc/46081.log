@@ -1,0 +1,19 @@
+Vulnerability:
+The vulnerability in the given diff file is a potential memory corruption issue. Specifically, in the `SetQuantumDepth` function, there is an incorrect calculation for the `extent` variable, resulting in a potential buffer overflow.
+
+Summary of the Fix:
+The fix for this vulnerability is to correct the calculation of the `extent` variable in the `SetQuantumDepth` function. Instead of multiplying `quantum` by the size of `double`, it should be multiplied by the size of `unsigned char` or `unsigned short`, depending on the value of `quantum_info->depth`.
+
+Detailed Description of the Fix:
+1. Open the file `MagickCore/quantum.c`.
+2. Locate the function `SetQuantumDepth`.
+3. Find the line that calculates the `extent` variable:
+   ```
+   extent = MagickMax(image->columns, image->rows) * quantum * sizeof(double);
+   ```
+4. Replace the above line with:
+   ```
+   extent = MagickMax(image->columns, image->rows) * quantum * ((quantum_info->depth+7)/8);
+   ```
+   This corrects the calculation to consider the size of `unsigned char` or `unsigned short` based on the value of `quantum_info->depth`.
+5. Save the file and verify that the fix has resolved the vulnerability.

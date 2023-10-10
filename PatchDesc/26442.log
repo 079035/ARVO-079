@@ -1,0 +1,10 @@
+Vulnerability:
+There is a vulnerability in the code that can lead to a heap buffer overflow when there is not enough space to write the compressed block size.
+
+Summary of the fix:
+The fix for this vulnerability checks whether there is enough space to write out the compressed block size before performing the compression. If there is not enough space, the function returns -1.
+
+Detailed description of the fix:
+The fix for the vulnerability can be found in the `blosc_c` function. 
+1. At line 123, a check is added to ensure that there is enough space to write out the compressed block size. If there is not enough space (`ntbytes > destsize`), the function returns -1.
+2. If the check passes, the compression operation continues as before.

@@ -1,0 +1,14 @@
+Vulnerability Description:
+The vulnerability patched in this diff file is an uninitialized value use in the `stun_check_message_integrity_by_key_str` function in `ns_turn_msg.c`. The uninitialized value `new_hmac` is used in the `bcmp` function, which compares the contents of two memory areas. This can lead to undefined behavior and potential security vulnerabilities.
+
+Summary of the Fix:
+The fix initializes the `new_hmac` array to all zeroes when it is declared. This ensures that the `new_hmac` array is properly initialized before being used in the `bcmp` function.
+
+Detailed Description of the Fix:
+The fix initializes the `new_hmac` array to all zeroes using the following line of code:
+```c
+uint8_t new_hmac[MAXSHASIZE] = {0};
+```
+This line declares the `new_hmac` array and initializes all its elements to zero. By doing so, the uninitialized value issue is resolved, and the `new_hmac` array can be safely used in the `bcmp` function without causing undefined behavior.
+
+This fix ensures that the `new_hmac` array has a defined initial value, preventing any potential security vulnerabilities that could occur due to the use of uninitialized memory.

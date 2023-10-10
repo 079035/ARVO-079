@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability patched in this diff file is an index out of bounds issue in the `arm-dis.c` file relating to the handling of the 'T' value in the `print_insn_cde` function. The value is not properly wrapped within the array bounds, which could lead to accessing an incorrect value or memory outside the defined array.
+
+Summary of Fix:
+The fix in this diff file wraps the 'T' value within the array bounds by using the modulus operator with the array size.
+
+Detailed Description of Fix:
+In the original code, the 'T' value is obtained from `arm_regnames[(value + 1) & 15]`. The addition of 1 to `value` can potentially result in an index out of bounds if `value` is already at the maximum value. The fix modifies this line to use `(value + 1) & 15` which results in the 'T' value being wrapped within the range `[0, 15]`. This ensures that the index falls within the bounds of the `arm_regnames` array, preventing any out-of-bounds access.
+
+Additionally, the fix also checks for the case where the 'T' value exceeds 10 and sets the `is_unpredictable` flag to true. This indicates that the instruction is unpredictable and results in printing `<UNPREDICTABLE>` for that instruction.

@@ -1,0 +1,8 @@
+Vulnerability:
+This patch addresses a vulnerability related to a potential buffer overflow. The code lacks proper boundary checks when processing packets with a TZSP encapsulation. Without the fix, if the captured packet is too short for TZSP encapsulation, the function will continue processing the packet without verifying the existence of certain fields, leading to a buffer overflow vulnerability.
+
+Summary of the fix:
+The fix adds a check to ensure that the captured packet is long enough to process TZSP encapsulation. If the packet is too short, the function will return without processing the packet further, avoiding the potential buffer overflow vulnerability.
+
+Detailed description of the fix:
+The fix adds a check at line 152 to verify if the captured packet is long enough for TZSP encapsulation. If the packet is shorter than the expected length (ip_offset + ip_len + sizeof(struct ndpi_udphdr) + 4), the function returns without processing the packet further. This check ensures that the function does not access memory outside the bounds of the packet, preventing a potential buffer overflow.

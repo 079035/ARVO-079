@@ -1,0 +1,16 @@
+Vulnerability Description:
+The vulnerability in the code is an ASAN heap-buffer-overflow when reading the chunk offset in the frame. This issue can lead to a crash or possibly arbitrary code execution.
+
+Summary of the Fix:
+The fix resolves the ASAN heap-buffer-overflow by adding proper boundary checks before accessing the chunk offset in the frame.
+
+Detailed Description of the Fix:
+1. The code first checks if the `coffsets` (compressed data offsets) are already present in the frame. If they are present, it directly returns `coffsets`, which indicates that the offsets have been previously calculated and stored. No changes are needed in this case.
+2. If `coffsets` are not present, the code checks if `cframe` (compressed frame) is present in the frame. If it is present, it calculates the offset position (off_pos) by adding the header length and compressed data length (cbytes). The code then checks if the offset position is within the frame boundaries and has enough room to read the Blosc header. If not, an error is logged, and `NULL` is returned to indicate the failure.
+3. If the offset position is valid, the `off_start` pointer is set to the address in memory where the chunk offset starts. Then, the code calculates the chunk data size (`chunk_cbytes`) using the `blosc2_cbuffer_sizes` function, checks if it is within the frame boundaries, and logs an error if not.
+4. If `coffsets` are still not available, the code proceeds to calculate the trailer offset (the position where the frame trailer starts). It checks if the trailer offset and the minimum required length for the trailer are within the frame boundaries. If not, an error is logged, and `NULL` is returned.
+5. Next, the code calculates `coffsets_cbytes` based on whether the frame is a super-frame (`sframe`) or not. If it is a super-frame, `coffsets_cbytes` is calculated as the difference between the trailer offset and header length. Otherwise, it is calculated as the difference between the trailer offset and the sum of the header length and compressed data length (`cbytes`).
+6. Finally, if `off_cbytes` is not `NULL`, it sets the value of `coffsets_cbytes` to `off_cbytes`. It then opens the file or super-frame (`sframe`) for reading, seeks to the appropriate position in the file based on the frame type, reads `coffsets` from the file, and closes the file. If the number of bytes read (`rbytes`) does not match the expected `coffsets_cbytes`, an error is logged, and the allocated memory for `coffsets` is freed before returning `NULL`.
+7. If everything executes successfully, `coffsets` is assigned to `frame->coffsets`, and `coffsets` is returned.
+
+This fix ensures that the code performs proper boundary checks before reading the chunk offset in the frame, preventing the ASAN heap-buffer-overflow vulnerability.

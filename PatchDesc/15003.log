@@ -1,0 +1,33 @@
+Vulnerability:
+The vulnerability fixed in this diff is a crash that occurs when parsing 1 byte truncated omf files (#14227).
+
+Summary of the Fix:
+The fix addresses the crash by modifying how the `rec_size` and `str_size` variables are calculated and by adding error handling in the loop that checks if the string is ASCII.
+
+Detailed Description of the Fix:
+1. In the original code, `rec_size` is calculated by reading a 16-bit little-endian value from bytes 2 and 3 of the buffer. The fix changes this calculation to use the `r_buf_read_le16_at()` function to read the value directly from the buffer.
+   - Before: `ut16 rec_size = ut8p_bw (buf + 1);`
+   - After: `ut16 rec_size = r_buf_read_le16_at (b, 1);`
+   
+2. In the original code, `str_size` is assigned the value of byte 3 of the buffer using a simple assignment. The fix changes this assignment to use the `r_buf_read_at()` function to read the value from the buffer.
+   - Before: `ut8 str_size = *(buf + 3);`
+   - After: `ut8 str_size; (void)r_buf_read_at (b, 3, &str_size, 1);`
+   
+3. In the original code, the loop that checks if the string is ASCII iterates from index 4 to `str_size + 4`. The fix modifies the loop to check the ASCII value of each character using the `r_buf_read_at()` function and adds error handling for cases where there may not be enough bytes to read.
+   - Before: `for (i = 4; i < str_size + 4; ++i) { ... }`
+   - After: 
+     ```
+     for (i = 4; i < str_size + 4; i++) {
+         if (r_buf_read_at (b, i, &ch, 1) != 1) {
+             break;
+         }
+         if (ch > 0x7f) {
+             return false;
+         }
+     }
+     ```
+     
+4. The fix also adds a new line just before the final return statement to get the pointer to the buffer data.
+   - After: `const ut8 *buf = r_buf_data (b, NULL);`
+   
+Overall, the fix improves the handling of the buffer and adds error handling to prevent crashes when parsing 1 byte truncated omf files.

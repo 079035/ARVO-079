@@ -1,0 +1,8 @@
+Vulnerability Description:
+The vulnerability in the code is a potential buffer overflow in the `janus_rtcp_incoming_transport_cc` function. The code subtracts the value of `total` by 20 but does not check if `total` is already less than 20. This can lead to accessing memory outside the bounds of the `twcc` buffer.
+
+Summary of Fix:
+The fix in the code is to add a check right after subtracting `total` by 20. If `total` is found to be less than 0, indicating an incomplete feedback, the function returns and does not proceed further, thus preventing the potential buffer overflow.
+
+Detailed Fix Description:
+The fix involves adding a check after `total -= 20` to see if `psc` (packet status count) is greater than 0. If `psc` is still greater than 0, it means that the feedback is incomplete. In this case, the function returns and does not proceed further, preventing the potential buffer overflow.

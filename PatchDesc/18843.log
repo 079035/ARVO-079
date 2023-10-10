@@ -1,0 +1,8 @@
+Vulnerability:
+There is a vulnerability in the webp decoder that could lead to integer overflow.
+
+Summary of the Fix:
+The fix attempts to address the types in the webp decoder to protect against overflow.
+
+Detailed Description of the Fix:
+The fix involves changing the type of the `offset` variable from `ssize_t` to `size_t` to prevent integer overflow. The `offset` variable is used to keep track of the offset position in the `stream` while reading the extended header. The loop condition `(offset+TAG_SIZE+4) <= (length-TAG_SIZE)` is modified to `(offset+TAG_SIZE+4) <= (size_t) (length-TAG_SIZE)` to ensure the offset calculation does not result in an overflow. By using `size_t`, which is an unsigned integer type, the fix prevents the possibility of integer overflow and avoids potential vulnerabilities.

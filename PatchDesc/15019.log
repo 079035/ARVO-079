@@ -1,0 +1,9 @@
+Vulnerability: Missing configuration option
+
+Summary of the fix: The patch adds the missing configuration option `CONFIG_AIRTIME_POLICY=y` to the build configuration for the `ap-mgmt-fuzzer` test.
+
+Detailed description of the fix: The diff file shows a commit that fixes a build configuration issue in the `ap-mgmt-fuzzer` test. The missing configuration option `CONFIG_AIRTIME_POLICY` caused a discrepancy in the offset of the `struct hostapd_iface::prev_wmm` between the `libap.a` library and the `ap-mgmt-fuzzer.o` object file. This inconsistency led to failures in fuzzing due to a `memcpy` operation writing on top of the `ctx.iface->prev_wmm` and overriding the `ctx.hapd.iface` pointer, causing unexpected behavior.
+
+To address this issue, the patch adds the missing configuration option `CONFIG_AIRTIME_POLICY` by appending `-DCONFIG_AIRTIME_POLICY` to the `CFLAGS` variable in the `Makefile` of the `ap-mgmt-fuzzer` test. This ensures that the build configuration for the test matches the `libap.a` library, eliminating the discrepancy and preventing the memcpy overwrite vulnerability.
+
+The patch includes additional changes made by the author and credits the discovery of the issue to OSS-Fuzz.

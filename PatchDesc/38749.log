@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in this diff file is the lack of validation for the presence of `://` in the `url` parameter of the function `demux_NewAdvanced`. Without `://`, the creation of the demux will fail and an error will be returned.
+
+Summary of the fix:
+The fix introduces a check to ensure that the `url` parameter contains `://` by using `strstr` function to search for this substring. If `://` is not found, an error is set and `NULL` is returned.
+
+Detailed description of the fix:
+1. The fix starts by searching for the substring `://` in the `url` parameter using the `strstr` function. If the `url` parameter does not contain `://`, `p` will be `NULL`.
+2. If `p` is `NULL`, indicating that `://` is not present in the `url`, the `errno` global variable is set to `EINVAL`, indicating an invalid argument error, and the function returns `NULL`.
+3. Otherwise, if `://` is found in the `url`, the fix proceeds with creating the demux object and initializing its members.
+4. The fix sets the `psz_location` member of the demux object to `p_demux->psz_url + 3 + (p - url)`. This calculates the start of the location substring after `://` by adding `3` to the address of `p` (which points to the start of `://`) and `(p - url)`, which gives the offset of `p` from the start of the `url`.
+5. The fix then calls the `get_path` function to parse the URL and obtain the file path, setting it to the `psz_filepath` member of the demux object.
+6. The rest of the function initializes other members of the demux object and loads the appropriate demux module based on the module name and URL information.
+7. If the module loading is successful, the function returns the created demux object. If there is an error during module loading, memory allocated for the filepath is freed and the function jumps to the `error` label to perform cleanup and return `NULL`.

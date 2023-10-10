@@ -1,0 +1,15 @@
+Vulnerability: Buffer overflow
+
+Summary of fix:
+- Added a sanity check on the LOONGARCH reloc symbol index to prevent buffer overflow.
+- Do not apply the relocation after errors.
+- Reduce translation work of the "invalid symbol index" error message.
+
+Detailed description of fix:
+1. Added a sanity check on the LOONGARCH reloc symbol index `sym_index` to verify if it is not greater than or equal to the number of symbols `num_syms`. If it is, an error message is displayed indicating the invalid symbol index.
+2. If the `sym_index` is valid, the fix proceeds to calculate the value of the relocation based on the type of relocation (`reloc_type`):
+   - If the `reloc_type` is 107 (`R_LARCH_ADD_ULEB128`), `value` is calculated as the sum of the relocation addend (`reloc->r_addend`) and the value of the symbol (`symtab[sym_index].st_value`).
+   - If the `reloc_type` is 108 (`R_LARCH_SUB_ULEB128`), `value` is calculated as the subtraction of the relocation addends and the value of the symbol.
+3. The fix then proceeds to write the `value` as a uleb128 (unsigned LEB128) to the memory location pointed by `start + reloc->r_offset`. It writes the uleb128 value in a loop by extracting 7 bits of the `value` at a time and setting the continuation bit if necessary.
+
+Please note that the fix for the buffer overflow in the LOONGARCH reloc handling does not cover the fixes for other target-specific relocations such as MSP430, MN10300, and RL78, which are also included in the same code file.

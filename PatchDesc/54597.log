@@ -1,0 +1,26 @@
+Vulnerability:
+
+The vulnerability in the provided diff file is an unchecked buffer position in the function `get_utf_8_string()` in the `epan/charsets.c` file.
+
+Summary of the Fix:
+
+The fix adds a bounds check to the buffer position in the `get_utf_8_string()` function.
+
+Detailed Description of the Fix:
+
+1. In the original code, the `get_utf_8_string()` function initializes the pointer `prev` with the value of `ptr` at the start of the loop.
+2. After that, it calls the function `utf_8_validate()` to validate the UTF-8 byte sequence starting from the current position of `prev` and updates the `ptr` value to point to the next byte in the sequence.
+3. The valid bytes are then appended to the `wmem_strbuf_t` buffer.
+4. The length is decremented by `valid_bytes`, and if there are still remaining bytes (`length` is not zero), a replacement character is appended to the buffer using `wmem_strbuf_append_unichar_repl()`.
+5. The loop continues until the length reaches zero.
+6. Finally, the buffer is finalized and returned.
+
+The fix modifies the code as follows:
+
+1. The declaration and initialization of the `prev` pointer is moved inside the loop right before `utf_8_validate()` is called.
+2. Instead of directly decrementing the `length` by `valid_bytes`, it updates `length` by subtracting the difference between `ptr` and `prev`, indicating the number of bytes consumed in the loop iteration.
+3. The `prev` pointer is then incremented by `valid_bytes` to point to the next byte that needs to be processed if there are more bytes remaining.
+4. The condition for the replacement character append has been changed from `if (length)` to `if (ptr - prev)` to check if there are still bytes remaining in the sequence.
+5. The buffer is now correctly built, ensuring that the bounds of the buffer are checked with each iteration.
+
+The fix adds a bounds check to the get_utf_8_string() function, addressing the vulnerability of an unchecked buffer position and ensuring that the function processes the UTF-8 byte sequence correctly.

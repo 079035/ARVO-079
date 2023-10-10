@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in this diff file is related to the null-termination of binary strings. Prior to the fix, the code allocated memory for a binary string based on its size, but did not null-terminate the string. This could lead to issues when the binary string is treated as a C-style string in subsequent code, as the lack of null-termination could result in undefined behavior or erroneous behavior.
+
+Fix Summary:
+The fix introduces a null-termination step for binary strings. Specifically, it allocates memory for the binary string with an additional byte to accommodate the null-terminator. Then, it explicitly adds the null-terminator at the end of the binary string.
+
+Detailed Fix Description:
+In the original code, when handling the MDB_BINARY datatype, there was a check for a negative size. If the size is negative, the text buffer is set to an empty string. Otherwise, the code allocated memory for the buffer without null-termination: `text = g_malloc(size);`.
+
+In the fix, the code updates this allocation step to include space for the null-terminator: `text = g_malloc(size+1);`. The `+1` ensures that there is enough memory to hold the binary string and the null-terminator.
+
+After allocating the memory for the binary string, the code then performs a memcpy to copy the binary data into the text buffer. After the memcpy, the fix adds an additional line of code to explicitly add the null-terminator at the end of the binary string: `text[size] = '\0';`.
+
+By adding the null-terminator, the fix ensures that the binary string is properly null-terminated, allowing it to be treated as a C-style string in subsequent code without any undefined or erroneous behavior.

@@ -1,0 +1,21 @@
+Vulnerability:
+The vulnerability in the given diff file is that if the search for the tag with the specified signature `sig` is not found (`n < 0`), the function `cmsReadTag` returns `NULL` without unlocking the mutex `Icc->UsrMutex` that was locked at the beginning of the function. This can lead to a deadlock if the mutex is not unlocked in the error condition.
+
+Fix Summary:
+The fix added a block of code to unlock the mutex `Icc->UsrMutex` before returning `NULL` in the error condition when the tag with the specified signature is not found.
+
+Detailed Fix Description:
+The fix added the following lines of code:
+
+```c
+if (n < 0)
+{
+    // Not found, return NULL
+    _cmsUnlockMutex(Icc->ContextID, Icc->UsrMutex);
+    return NULL;
+}
+```
+
+The code block checks if the search for the tag with the specified signature `sig` is not found (`n < 0`). If it is true, it unlocks the mutex `Icc->UsrMutex` using the `_cmsUnlockMutex` function and then returns `NULL`.
+
+By adding this code block, the fix ensures that the mutex `Icc->UsrMutex` is always unlocked before returning `NULL` in the error condition, preventing potential deadlocks.

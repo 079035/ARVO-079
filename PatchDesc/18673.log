@@ -1,0 +1,10 @@
+1. Vulnerability:
+There is a vulnerability in the code that causes an incorrect read of extra bytes for 64-bit imports.
+
+2. Summary of the fix:
+The fix corrects the issue of reading the extra bytes by removing the unnecessary line of code.
+
+3. Detailed description of the fix:
+In the original code, for the case when the quantum_info->depth is 64 and the quantum_info->format is FloatingPointQuantumFormat, there is an incorrect read of extra bytes for pixel values. The line "p=PushDoublePixel(quantum_info,p,&pixel);" is used to read the extra bytes but it is not followed by any use of the "pixel" variable.
+
+In the fix, the unnecessary line of code "p=PushDoublePixel(quantum_info,p,&pixel);" has been removed. This ensures that the extra bytes are not read and the issue is resolved.

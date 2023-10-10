@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability patched in this diff file is a heap-buffer overflow.
+
+Summary of the fix:
+The fix in this commit addresses some heap-buffer overflows in the PPStream protocol implementation.
+
+Detailed description of the fix:
+The fix in this commit modifies the code in the `ndpi_search_ppstream` function within the `ppstream.c` file. 
+
+Before the fix, there were multiple instances where the code accessed elements of the `packet->payload` buffer without proper bounds checking, potentially leading to heap-buffer overflows.
+
+In the fixed code, additional checks for the length of the `packet->payload` buffer have been added to avoid accessing elements outside the buffer. These checks ensure that there are enough bytes available in the buffer before accessing specific elements.
+
+The modifications include checking the length of the `packet->payload` buffer before accessing elements at various offsets within the buffer. These checks help prevent heap-buffer overflows by ensuring that the accessed elements are within the bounds of the buffer.
+
+Overall, the fix adds necessary bounds checks to prevent heap-buffer overflows when processing the PPStream protocol.

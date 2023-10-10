@@ -1,0 +1,9 @@
+Vulnerability:
+The vulnerability in this code is an invalid free. 
+
+Summary of the fix:
+The fix for this vulnerability is to add a check for the success of the `heif_decode_image` function before performing further operations.
+
+Detailed description of the fix:
+In the original code, the `heif_decode_image` function is called without checking the return value. As a result, if `heif_decode_image` fails, the code proceeds to release resources and return `MagickFalse`, leading to a double free error.
+The fix adds a check for the success of the `heif_decode_image` function using the `IsHeifSuccess` function. If `heif_decode_image` fails, the resources are released, and the function returns `MagickFalse`. This prevents the double free error and ensures that the code handles the failure properly.

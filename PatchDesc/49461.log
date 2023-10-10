@@ -1,0 +1,20 @@
+Vulnerability:
+There is a vulnerability in the code that can lead to writing an incorrect number of entries when writing profiles with different node counts in the tables.
+
+Summary of the fix:
+The fix addresses the error and ensures that the correct number of entries is written for each table.
+
+Detailed description of the fix:
+The vulnerability is fixed by modifying the code in the function `Write16bitTables` in the `cmstypes.c` file. 
+
+1. The line `nEntries = Tables->TheCurves[0]->nEntries;` is removed because it incorrectly assigns the node count from the first table to `nEntries` variable.
+
+2. The code is then updated to correctly assign the node count for each table. The variable `nEntries` is now assigned the value of `Tables->TheCurves[i]->nEntries` inside the loop that iterates through the tables.
+
+3. The subsequent loop iterates through each entry of the current table and writes the value to the output using the `_cmsWriteUInt16Number` function. This ensures that the correct number of entries is written for each table.
+
+4. The code also includes a return statement to indicate a successful write operation (`return TRUE;`) at the end of the function.
+
+5. Additionally, the `cmsUNUSED_PARAMETER(ContextID);` statement is included to suppress any compiler warnings about the unused `ContextID` parameter.
+
+These modifications fix the error in writing profiles with tables of different node counts by correctly writing the appropriate number of entries for each table.

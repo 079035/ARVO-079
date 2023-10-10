@@ -1,0 +1,15 @@
+Vulnerability:
+
+This code patch fixes a vulnerability related to a potential buffer overflow.
+
+Summary of the fix:
+
+The fix addresses a situation where the calculation of an offset value (`ofs`) could be larger than the `buf_size`. This check ensures that the offset does not exceed the size of the buffer, preventing a buffer overflow.
+
+Detailed description of the fix:
+
+In the `exif_mnote_data_apple_load()` function, before processing the data, the code checks if the calculated offset value (`ofs`) is larger than the `buf_size` minus 16 bytes. If this condition is true, an error is logged and the function returns, preventing the further processing of the data.
+
+By performing this check, the code ensures that the offset does not exceed the size of the buffer. This prevents potential buffer overflows that could occur if the offset value is used to access elements beyond the buffer boundaries.
+
+This fix improves the security and robustness of the code by preventing potential buffer overflow vulnerabilities.

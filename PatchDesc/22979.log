@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given diff file is a potential buffer overrun in the function `parse_rollei()` in the file `metadata/misc_parsers.cpp`. The buffer `line` has a size of 128 bytes (`char line[128]`), but there is no check to ensure that the input string read from the file does not exceed the buffer size. This can lead to a buffer overrun, potentially causing a crash or memory corruption.
+
+Summary of the Fix:
+The fix in this commit is to add a line of code `line[127] = 0;` after reading each line from the file. This ensures that the last character of the `line` buffer is always set to null terminator, preventing a buffer overrun if the input string is larger than the buffer size.
+
+Detailed Description of the Fix:
+Before the fix, the code reads lines from the file using `fgets()` function into the `line` buffer. However, there is no guarantee that the file lines will not exceed the buffer size of 128 bytes. To prevent a potential buffer overrun, the fix adds the line `line[127] = 0;` after reading each line. This line sets the last character of the `line` buffer to null terminator, ensuring that the buffer is always properly terminated.
+
+By adding this line of code, the fix ensures that the `line` buffer will always have a valid null-terminated string, even if the input line is longer than 127 characters. This effectively prevents the buffer overrun vulnerability and avoids potential crashes or memory corruption issues that could have occurred due to the overrun.
+
+Overall, this fix is a simple and effective mitigation to prevent a buffer overrun in the `parse_rollei()` function, providing a safer execution environment.

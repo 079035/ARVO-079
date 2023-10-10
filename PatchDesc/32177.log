@@ -1,0 +1,15 @@
+Vulnerability:
+In the given diff file, the vulnerability that was patched is related to the function `cil_reset_classperms_set()` in the `cil_reset_ast.c` file. The function was incorrectly resetting the `set` field of `struct cil_classperms_set`, which is a pointer to a `struct cil_classpermission`. This was not the intended behavior, as the `cil_classperms_set` does not create the `cil_classpermission`. As a result, the vulnerability could lead to incorrect behavior or memory issues.
+
+Fix Summary:
+To fix the vulnerability, the code was modified to set the `set` field of `cil_classperms_set` to `NULL` instead of resetting the `classpermission` it points to.
+
+Detailed Fix Description:
+The fix made in the code involves the following changes:
+1. The function `cil_reset_classperms_set()` was modified to include a NULL check for the `cp_set` parameter.
+2. If the `cp_set` is NULL, the function returns early, avoiding any further operations.
+3. If the `cp_set` is not NULL, the `set` field of `cp_set` is set to NULL.
+
+By setting the `set` field to NULL instead of resetting the `classpermission`, the code ensures that no invalid or uninitialized memory is accessed. This prevents potential crashes or security vulnerabilities that could arise from accessing memory that has been freed or is otherwise unavailable.
+
+Overall, the fix ensures that the `cil_reset_classperms_set()` function behaves correctly by setting the `set` field to NULL when necessary. This prevents any unintended memory access or incorrect behavior related to the `classpermission` pointer.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential buffer overflow caused by an incorrect `memcpy` size in the function `ccr_handle_message_from_client`.
+
+Summary of the fix:
+The fix in this patch is to correct the `memcpy` size to avoid potential buffer overflow.
+
+Detailed description of the fix:
+In the function `ccr_handle_message_from_client`, there are two cases where `memcpy` is used to copy data into specific structs (`main_log` and `btlog`). However, the sizes of the `memcpy` calls are incorrect, potentially leading to buffer overflows.
+
+The fix in this patch corrects the `memcpy` size by replacing the incorrect `sizeof` arguments with the correct sizes of the destination structs `struct main_thread_event_log` and `struct cras_bt_event_log`. This ensures that only the correct amount of data is copied and prevents buffer overflows.
+
+By applying this fix, the potential vulnerability is patched, and the code is more secure.

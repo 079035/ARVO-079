@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability patched in the given diff file is that the code does not handle the case when a child box is larger than its container box. It only logs a warning message, but does not take any further action.
+
+Fix Summary:
+The fix adds a check for the "no-check" flag in the "core" options. If the flag is not set, it deletes the child box and returns an error code indicating an invalid file.
+
+Detailed Fix Description:
+1. The code initially checks if the size of the child box is greater than the size of the parent container box.
+2. If the size of the child box is larger, it proceeds with the following actions:
+   - Logs a warning message indicating that the child box is larger than the container box.
+   - Checks if the "no-check" flag is set in the "core" options.
+     - If the flag is set, the code continues without any further action.
+     - If the flag is not set, it performs the following steps:
+       - Deletes the child box by calling the "gf_isom_box_del" function.
+       - Returns an error code "GF_ISOM_INVALID_FILE" to indicate that the file is invalid.
+3. This fix ensures that if the child box is larger than the container box and the "no-check" flag is not set, the child box is deleted and an error is returned, indicating an invalid file.

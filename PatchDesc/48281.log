@@ -1,0 +1,8 @@
+Vulnerability:
+There is an out of array access vulnerability in the code.
+
+Summary of the Fix:
+The fix checks if the width of the video is divisible by 8 in addition to the existing checks for buffer size and width.
+
+Detailed Description of the Fix:
+The fix modifies the conditional statement on line 61 to check if the width of the video is divisible by 8 using the modulus operator (%). If the width is not divisible by 8, the function returns AVERROR_INVALIDDATA, indicating an error. This additional check ensures that the width is a multiple of 8 and prevents out of array access.

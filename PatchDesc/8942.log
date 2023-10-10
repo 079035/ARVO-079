@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in this code is that it does not handle errors properly when loading a library file.
+
+Summary of Fix:
+The fix improves error reporting for the Python binding by adding a check for the existence of the library file before attempting to load it.
+
+Detailed Fix Description:
+1. The code previously had a try-except block that attempted to load the library file using `ctypes.cdll.LoadLibrary()`.
+2. The fix modifies this block to check if the library file exists using `os.path.exists(lib_file)` instead of relying on an exception to handle the error.
+3. If the library file exists, it is loaded using `ctypes.cdll.LoadLibrary(lib_file)`.
+4. If the library file does not exist, the code checks if the extension is `.so` and attempts to load the file with the `.so.4` extension using `os.path.exists(lib_file + '.4')`.
+5. If the library file with the `.so.4` extension exists, it is loaded using `ctypes.cdll.LoadLibrary(lib_file + '.4')`.
+6. If the library file or the library file with the `.so.4` extension does not exist, None is returned.
+7. The fix improves error reporting by ensuring that the code does not raise an exception when the library file is not found, and instead returns None when the file is not available.

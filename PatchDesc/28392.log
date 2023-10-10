@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability addressed in this patch is an invalid compressed size in the frame header.
+
+Summary of the Fix:
+The fix adds a sanity check for the compressed sizes in the frame header.
+
+Detailed Description of the Fix:
+In the `get_header_info` function, the fix adds a new sanity check for the compressed sizes. The check is performed on the variable `*cbytes`. If `*cbytes` is less than 0, or if `*nbytes` is greater than 0 and `*cbytes` is 0, or if the product of `*nchunks` and `*chunksize` is less than `*nbytes`, then an error is logged indicating an invalid compressed size in the frame header.
+
+This check ensures that the compressed size is valid and within the expected range, preventing potential issues caused by incorrect or inconsistent data in the frame header. By taking into account the number of chunks and the chunk size, the fix ensures that the compressed size is reasonable and not too large or too small for the specified parameters.

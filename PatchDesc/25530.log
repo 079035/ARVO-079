@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential buffer overflow in the function `ima_reader_init()` in the file `ima_adpcm.c`. 
+
+Summary of the fix:
+The fix allocates slightly more memory than necessary in order to avoid a branch when pulling apart the nibbles. This ensures that there is enough space to store decoded nibbles when reading IMA ADPCM data.
+
+Detailed description of the fix:
+In the original code, the variable `pimasize` was calculated as the sum of the sizeof `IMA_ADPCM_PRIVATE`, the blockalign multiplied by the number of channels, and 3 times the number of channels multiplied by the samplesperblock. However, this calculation did not consider the necessary space for decoding the nibbles.
+
+To fix this, the fix introduced a new variable `count` that is calculated as ((samplesperblock - 2) | 7) + 2. This ensures that `count` is always a multiple of 8, which avoids having to branch when pulling apart the nibbles. Then, the `pimasize` is calculated as the sum of the sizeof `IMA_ADPCM_PRIVATE`, the number of channels multiplied by `(blockalign + samplesperblock + sizeof(short) * count)`.
+
+By allocating slightly more memory than needed, the fix ensures that the function has enough space to store the decoded nibbles without causing a buffer overflow.

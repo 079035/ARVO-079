@@ -1,0 +1,12 @@
+Vulnerability Description:
+In the given diff file, the vulnerability being patched is a null dereference in the function `xsltKeyFunction`. This is identified by OSS-Fuzz and reported as issue #84.
+
+Summary of the Fix:
+The fix for the vulnerability involves checking if the `ret` variable is `NULL` before accessing its members in the `xsltKeyFunction` function. If `ret` is `NULL`, the function sets the error code `XPATH_MEMORY_ERROR` and frees the objects `obj1` and `obj2` before returning.
+
+Detailed Fix Description:
+In the `xsltKeyFunction` function, after checking the types of `obj2`, a new `xmlXPathObjectPtr` called `ret` is created as an empty `xmlXPathNodeSet`. Before using `ret`, the fix checks if it is `NULL` and, if so, sets the error code `XPATH_MEMORY_ERROR`. Additionally, the objects `obj1` and `obj2` are freed before returning.
+
+The fix ensures that if `ret` fails to be allocated properly due to memory limitations, the error code `XPATH_MEMORY_ERROR` is set and memory is cleaned up to avoid further issues.
+
+This fix prevents the null dereference vulnerability by properly handling allocation failures and ensuring that the error code is set accordingly.

@@ -1,0 +1,7 @@
+Vulnerability: Null pointer dereference
+
+Summary of the fix: The fix adds error handling for the function `ddsi_type_ref_proxy` to handle the case when it returns an error code instead of a valid pointer.
+
+Detailed description of the fix: In the original code, the function `ddsi_type_ref_proxy` is called to retrieve a reference to a type object. However, the code does not check the return value of this function to ensure that it returns a valid pointer. If the function fails and returns an error code, the code proceeds to dereference the returned pointer, leading to a null pointer dereference. 
+
+In the fixed code, the return value of `ddsi_type_ref_proxy` is checked against the error code `DDSI_RETCODE_OK`. If the return value is `DDSI_RETCODE_OK`, it means that the function has successfully returned a valid pointer to the type object. In this case, the code proceeds to add the type object to the global variable `gv` using the function `ddsi_type_add_typeobj`. If the return value is not `DDSI_RETCODE_OK`, the code does not perform any further operations with the returned pointer and continues execution without invoking undefined behavior. Finally, the function `ddsi_type_unref` is called to release the reference to the type object. This ensures proper memory management and prevents any potential null pointer dereference.

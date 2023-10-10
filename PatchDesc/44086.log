@@ -1,0 +1,16 @@
+Vulnerability Description:
+The vulnerability in the given diff file is an invalid use of material reference. It occurs in the `ParseLV2MaterialBlock` function.
+
+Summary of the Fix:
+The fix for this vulnerability is to correctly parse the material block by including a check for the validity of the submaterial index.
+
+Detailed Description of the Fix:
+1. The fix involves adding a check for the validity of the submaterial index before parsing the material block.
+2. Firstly, the variable `iNumSubMaterials` is used to store the number of submaterials. It is initialized to 0.
+3. Inside the while loop, when encountering the token "NUMSUBMTLS", the function `ParseLV4MeshLong` is used to parse the number of submaterials and store it in `iNumSubMaterials`.
+4. After parsing the number of submaterials, the code checks if the submaterial index `iIndex` is valid. If it is larger than or equal to the number of submaterials (`iNumSubMaterials`), a warning message is logged and `iIndex` is set to the maximum valid index (`iNumSubMaterials - 1`).
+5. Then, the code retrieves a reference to the submaterial at the given index (`iIndex`) in `mat.avSubMaterials`.
+6. After getting a reference to the submaterial, the fix includes parsing the material block by invoking the `ParseLV2MaterialBlock` function with the extracted submaterial reference (`sMat`) as the argument.
+7. The fix ensures that the material block is correctly parsed for each valid submaterial.
+
+By making these changes, the fix ensures the correct use of material references and prevents any invalid access or undefined behavior.

@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the provided diff file is an out-of-bounds read in the `ucl_expand_variable` function. If the input ends with a '$' character, the function will call `ucl_check_variable` with an incorrect length, resulting in an out-of-bounds read.
+
+Summary of the Fix:
+The fix addresses the out-of-bounds read issue by adding a check to ensure that the '$' character is not the last character in the input before calling `ucl_check_variable`.
+
+Detailed Description of the Fix:
+The fix modifies the condition inside the `while` loop in the `ucl_expand_variable` function. It now checks if the current character is '$' and that the next character is not the end of the input (i.e., `p + 1 != end`). This ensures that there is at least one more character after '$' before calling `ucl_check_variable`.
+
+By making this check, the fix prevents the function from accessing memory beyond the end of the input string and avoids the out-of-bounds read vulnerability.
+
+Overall, the fix adds a validation step to handle the edge case where the input ends with a '$' character, ensuring the correct behavior of the function and mitigating the vulnerability.

@@ -1,0 +1,20 @@
+Vulnerability:
+The vulnerability in this code is a potential buffer underflow. Specifically, in the function `sc_pkcs15init_rmdir()`, there is a check for the path length before selecting the parent DF. However, the check is incorrectly performed, resulting in a possible buffer underflow if the path length is less than or equal to 2.
+
+Summary of the Fix:
+The fix for this vulnerability is to add a check for the path length before selecting the parent DF. If the path length is less than or equal to 2, the function returns an error with an "invalid arguments" message.
+
+Detailed Description of the Fix:
+The fix for this vulnerability can be seen in the following code snippet:
+
+```diff
+ 	path = df->path;
++	if (path.len <= 2)
++		return SC_ERROR_INVALID_ARGUMENTS;
+ 	path.len -= 2;
+ 	r = sc_select_file(p15card->card, &path, &parent);
+```
+
+In the previous code, the check `if (path.len <= 2)` has been added. If the condition is true, the function returns immediately with the `SC_ERROR_INVALID_ARGUMENTS` error code. This prevents the buffer underflow that could occur if the path length is too short.
+
+By implementing this fix, the code ensures that the path length is greater than 2 before attempting to select the parent DF, preventing a potential buffer underflow vulnerability.

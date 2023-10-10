@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability addressed by this patch is related to the incorrect initialization of the cur_sb_col variable in the loop restoration multi-threading of the AV1 video codec. When luma loop restoration is disabled, the initialization of cur_sb_col is not happening correctly, leading to potential issues in the code.
+
+Summary of fix:
+The patch fixes the vulnerability by ensuring that the initialization of cur_sb_col in lr_sync is only done if the luma loop restoration is enabled (i.e., rst_info[plane].frame_restoration_type is not RESTORE_NONE).
+
+Detailed description of fix:
+The fix modifies the foreach_rest_unit_in_planes_mt function in the thread_common.c file. After the loop declaration for iterating over each plane, the code checks if luma loop restoration is enabled for the current plane using the condition:
+
+  `if (cm->rst_info[plane].frame_restoration_type == RESTORE_NONE) continue;`
+
+If the above condition is true (i.e., luma loop restoration is disabled for the current plane), the code skips the rest of the loop iteration and moves to the next plane.
+
+This fix ensures that the initialization of cur_sb_col in lr_sync is only performed when it is necessary for the enabled planes, preventing incorrect initialization and potential issues in the code.

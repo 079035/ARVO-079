@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in the given diff file is related to a potential buffer overflow. The code calculates the estimated size of each sample by dividing the total size of the samples by the sample count. However, if the estimated size is zero and the sample count is odd, or if the estimated size is 1 or 2, the code sets the sample size to 4 or 8 multiplied by the estimated size, respectively. This can lead to a situation where the sample size becomes larger than the available buffer, causing a buffer overflow.
+
+Summary of the Fix:
+The fix introduced changes to properly calculate and handle the sample sizes to prevent potential buffer overflows. The fix includes updating the sample size calculation logic and making sure that the calculated sample size does not exceed the maximum available buffer size.
+
+Detailed Description of the Fix:
+1. Previously, if the sample size calculation fell into the default case, the code would set the sample size based on the estimated size. The fix introduces a new variable `s_size` to store each calculated sample size.
+2. After calculating the sample size, the fix checks if the newly calculated `s_size` is larger than the current maximum sample size in `ptr->max_size`. If it is, the fix updates `ptr->max_size` with the new value.
+3. The fix also updates `ptr->total_size` and `ptr->total_samples` by adding the newly calculated `s_size` to the total size and incrementing the total sample count.
+4. The fix replaces the assignment `ptr->sizes[i] = gf_bs_read_int(bs, ptr->sampleSize);` with `s_size` to store the correctly calculated sample size.
+5. Finally, the fix increments the index `i` only once, regardless of the sample size case, since the sample count is incremented in the appropriate places within each case.
+
+These changes ensure that the sample sizes are correctly calculated and stored without exceeding the available buffer size, preventing potential buffer overflows.

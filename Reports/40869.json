@@ -1,0 +1,114 @@
+{
+    "fix": "https://gitlab.xiph.org/xiph/opus.gitec64b3c5b7abd621dfddee6b4cc115298e5d6803",
+    "verify": "0",
+    "localId": 40869,
+    "project": "opus",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Dynamic-stack-buffer-overflow READ 8",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 40869,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1636484033,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=4547738700742656\n\nProject: opus\nFuzzing Engine: libFuzzer\nFuzz Target: opus_projection_encoder_fuzzer_fixed\nJob Type: libfuzzer_asan_opus\nPlatform Id: linux\n\nCrash Type: Dynamic-stack-buffer-overflow READ 8\nCrash Address: 0x7ffc2e1ac99f\nCrash State:\n  xcorr_kernel_sse4_1\n  celt_pitch_xcorr_c\n  pitch_search\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_opus&range=202111080609:202111090612\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=4547738700742656\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 40869,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1636487904,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-02-07"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 40869,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1637253824,
+                "content": "This crash occurs very frequently on linux platform and is likely preventing the fuzzer opus_projection_encoder_fuzzer_fixed from making much progress. Fixing this will allow more bugs to be found.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Fuzz-Blocker"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 40869,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1638496544,
+                "amendments": [
+                    {
+                        "fieldName": "Cc",
+                        "newOrDeltaValue": "tomdenton@google.com"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 40869,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1639583050,
+                "content": "ClusterFuzz testcase 4547738700742656 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_opus&range=202112140611:202112150610\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 40869,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1639683833,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "ec64b3c5b7abd621dfddee6b4cc115298e5d6803",
+    "repo_addr": "https://gitlab.xiph.org/xiph/opus.git"
+}

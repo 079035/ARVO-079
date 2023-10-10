@@ -1,0 +1,20 @@
+Vulnerability:
+The vulnerability lies in the function `zbee_sec_add_key_to_keyring()`. In this function, a comparison is being made between the `key` parameter and the `((key_record_t *)((GSList *)(*nwk_keyring))->data)->key` member using `memcmp()`. However, the `key` parameter is not being dereferenced, which means that the comparison is between the pointer values and not the actual key values.
+
+Summary of the fix:
+The fix addresses the buffer overrun in `zbee_sec_add_key_to_keyring()` function. It changes the comparison in the `if` condition to compare the values of the `key` parameter and the `key` member.
+
+Detailed description of the fix:
+The fix modifies the code in the `zbee_sec_add_key_to_keyring()` function:
+```
+if ( !*nwk_keyring ||
+        memcmp( ((key_record_t *)((GSList *)(*nwk_keyring))->data)->key, key,
+            ZBEE_APS_CMD_KEY_LENGTH) ) {
+    /* Store a new or different key in the key ring */
+    key_record.frame_num = pinfo->num;
+    key_record.label = NULL;
+    memcpy(&key_record.key, key, ZBEE_APS_CMD_KEY_LENGTH);
+    *nwk_keyring = g_slist_prepend(*nwk_keyring, g_memdup(&key_record, sizeof(key_record_t)));
+}
+```
+The line `memcmp( ((key_record_t *)((GSList *)(*nwk_keyring))->data)->key, &key, ZBEE_APS_CMD_KEY_LENGTH)` is changed to `memcmp( ((key_record_t *)((GSList *)(*nwk_keyring))->data)->key, key, ZBEE_APS_CMD_KEY_LENGTH)`. This change ensures that the comparison is made between the values stored in the `key` parameter and the `key` member, rather than the pointer values.

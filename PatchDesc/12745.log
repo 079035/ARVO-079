@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability in the code is a potential heap overflow. 
+
+Summary of the fix:
+The fix includes adding boundary checks to prevent accessing the array out-of-bounds.
+
+Detailed description of the fix:
+The vulnerability is fixed by adding two boundary checks at lines 432 and 437. The first boundary check is added after the condition `if (c_char != 0)` to check if `i` is not equal to zero before decrementing it. Similarly, the second boundary check is added after the condition `if (c_char1 == 0)` to check if `i` is not equal to zero before decrementing it. These boundary checks ensure that the loop terminates gracefully and does not access the array out-of-bounds.

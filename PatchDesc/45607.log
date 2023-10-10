@@ -1,0 +1,25 @@
+Vulnerability: 
+
+The vulnerability patched in the given diff file is an issue where the code does not check if the reference picture count exceeds the maximum reference count allowed before populating the reference picture list. 
+
+Summary of the fix: 
+
+The fix checks if the reference picture count is less than the maximum reference count allowed before adding the references to the reference picture list. 
+
+Detailed description of the fix: 
+
+1. The code first checks and recovers for any future decoding errors using the function `WelsCheckAndRecoverForFutureDecoding(pCtx)`. If the error returned is not `ERR_NONE`, the function returns the error without making any further changes.
+
+2. The function `WrapShortRefPicNum(pCtx)` is called, which wraps the short reference picture numbers within the valid range if there is any wrapping required.
+
+3. The short reference picture list `ppShoreRefList` and the long reference picture list `ppLongRefList` are initialized.
+
+4. The array `pCtx->sRefPic.pRefList[LIST_0]` is cleared using `memset` to initialize it to all zeros.
+
+5. A loop is started to populate the reference picture list for `LIST_0`. The loop iterates over the short reference count, and if the count is less than `MAX_REF_PIC_COUNT` and `iCount` (the current count of added reference pictures) is less than `MAX_REF_PIC_COUNT`, the reference picture `ppShoreRefList[i]` is added to `pCtx->sRefPic.pRefList[LIST_0]` and `iCount` is incremented.
+
+6. Another loop is started to populate the reference picture list for `LIST_0`. This time, the loop iterates over the long reference count, and if the count is less than `MAX_REF_PIC_COUNT` and `iCount` is still less than `MAX_REF_PIC_COUNT`, the reference picture `ppLongRefList[i]` is added to `pCtx->sRefPic.pRefList[LIST_0]` and `iCount` is incremented.
+
+7. The final count of reference pictures added to `pCtx->sRefPic.pRefList[LIST_0]` is stored in `pCtx->sRefPic.uiRefCount[LIST_0]`.
+
+8. The function returns `ERR_NONE` to indicate that the operation was successful.

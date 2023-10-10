@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability being patched in this diff file is a buffer overflow. 
+
+Summary of the Fix:
+
+The fix in this diff file addresses the buffer overflow issue reported by the fuzzer. 
+
+Detailed Description of the Fix:
+
+In the `_normalize_axes_location` function, the fix introduces a new variable `avar_axis_count` to store the number of axes in the `avar` table of the font. It initializes this variable to the return value of the `get_axis_count` function on the `avar` table. 
+
+The fix then modifies the code within the loop that iterates over the axes of the font. It replaces the usage of `face->table.avar->get_axis_count()` with the new `avar_axis_count` variable. This change ensures that the loop does not access the `seg_maps` variable beyond the actual number of axes in the `avar` table, preventing a buffer overflow. 
+
+Overall, the fix prevents the buffer overflow vulnerability by correctly handling the number of axes in the `avar` table during the iteration process.

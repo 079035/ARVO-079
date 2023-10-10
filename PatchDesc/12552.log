@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability in this code is a misconfiguration of the `AOM_DEC_BORDER_IN_PIXELS` constant. It was reduced to 64 in a previous commit, but this change caused several bugs in `oss-fuzz`. 
+
+Summary of the Fix: 
+The fix changes the `AOM_DEC_BORDER_IN_PIXELS` constant back to its original value of 288. 
+
+Detailed Description of the Fix: 
+The fix updates the `AOM_DEC_BORDER_IN_PIXELS` constant in the file `aom_scale/yv12config.h`. In the commit, the line containing `AOM_DEC_BORDER_IN_PIXELS` is changed from `#define AOM_DEC_BORDER_IN_PIXELS 64` to `#define AOM_DEC_BORDER_IN_PIXELS 288`. This reverts the previous reduction of the constant, which caused the `oss-fuzz` bugs. By setting the constant back to its original value, the fix resolves the issues reported by `oss-fuzz`.

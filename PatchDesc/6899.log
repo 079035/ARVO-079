@@ -1,0 +1,10 @@
+Vulnerability:
+There is a vulnerability in the code that allows for slices with non-positive widths to be processed.
+
+Summary of Fix:
+The fix checks if the width of each slice is positive before processing.
+
+Detailed Description of Fix:
+In the fix, a loop is added to iterate over each element in the `slicesWidths` vector. Inside the loop, an if statement is used to check if the current `slicesWidth` is less than or equal to 0. If it is, an exception is thrown with an error message that includes the value of `slicesWidth`. This ensures that slices with non-positive widths are not processed and an error is thrown instead.
+
+After the check, the code continues to call the `AbstractLJpegDecompressor::decode()` function as before.

@@ -1,0 +1,12 @@
+Vulnerability:
+There is a vulnerability in the code related to the `LookupFormat10` struct. The vulnerability is due to the fact that the `DEFINE_SIZE_ARRAY` macro is providing incorrect size information for the `valueArrayZ` member.
+
+Summary of the fix:
+The fix is to update the `DEFINE_SIZE_ARRAY` macro to provide the correct size information for the `valueArrayZ` member.
+
+Detailed description of the fix:
+The `DEFINE_SIZE_ARRAY` macro is used to define and allocate memory for the `valueArrayZ` member of the `LookupFormat10` struct. In this code, the macro is currently using the number `6` to specify the size of the array. However, the actual size of the `valueArrayZ` array should be `8`.
+
+By updating the `DEFINE_SIZE_ARRAY` macro to use the correct size of `8`, the memory allocation for `valueArrayZ` will be corrected. This will ensure that the array has enough space to store the lookup values for each glyph in the range specified by `firstGlyph` and `glyphCount`.
+
+This fix was made to address the vulnerability reported in a bug report on the Chromium project's issue tracker.

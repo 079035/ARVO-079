@@ -1,0 +1,10 @@
+Vulnerability:
+This code patch fixes an out-of-bounds read vulnerability in the XML parser when formatting an error message.
+
+Summary of the fix:
+The fix ensures that characters beyond the end of the buffer are not accessed during error message formatting.
+
+Detailed description of the fix:
+To fix the vulnerability, the code now checks the remaining available space in the input buffer before attempting to print characters. If the remaining space is less than 4 bytes, it directly reports an encoding error indicating that the input is not proper UTF-8. The error message includes a description of the problematic bytes. This prevents accessing characters beyond the end of the buffer. If there is sufficient space, the error message formatting proceeds as before.
+
+The fix helps prevent potential out-of-bounds memory access when formatting error messages during XML parsing.

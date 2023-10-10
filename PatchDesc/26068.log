@@ -1,0 +1,27 @@
+Vulnerability:
+The vulnerability in this code can be identified in the following lines:
+```
+if ((pDecContext->iErrorCode & (dsBitstreamError | dsDataErrorConcealed)) && pDecContext->eSliceType == B_SLICE) {
+    ResetReorderingPictureBuffers (&m_sReoderingStatus, m_sPictInfoList, true);
+    WelsResetRefPic (pDecContext);
+    return dsErrorFree;
+}
+```
+In this section, when the error code indicates a bitstream error or a concealed data error, and the slice type is a B-slice, the code calls the `ResetReorderingPictureBuffers` function and the `WelsResetRefPic` function, and then returns `dsErrorFree`. However, returning `dsErrorFree` in this situation can lead to incorrect behavior and the program may continue processing with corrupted data.
+
+Fix Summary:
+The fix modifies the code block mentioned above to handle the B-slice error case correctly and ensure that the proper error state is returned.
+
+Detailed Fix Description:
+The code is fixed by removing the `return dsErrorFree;` statement and adding a check for the error code related to bitstream and data errors. If the error code indicates a bitstream error or a concealed data error and the slice type is a B-slice, the code proceeds with the error handling logic. This includes calling `ResetReorderingPictureBuffers` to reset the reordering picture buffers and `WelsResetRefPic` to reset the reference pictures. After the error handling, the code continues with the rest of the decoding process.
+
+The fixed code block is as follows:
+```
+if ((pDecContext->iErrorCode & (dsBitstreamError | dsDataErrorConcealed)) && pDecContext->eSliceType == B_SLICE) {
+    ResetReorderingPictureBuffers (&m_sReoderingStatus, m_sPictInfoList, true);
+    WelsResetRefPic (pDecContext);
+    // Do error handling here
+}
+```
+
+This fix ensures that the program handles the B-slice error case correctly and avoids processing with corrupted data.

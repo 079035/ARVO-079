@@ -1,0 +1,7 @@
+Vulnerability: Use-of-uninitialized-value in `encodeCodepoint()`
+
+Summary of fix: The fix initializes the member variable `_highSurrogate` to 0 in the constructor of the `Codepoint` class.
+
+Detailed description of fix: In the original code, the `Codepoint` class did not initialize the member variable `_highSurrogate` in its constructor. This resulted in potential use of an uninitialized value in the `append()` function.
+
+The fix introduces a constructor for the `Codepoint` class and initializes the member variable `_highSurrogate` to 0. This guarantees that `_highSurrogate` will always have a valid value when `append()` is called. This fix resolves the potential use-of-uninitialized-value vulnerability in `encodeCodepoint()`.

@@ -1,0 +1,19 @@
+Vulnerability:
+
+The vulnerability that could be patched in the given diff file is a potential buffer overflow in the `isvcd_pic_reset_ctxt` function in the file `isvcd_nal_parse.c`. The buffer overflow occurs when calculating the value of `ps_nal_parse_ctxt->u4_bytes_left_non_vcl` using the expression `(MAX_NON_VCL_NAL_BUFF_SIZE * 0.85)`. Since `MAX_NON_VCL_NAL_BUFF_SIZE` is an integer, the result of the multiplication will also be an integer, resulting in truncation. This means that only the integer part of the result will be assigned to `ps_nal_parse_ctxt->u4_bytes_left_non_vcl`, potentially leading to a smaller buffer size than intended.
+
+Summary of the Fix:
+
+The fix resolves the issue of a non-vcl buffer overflow in the `nal_parse` function.
+
+Detailed Description of the Fix:
+
+To fix the vulnerability, the code has been modified as follows:
+
+```c
+-    ps_nal_parse_ctxt->u4_bytes_left_non_vcl = (MAX_NON_VCL_NAL_BUFF_SIZE * 0.85);
++    /* 85% of the buffer is used. 15% is used to handle error cases*/
++    ps_nal_parse_ctxt->u4_bytes_left_non_vcl = (WORD32)(MAX_NON_VCL_NAL_BUFF_SIZE * 0.85);
+```
+
+The fix changes the calculation of `ps_nal_parse_ctxt->u4_bytes_left_non_vcl` by explicitly casting the result of the multiplication expression to `WORD32`. This ensures that the decimal fraction of the result is not truncated and the correct buffer size is assigned, addressing the buffer overflow vulnerability.

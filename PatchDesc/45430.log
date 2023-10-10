@@ -1,0 +1,15 @@
+Vulnerability:
+Heap-buffer-overflow WRITE 2 in function `do_fileid()`
+
+Summary of the fix:
+The fix addresses an issue where an input checking was not properly done, leading to a heap-buffer-overflow WRITE of 2 bytes in the `do_fileid()` function.
+
+Detailed description of the fix:
+1.	In the original code, the function `do_fileid()` reads a file ID from the command line argument and performs some checks.
+2.	The fix adds an additional input check to ensure that the length of the file path does not exceed the size of the buffer.
+3.	A condition is added to check if the length of the file path, along with the additional 2 bytes for the new file ID, exceeds the size of the buffer.
+4.	If the condition is true, a parse_error is called with an error message and returns an error code.
+5.	This prevents a heap-buffer-overflow WRITE of 2 bytes, as the length of the file path is checked before copying the new file ID.
+6.	The fix ensures that the file path is properly updated with the new file ID and the function returns without any further issues.
+
+Note: The fix does not provide information about the specific input conditions that trigger the vulnerability, or any potential impacts of the vulnerability.

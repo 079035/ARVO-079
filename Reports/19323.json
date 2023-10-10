@@ -1,0 +1,99 @@
+{
+    "fix": "https://github.com/OISF/libhtp/commit/234431b6f32ff2ef25e0e3ec482afe19a1f4e299",
+    "verify": "0",
+    "localId": 19323,
+    "project": "libhtp",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "msan",
+    "crash_type": "UNKNOWN WRITE",
+    "severity": "High",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 19323,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1576070232,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5746994274631680\n\nProject: libhtp\nFuzzing Engine: libFuzzer\nFuzz Target: fuzz_htp\nJob Type: libfuzzer_msan_libhtp\nPlatform Id: linux\n\nCrash Type: UNKNOWN WRITE\nCrash Address: 0x701000010000\nCrash State:\n  htp_connp_res_buffer\n  htp_connp_RES_LINE\n  htp_connp_res_data\n  \nSanitizer: memory (MSAN)\n\nRecommended Security Severity: High\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_libhtp&range=201912090320:201912110320\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5746994274631680\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 19323,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "4164592774",
+                    "displayName": "sheriffbot@chromium.org"
+                },
+                "timestamp": 1576083706,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2020-03-10"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 19323,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1576140418,
+                "content": "This crash occurs very frequently on linux platform and is likely preventing the fuzzer fuzz_htp from making much progress. Fixing this will allow more bugs to be found.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Fuzz-Blocker"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 19323,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1576251917,
+                "content": "ClusterFuzz testcase 5746994274631680 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_msan_libhtp&range=201912120407:201912130405\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 19323,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "4164592774",
+                    "displayName": "sheriffbot@chromium.org"
+                },
+                "timestamp": 1578847108,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "234431b6f32ff2ef25e0e3ec482afe19a1f4e299",
+    "repo_addr": "https://github.com/OISF/libhtp.git"
+}

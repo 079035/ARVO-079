@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential out-of-bounds memory access.
+
+Summary of the fix:
+The fix adds a boundary check to ensure that the index iMaxRefIdx does not exceed the maximum allowed value MAX_REF_PIC_COUNT. If iMaxRefIdx is greater than or equal to MAX_REF_PIC_COUNT, it is set to MAX_REF_PIC_COUNT - 1 to prevent accessing memory beyond the allowed range.
+
+Detailed description of the fix:
+In the original code, the variable iMaxRefIdx is used as an index for accessing an array. However, there is no check to ensure that iMaxRefIdx is within the allowed range of the array. This can potentially lead to accessing memory beyond the bounds of the array, resulting in undefined behavior.
+
+To fix this vulnerability, the code is modified to include a boundary check. If iMaxRefIdx is found to be greater than or equal to MAX_REF_PIC_COUNT, it is set to MAX_REF_PIC_COUNT - 1. This ensures that the index stays within the valid range of the array.
+
+By adding this boundary check, the code prevents potential out-of-bounds memory access and improves the overall security and stability of the program.

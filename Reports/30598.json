@@ -1,0 +1,49 @@
+{
+    "fix": "https://github.com/SerenityOS/serenity/commit/c12781a6a2dc074be249c21a31913d9b1458c1c9",
+    "verify": "0",
+    "localId": 30598,
+    "project": "serenity",
+    "fuzzer": "afl",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow READ 1",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 30598,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1612801641,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=6673512322433024\n\nProject: serenity\nFuzzing Engine: afl\nFuzz Target: FuzzPNGLoader\nJob Type: afl_asan_serenity\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow READ 1\nCrash Address: 0x604000000100\nCrash State:\n  decode\n  codes\n  fixed\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=afl_asan_serenity&range=202102070602:202102080622\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6673512322433024\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 30598,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1614871654,
+                "content": "ClusterFuzz testcase 6673512322433024 is verified as fixed in https://oss-fuzz.com/revisions?job=afl_asan_serenity&range=202103030612:202103040625\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "c12781a6a2dc074be249c21a31913d9b1458c1c9",
+    "repo_addr": "https://github.com/SerenityOS/serenity"
+}

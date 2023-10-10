@@ -1,0 +1,3 @@
+Vulnerability: Out-of-memory Access Issue
+Summary of the fix: The fix addresses an out-of-memory access issue in the code.
+Detailed description of the fix: The fix modifies the `subset` function in the `gvar` struct. In the original code, the variable `glyph_count` is assigned the value of `c->plan->source->get_num_glyphs()`, which could lead to an out-of-memory access if `version.to_int()` is false. The fix adds a condition to set `glyph_count` to 0 if `version.to_int()` is false, preventing the out-of-memory access issue.

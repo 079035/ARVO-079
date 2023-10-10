@@ -1,0 +1,12 @@
+Vulnerability Description:
+The vulnerability fixed in this code patch is an out-of-bounds read in `libFLAC/bitreader.c`. The vulnerability was reported by Oss-Fuzz and tracked in Chromium bug tracker (Issue: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=17069). The patch addresses the issue and fixes the out-of-bounds read.
+
+Summary of the Fix:
+The fix in this patch checks if the value of `cwords` is less than the value of `words` before accessing the `br->buffer` array. If `cwords` is less than `words`, it performs the `br->buffer[cwords] << br->consumed_bits` operation, otherwise, it assigns the value 0 to `b`.
+
+Detailed Description of the Fix:
+1. In the original code, the `b` variable is assigned the value `br->buffer[cwords] << br->consumed_bits` without any bounds check.
+2. In the fix, the code is modified to include the check: `cwords < br->capacity`. This check ensures that `cwords` is not out-of-bounds for the `br->buffer` array.
+3. If `cwords` is less than `br->capacity`, the code proceeds with the `br->buffer[cwords] << br->consumed_bits` operation.
+4. If `cwords` is equal to or greater than `br->capacity`, it means that `cwords` is out-of-bounds, and in that case, the value 0 is assigned to `b`.
+5. This fix prevents the out-of-bounds read by ensuring that only valid array indices are used to access `br->buffer`.

@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability in the given code is that the multiplication in the line `status=ReadProfile(image,"iptc",profile,4L*length,exception);` does not take into account the type of the field before performing the multiplication. This can lead to an incorrect calculation and memory corruption if the type of the field is not what is expected.
+
+Fix Summary:
+The fix introduced additional code to check the type of the field with the tag `TIFFTAG_RICHTIFFIPTC` before performing the multiplication. If the type of the field is `TIFF_LONG`, the multiplication is performed with `4L*length`, otherwise, it is performed with just `length`.
+
+Detailed Fix:
+The fix introduced the following changes:
+1. Declared a `const TIFFField` pointer named `field`.
+2. Checked if the TIFF data is byte swapped using `TIFFIsByteSwapped` function.
+3. Retrieved the `TIFFField` for the tag `TIFFTAG_RICHTIFFIPTC` using `TIFFFieldWithTag` function and assigned it to the `field` pointer.
+4. Added a condition to check if the data type of the field is `TIFF_LONG` using `TIFFFieldDataType` function.
+5. If the data type is `TIFF_LONG`, the multiplication is performed with `4L*length`.
+6. If the data type is not `TIFF_LONG`, the multiplication is performed with `length`.
+7. The updated multiplication value is then passed as an argument to the `ReadProfile` function.
+
+These changes ensure that the correct multiplication is performed based on the type of the field, preventing memory corruption and potential issues with calculation.

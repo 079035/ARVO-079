@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability fixed in this diff file is a null-dereference write in the function `MqttProps_Free` in `mqtt_client.c`.
+
+Summary of the fix:
+The fix in this commit addresses the null-dereference write vulnerability by adding additional checks to ensure the proper handling of packet types and IDs. The fix also includes modifications to the logic for determining if a match has been found.
+
+Detailed description of the fix:
+1. The code adds additional conditions to the if statement in the `MqttClient_WaitType` function. The conditions now check for the packet types and IDs to ensure that the received packet matches the expected type and ID. This prevents the null-dereference write from occurring when accessing the packet object.
+
+2. The code also modifies the logic for determining if a match has been found. The fix ensures that the match is only considered valid if both the packet type and the wait type are publish response packets. This avoids potential mismatches that may occur between different packet types.
+
+3. In the case of multithreaded execution, the code adds additional checks to handle pending responses and packet matches from other threads. This ensures that the correct packet object and type are used for further processing.
+
+4. The fix also includes the reset of the `mms_stat` variable to `MQTT_MSG_BEGIN` after handling the received packet. This ensures that the state is properly reset for the next iteration of the loop.
+
+5. Finally, the fix includes proper error handling and logging to handle failure cases and provide debug information.
+
+Overall, the fix addresses the null-dereference write vulnerability by improving the packet type and ID matching logic and ensuring the proper handling of pending responses in multithreaded scenarios.

@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability in the given diff file is a buffer overrun in the `EnergyScanServer::HandleScanResult()` function.
+
+Summary of the fix:
+The fix prevents buffer overrun by adding a check to ensure that the buffer does not overflow before storing the scan result.
+
+Detailed description of the fix:
+1. The fix introduces the `VerifyOrExit(mScanResultsLength < OPENTHREAD_CONFIG_TMF_ENERGY_SCAN_MAX_RESULTS)` check before storing the scan result in the `mScanResults` array.
+2. This check ensures that the buffer is not already full (`mScanResultsLength < OPENTHREAD_CONFIG_TMF_ENERGY_SCAN_MAX_RESULTS`). If the buffer is full, the execution exits the function using the `VerifyOrExit` macro.
+3. If the buffer is not full, the scan result (`aResult->mMaxRssi`) is stored in the next available position in the `mScanResults` array (`mScanResults[mScanResultsLength++] = aResult->mMaxRssi`).
+4. After storing the scan result, the function continues with its normal execution.

@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in this diff file is that the `LJpegDecompressor::decodeScan()` function does not ensure that the LJpeg frame is large enough. This means that if the frame contains fewer pixels than the DNG tile/slice, there may be uninitialized pixels.
+
+Summary of the Fix:
+The fix ensures that the LJpeg frame is large enough by adding a check to verify the size of the frame. If the frame width is smaller than the expected width or the frame height is smaller than the expected height, an exception is thrown.
+
+Detailed Description of the Fix:
+The fix includes the following changes:
+
+1. A new variable `frameWidth` is declared and assigned the value of `frame.cps * frame.w`, which represents the width of the LJpeg frame.
+2. An `if` condition is added to check if `frameWidth` is less than `w` (expected width) or if `frame.h` (height of frame) is less than `h` (expected height).
+3. If the condition evaluates to true, an exception is thrown using the `ThrowRDE()` function, providing a message that indicates that the LJpeg frame is smaller than expected.
+4. This check ensures that the LJpeg frame size is sufficient to prevent uninitialized pixels and potential data corruption or unexpected behavior during decompression.

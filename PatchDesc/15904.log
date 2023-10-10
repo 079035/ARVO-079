@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is an out-of-bounds vector access.
+
+Summary of the fix:
+The fix resolves the out-of-bounds vector access issue by adding proper checks and conditions while accessing vector elements.
+
+Detailed description of the fix:
+1. In the function `parseCompoundSelector()`, the fix starts by initializing an empty compound selector wrapper.
+2. The fix then skips initial white-space, lexes the input, and checks if the parent selector '&' is present. If it is present, it sets the `hasRealParent` flag to true.
+3. The fix then enters a loop to parse the list of simple selectors.
+4. Within the loop, it removes all block comments and checks if the parent selector '&' is present again. If it is present, it throws an error.
+5. The fix then checks if a functional or type selector is present and appends it to the compound selector wrapper.
+6. It also checks for abort conditions such as spaces, end of file, selector combinator operators, and complex selector delimiters. If any of these conditions are met, the loop breaks.
+7. Finally, the fix checks if the compound selector wrapper is empty and if the next character is not the start of a block ('{'). If these conditions are met, it sets the `hasPostLineBreak` flag based on the presence of a new line character.
+
+Note: The provided code only includes a partial diff, so the full fix might involve changes in other parts of the code as well.

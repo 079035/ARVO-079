@@ -1,0 +1,15 @@
+Vulnerability:
+
+A heap buffer overflow vulnerability was found and fixed in the code.
+
+Summary of Fix:
+
+The fix ensures that the ligature_count variable does not exceed the length of the LigatureArray, preventing a heap buffer overflow.
+
+Detailed Description of Fix:
+
+In the original code, the ligature_count variable was incremented without any bounds checking, potentially causing it to exceed the length of the LigatureArray. This could lead to a heap buffer overflow if the coverage iterator contained more elements than the array length.
+
+To fix this issue, a check was added before incrementing ligature_count to ensure that it does not exceed the length of the LigatureArray. If ligature_count is greater than or equal to the array length, the loop is exited using the break statement.
+
+With this fix, the heap buffer overflow vulnerability is mitigated by preventing the ligature_count variable from going beyond the allocated memory for the LigatureArray.

@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability that could be patched in this diff file is the lack of support for the 6 GHz band in the Representative Tx Power List (RTPL) list entry instance. Currently, the primary channel number attribute (QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY) is being used to identify channels. However, this attribute is deprecated if both the driver and user space application support the 6 GHz band.
+
+Summary of the Fix:
+
+The fix adds a new attribute called QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY_FREQUENCY to the RTPL list entry instance. This attribute represents the primary channel center frequency in MHz and is required for 6 GHz support. Additionally, the QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY attribute is marked as deprecated if both the driver and user space application support the 6 GHz band, ensuring backward compatibility.
+
+Detailed Description of the Fix:
+
+The fix addresses the issue by introducing a new attribute called QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY_FREQUENCY in the enum qca_wlan_vendor_attr_rtplinst. This attribute represents the primary channel center frequency in MHz. It is added to the definition of the Representative Tx Power List (RTPL) list entry instance to uniquely identify channels, especially in the case of the 6 GHz band.
+
+To maintain backward compatibility, the QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY attribute is still used if either the driver or user space application or both do not support the 6 GHz band. However, if both the driver and user space application support the 6 GHz band, the QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY attribute is marked as deprecated.
+
+This fix ensures that the RTPL list entry instance can properly handle channels in the 6 GHz band by providing the primary channel center frequency attribute. It also takes into account backward compatibility by deprecating the existing primary channel number attribute if necessary.

@@ -1,0 +1,13 @@
+Vulnerability: The vulnerability that is being patched in this diff file is a UBSAN (Undefined Behavior Sanitizer) false-positive. 
+
+Summary of the fix:
+- The fix in this code modifies the logic of removing trailing zeros from the `auth` parameter.
+- The fix replaces a `for` loop with a `while` loop to improve code readability.
+- The fix eliminates an unnecessary access to the `auth->t.buffer` array, which caused the UBSAN false-positive.
+
+Detailed description of the fix:
+- Previously, the code used a `for` loop to iterate through the `auth->t.buffer` array and remove trailing zeros. The loop started from the last element of the array and continued until a non-zero element was found or the beginning of the array was reached.
+- The fix replaces the `for` loop with a `while` loop for improved code readability. 
+- Instead of directly accessing the `auth->t.buffer` array through a pointer `a`, the fix uses the `auth->t.buffer[auth->t.size - 1]` expression to access the last element of the array. This eliminates the unnecessary pointer arithmetic and makes the code clearer.
+- The `while` loop condition checks two things: (1) `auth->t.size` is greater than 0, and (2) the last element of `auth->t.buffer` is a zero. If these conditions are met, the loop reduces `auth->t.size` by 1.
+- With this fix, trailing zeros are correctly removed from the `auth` parameter, and the code no longer triggers the UBSAN false-positive.

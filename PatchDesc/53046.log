@@ -1,0 +1,14 @@
+Vulnerability:
+Heap-buffer-overflow in onigenc_unicode_mbc_case_fold.
+
+Summary of the fix:
+The fix handles a heap buffer overflow in the function onigenc_unicode_mbc_case_fold.
+
+Detailed description of the fix:
+The fix introduced in this commit includes the following changes:
+- Previously, the `search` function was called directly with the `data_pattern` parameters, potentially causing a heap buffer overflow if the `data_pattern` was equal to the `pattern` or if `onigenc_is_valid_mbc_string` returned a non-zero value. To fix this issue, the code now includes an additional check before calling the `search` function.
+- The new check verifies that the `data_pattern` is not equal to the `pattern` and that `onigenc_is_valid_mbc_string` returns 0 for the `data_pattern`. If both conditions are satisfied, the `search` function is called with the `data_pattern` parameters.
+- This change ensures that the `search` function is not called with invalid or overlapping parameters, thus preventing a potential heap buffer overflow.
+- The fix also includes a conditional check for the `str` and `end` parameters using `onigenc_is_valid_mbc_string` to prevent potential buffer overflows in the `search` function when processing the `str` parameter. If the `str` and `end` parameters are valid, the `search` function is called with these parameters as well.
+
+This fix addresses the heap buffer overflow vulnerability in the `onigenc_unicode_mbc_case_fold` function by validating and properly handling the input parameters before calling the `search` function.

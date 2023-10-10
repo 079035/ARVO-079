@@ -1,0 +1,9 @@
+Vulnerability: Crash on copying non-HDR alpha plane.
+
+Summary of the fix: The fix ensures that the correct width is used when copying the non-HDR alpha plane.
+
+Detailed description of the fix: In the given code, there is a check for the presence of an alpha channel (`has_alpha`) and the bit depth of the alpha channel is compared with the bit depth of the other color channels (`input->get_bits_per_pixel(heif_channel_Alpha) != bpp`). If the alpha channel exists and its bit depth is not equal to the bit depth of the other channels, the function returns `nullptr`, indicating an error.
+
+In the fixed code, a new variable `copyWidth` is introduced to determine the width of the alpha channel copy. If the input image is in HDR format (`hdr == true`), the `copyWidth` is set to `width*2`, otherwise, it is set to `width`. This ensures that the correct width is used when copying the non-HDR alpha plane. The `memcpy` call is then updated to use the `copyWidth` value instead of `width * 2`.
+
+This fix prevents a crash that could occur when copying the non-HDR alpha plane and ensures that the correct width is used during the copying operation.

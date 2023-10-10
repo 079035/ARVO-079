@@ -1,0 +1,16 @@
+1. Vulnerability: 
+The vulnerability that is patched in the given diff file is a potential crash or incorrect behavior when trying to decode a tile of an image that is outside the image boundaries or overflows the image dimensions horizontally or vertically.
+
+2. Summary of the fix: 
+The fix ensures that when decoding a tile, the code checks if the tile's coordinate and dimensions are within the image boundaries. If the tile is outside the boundaries or overflows the image, an appropriate error is reported instead of crashing or filling only a part of the tile.
+
+3. Detailed description of the fix: 
+Before the fix, the code in the `decode()` function checks if the tile's X and Y offsets are within the image boundaries using the conditions `if (offsetX >= static_cast<unsigned>(mRaw->dim.x))` and `if (offsetY >= static_cast<unsigned>(mRaw->dim.y))`. However, it doesn't handle the case when the tile's width and height exceed the image dimensions or when the tile overflows the image horizontally or vertically.
+
+The fix adds additional checks to ensure the tile's width, height, and its coordinates plus width and height are within the image boundaries. The added code includes the following checks:
+- `if (width > static_cast<unsigned>(mRaw->dim.x))`: Checks if the tile's width is greater than the image width and throws an error.
+- `if (height > static_cast<unsigned>(mRaw->dim.y))`: Checks if the tile's height is greater than the image height and throws an error.
+- `if (offsetX + width > static_cast<unsigned>(mRaw->dim.x))`: Checks if the tile overflows the image horizontally and throws an error.
+- `if (offsetY + height > static_cast<unsigned>(mRaw->dim.y))`: Checks if the tile overflows the image vertically and throws an error.
+
+These additional checks ensure that the code does not attempt to decode tiles that are outside the image boundaries or overflow the image dimensions. Instead, an appropriate error is thrown to indicate the problem. This prevents potential crashes or incorrect behavior when decoding tiles.

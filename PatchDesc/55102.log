@@ -1,0 +1,7 @@
+Vulnerability: Out of array access
+Summary of the fix: The fix in this commit addresses an out-of-array access vulnerability in the `decompress_p3` function of the `scpr3.c` file.
+Detailed description of the fix: 
+1. The vulnerability occurs when accessing the `dst` array, which represents the destination buffer for decompressed pixels.
+2. The fix introduces a check to ensure that the value of `bx` does not exceed the width of the video frame (`avctx->width`) before accessing the `dst` array.
+3. If `bx` exceeds the width, an error code `AVERROR_INVALIDDATA` is returned, indicating that the input data is invalid.
+4. This check prevents the out-of-array access and mitigates the vulnerability.

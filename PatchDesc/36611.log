@@ -1,0 +1,21 @@
+Vulnerability:
+The vulnerability patched in this code is related to improper checking of a parameter when inserting a name in the `__cil_insert_name` function. This function is responsible for inserting file names for `typetransition` rules. However, there was a missing check in the function that could mistakenly identify a parameter name as a file name string, leading to potential issues.
+
+Summary of the fix:
+The fix ensures that the parameter flavor is `CIL_NAME` and that the parameter name matches the file name to be stored in the datum. This prevents parameters from being mistaken for file name strings.
+
+Detailed description of the fix:
+1. The code checks if the parent of the AST node (`ast_node`) has a flavor of `CIL_CALL`. If it does, it retrieves the associated macro.
+2. If the parent has a flavor of `CIL_MACRO`, it retrieves the macro from the parent.
+3. Then, the code checks if the retrieved macro has parameters (`macro->params` is not NULL).
+4. If the macro has parameters, it iterates over each parameter using a `cil_list_for_each` loop.
+5. Inside the loop, it checks if the parameter has a flavor of `CIL_NAME` and if its value (`param->str`) matches the key being inserted (`key`).
+6. If there is a match, the function returns NULL, indicating that the parameter was mistaken for a file name string.
+7. If no match is found in the parameters, the code proceeds to create and insert the name as before.
+8. It converts the flavor `CIL_NAME` to a symbol table index (`sym_index`) using the `cil_flavor_to_symtab_index` function.
+9. It retrieves the symbol table (`symtab`) corresponding to the symbol table index.
+10. It uses the symbol table to check if a datum already exists for the given key.
+11. If a datum is found, it returns the existing name.
+12. If no datum is found, it initializes a new name (`cil_name_init(&name)`), inserts it into the symbol table and the database names list, and returns the newly created name.
+
+By including the additional check on the parameter's flavor and matching with the key, the fix ensures that only actual file names are stored in the datum, preventing the vulnerability where parameter names were mistaken for file name strings.

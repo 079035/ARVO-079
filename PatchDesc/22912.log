@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the code is that the check for the payload length in the Spotify protocol is not sufficient. It currently checks if the payload length is greater than 2 for UDP packets and greater than or equal to 9 for TCP packets. This check is not accurate and may give false positives or negatives.
+
+Fix Summary:
+The fix adds a more specific and accurate check for the Spotify payload length. For UDP packets, it checks if the payload length is greater than or equal to 7. For TCP packets, it checks if the payload length is greater than or equal to 9 and specific bytes in the payload match certain values.
+
+Fix Description:
+The fix modifies the code in the `ndpi_check_spotify` function. For UDP packets, the code previously checked if the payload length was greater than 2, but now it checks if the payload length is greater than or equal to 7. This change ensures that only packets with a payload length of 7 or more and matching the "SpotUdp" pattern are considered as Spotify UDP dissector packets.
+
+For TCP packets, the code previously checked if the payload length was greater than or equal to 9, but now it adds more specific checks. It checks if the payload length is greater than or equal to 9 and if specific bytes in the payload match certain values. These values are 0x00 at index 0, 0x04 at index 1, 0x00 at index 2, 0x00 at index 3, 0x52 at index 6, and either 0x0e or 0x0f at index 7, and 0x50 at index 8. This change ensures that only packets with a payload length of 9 or more and matching these specific byte values are considered as Spotify TCP dissector packets.
+
+Additionally, the code includes IP range checks to further identify Spotify traffic. It checks if the source or destination IP address falls within certain predefined ranges associated with Spotify. If a match is found, the Spotify protocol is set as the detected protocol for the flow.
+
+Overall, these changes improve the accuracy of detecting Spotify packets and reduce the possibility of false positives or negatives.

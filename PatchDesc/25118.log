@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability in the given diff file is that the wrong size parameter is being passed to the function `blosc_run_decompression_with_context()`. The `srcsize` parameter is not being used correctly and instead `INT32_MAX` is being passed as the source size. This can lead to potential memory corruption or undefined behavior if the actual source size is greater than `INT32_MAX`.
+
+Summary of the Fix:
+The fix in this commit involves replacing the incorrect `INT32_MAX` value with the correct `srcsize` parameter when calling the `blosc_run_decompression_with_context()` function.
+
+Detailed Description of the Fix:
+In the `blosc2_decompress()` function, the fix involves replacing the `INT32_MAX` value with the actual `srcsize` parameter when calling the `blosc_run_decompression_with_context()` function. This ensures that the correct size of the source data is passed to the decompression routine, preventing potential memory corruption or undefined behavior.
+
+Specifically, the following line is modified:
+```diff
+result = blosc_run_decompression_with_context(g_global_context, src, INT32_MAX, dest, destsize);
+```
+is changed to:
+```diff
+result = blosc_run_decompression_with_context(g_global_context, src, srcsize, dest, destsize);
+```
+This fix ensures that the `srcsize` parameter is correctly used in the decompression process, providing the accurate size of the source data to be decompressed.

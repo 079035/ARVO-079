@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability fixed in this diff file is related to a potential buffer overflow. Specifically, in the function `pps_multilayer_extension()`, there is a check missing for the value of `pps->num_ref_loc_offsets`. This value is read from the bitstream using `get_ue_golomb_long(gb)` and is used as the loop condition for iterating over the `pps->ref_loc_offset_layer_id` array. If the value of `pps->num_ref_loc_offsets` is greater than the size of the `pps->ref_loc_offset_layer_id` array, it can lead to writing beyond the array bounds.
+
+Summary of the fix:
+The fix introduced in this diff file addresses the vulnerability by adding a check for the value of `pps->num_ref_loc_offsets`. If the value is greater than the size of the `pps->ref_loc_offset_layer_id` array (`FF_ARRAY_ELEMS(pps->ref_loc_offset_layer_id)`), the value of `pps->num_ref_loc_offsets` is set to 0, and the function returns an error (`AVERROR_INVALIDDATA`). This prevents the buffer overflow from occurring.
+
+Detailed description of the fix:
+1. The fix adds the following check after reading the value of `pps->num_ref_loc_offsets`:
+```c
+if (pps->num_ref_loc_offsets > FF_ARRAY_ELEMS(pps->ref_loc_offset_layer_id)) {
+    pps->num_ref_loc_offsets = 0;
+    return AVERROR_INVALIDDATA;
+}
+```
+2. If the condition `pps->num_ref_loc_offsets > FF_ARRAY_ELEMS(pps->ref_loc_offset_layer_id)` is true, it means that the value of `pps->num_ref_loc_offsets` is larger than the size of the `pps->ref_loc_offset_layer_id` array. In this case, the value of `pps->num_ref_loc_offsets` is set to 0 to avoid exceeding the array bounds.
+3. Additionally, the function returns an error value (`AVERROR_INVALIDDATA`) to indicate that the input data is invalid.
+4. This fix effectively prevents the buffer overflow by ensuring that the loop iterations are within the bounds of the `pps->ref_loc_offset_layer_id` array.

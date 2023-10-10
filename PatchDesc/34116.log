@@ -1,0 +1,25 @@
+Vulnerability:
+The vulnerability in the given code is a double-free issue. It occurs when the pointer `mp_buf` is freed multiple times, leading to undefined behavior.
+
+Summary of the Fix:
+The fix for the vulnerability is to check if `tmp_out_buf` and `mp_buf` point to the same memory location before freeing `mp_buf`. If they are the same, we only free `mp_buf` once. Otherwise, we free both `mp_buf` and `tmp_out_buf`.
+
+Detailed Description of the Fix:
+1. In the code block where the vulnerability occurs, replace the following lines:
+   ```
+   flb_free(mp_buf);
+   flb_free(tmp_out_buf);
+   ```
+   with the fixed code:
+   ```
+   if (mp_buf == tmp_out_buf) {
+       flb_free(mp_buf);
+   } else {
+       flb_free(mp_buf);
+       flb_free(tmp_out_buf);
+   }
+   ```
+   This fix ensures that `mp_buf` is freed only once, regardless of whether it is the same as `tmp_out_buf`.
+
+Impact of the Fix:
+The fix prevents the double-free vulnerability from occurring, which could lead to memory corruption or crashes. By correctly handling the freeing of memory, the fix ensures proper memory management and avoids undefined behavior.

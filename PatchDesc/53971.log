@@ -1,0 +1,12 @@
+Vulnerability: Invalid NALU type in vvcC - ignoring
+
+Summary of Fix: The fix for the vulnerability is to add a check to validate the NALU type before further processing. Invalid NALU types are ignored.
+
+Detailed Description of Fix: 
+1. Before the fix, the code would output a warning message for invalid NALU types in vvcC and continue processing. This could lead to potential issues if the invalid NALU types are supposed to be handled differently.
+
+2. The fix adds a check to validate the NALU type. If the NALU type is invalid, a warning message is logged and the code skips further processing of the invalid NALU.
+
+3. The modified code now checks for the validity of the NALU type before checking the nalucount and processing the NALUs.
+
+4. This fix ensures that only valid NALU types are processed, improving the overall reliability and stability of the code.

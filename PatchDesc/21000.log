@@ -1,0 +1,22 @@
+Vulnerability:
+The vulnerability that is patched in the provided diff file is a buffer overread in the function `ndpi_search_setup_capwap`. The vulnerable code allows the function to read from a buffer beyond its boundaries, which can lead to undefined behavior and potential security vulnerabilities.
+
+Summary of the Fix:
+The fix in the provided diff file addresses the buffer overread vulnerability in the `ndpi_search_setup_capwap` function. It adds checks to ensure that the function does not read beyond the boundaries of the buffer, effectively preventing the buffer overread.
+
+Detailed Description of the Fix:
+1. In the original code, there is a section where the variable `msg_len` is assigned the value of a 16-bit unsigned integer retrieved from the packet payload:
+```c
+msg_len = ntohs(*(u_int16_t*)&packet->payload[offset]);
+```
+2. To fix the buffer overread vulnerability, the fix checks if the packet payload length is sufficient to read the 16-bit value at the given offset before assigning it to `msg_len`:
+```c
+if (packet->payload_packet_len >= offset + sizeof(u_int16_t)) {
+  msg_len = ntohs(*(u_int16_t*)&packet->payload[offset]);
+  
+  if((msg_len+to_add) == packet->payload_packet_len)
+    goto capwap_found;
+}
+```
+3. The `if` condition `packet->payload_packet_len >= offset + sizeof(u_int16_t)` ensures that there are enough bytes following the offset to read the 16-bit value. If the condition is not met, the `if` block is skipped, and the code does not proceed to check the buffer length for a match.
+4. By adding this check, the fix prevents the buffer overread by ensuring that the read operation stays within the boundaries of the packet payload buffer.

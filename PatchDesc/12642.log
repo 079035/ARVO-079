@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given diff file is a lack of length check for the `argv[2]` and `argv[3]` arguments in the "add" command of the command line interface (CLI). 
+
+Summary of the fix:
+The fix adds length checks for `argv[2]` and `argv[3]` to ensure that the data being copied into `cfg.mServiceData` and `cfg.mServerConfig.mServerData` does not exceed the buffer size.
+
+Detailed description of the fix:
+1. A new variable `length` of type `size_t` is declared.
+2. The length of `argv[2]` is calculated using `strlen()` and assigned to `length`.
+3. The length of `argv[3]` is calculated using `strlen()` and assigned to `length`.
+4. The length of `argv[2]` is checked to ensure it does not exceed the size of the buffer `cfg.mServiceData`. If it exceeds, the error `OT_ERROR_NO_BUFS` is set and the function exits.
+5. The length of `argv[3]` is checked to ensure it does not exceed the size of the buffer `cfg.mServerConfig.mServerData`. If it exceeds, the error `OT_ERROR_NO_BUFS` is set and the function exits.

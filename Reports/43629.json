@@ -1,0 +1,82 @@
+{
+    "fix": "https://github.com/GrokImageCompression/grok/commit/70815f899869c02e01ed10b9b95807a9f08c34a5",
+    "verify": "0",
+    "localId": 43629,
+    "project": "grok",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "msan",
+    "crash_type": "Use-of-uninitialized-value",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43629,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1642140416,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5079826912903168\n\nProject: grok\nFuzzing Engine: libFuzzer\nFuzz Target: grk_decompress_fuzzer\nJob Type: libfuzzer_msan_grok\nPlatform Id: linux\n\nCrash Type: Use-of-uninitialized-value\nCrash Address: \nCrash State:\n  CachedXFORM\n  cmsDoTransform\n  grk::GrkImage::applyICC\n  \nSanitizer: memory (MSAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_grok&range=202201020601:202201030601\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5079826912903168\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43629,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1642189963,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-04-14"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43629,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1645547669,
+                "content": "ClusterFuzz testcase 5079826912903168 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_msan_grok&range=202202210604:202202220605\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 43629,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1645558899,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "70815f899869c02e01ed10b9b95807a9f08c34a5",
+    "repo_addr": "https://github.com/GrokImageCompression/grok.git"
+}

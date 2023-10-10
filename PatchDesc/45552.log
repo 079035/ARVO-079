@@ -1,0 +1,23 @@
+Vulnerability:
+The vulnerability is an out-of-bounds write in the `pkcs15-init` function in the `pkcs15init/profile.c` file. 
+The issue occurs when checking the name of a file and mapping it to a file type. If the `name+7` exceeds the range of the `pkcs15DfNames` array or is not valid, the function will return NULL, potentially leading to a crash or other undefined behavior if not handled correctly.
+
+Summary of the fix:
+The fix involves adding an additional check to ensure that `df_type` is not greater than or equal to `SC_PKCS15_DF_TYPE_COUNT`. If it is, the function will return NULL, preventing the out-of-bounds write.
+
+Detailed description of the fix:
+In the code, the vulnerable line is:
+```
+if (map_str2int(cur, name+7, &df_type, pkcs15DfNames) || df_type >= SC_PKCS15_DF_TYPE_COUNT)
+```
+
+To fix the issue, we need to add an additional check after `map_str2int` to ensure that `df_type` is a valid index within the `pkcs15DfNames` array. We can use the `SC_PKCS15_DF_TYPE_COUNT` constant to check whether `df_type` exceeds the maximum valid index.
+
+The fixed code will look like this:
+```c
+if (map_str2int(cur, name+7, &df_type, pkcs15DfNames) || df_type >= SC_PKCS15_DF_TYPE_COUNT) {
+    return NULL;
+}
+```
+
+By adding this check, the function will return NULL if `df_type` is out of bounds, preventing the out-of-bounds write and potentially avoiding a crash or other undefined behavior.

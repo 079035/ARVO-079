@@ -1,0 +1,23 @@
+Vulnerability: Integer Overflow
+
+Summary of the Fix: The fix in this code patch addresses an integer overflow vulnerability in the `decrypt_initial_packet` function of the QUIC protocol implementation. The code uses the `quic_len` function to compute an offset, which is then used to perform bounds checking. However, due to the use of unsigned arithmetic, an integer overflow can occur, leading to a potential buffer overflow and subsequent memory corruption.
+
+Detailed Description of the Fix: The fix involves promoting the `pn_offset` variable to `uint64_t` before performing the bounds checking. By doing this, the arithmetic operation will not result in an integer overflow even if the values involved are large. This prevents the potential buffer overflow and ensures the integrity of memory operations.
+
+The code before the fix:
+```c
+if(pn_offset + 8 + (4 + 16) >= packet->payload_packet_len) {
+  quic_ciphers_reset(&ciphers);
+  return NULL;
+}
+```
+
+The code after the fix:
+```c
+if((uint64_t)pn_offset + 8 + (4 + 16) >= (uint64_t)packet->payload_packet_len) {
+  quic_ciphers_reset(&ciphers);
+  return NULL;
+}
+```
+
+The fix resolves the vulnerability by correctly checking for buffer overflow conditions. By promoting the variables to `uint64_t`, the bounds checking operation can handle large values without overflowing and causing memory corruption.

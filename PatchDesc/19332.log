@@ -1,0 +1,33 @@
+Vulnerability: Read Buffer Overflow in STUN
+
+Summary of the Fix: The fix for this vulnerability is to update the condition in line 99 from "payload_length < sizeof(struct stun_packet_header)" to "payload_length < sizeof(struct stun_packet_header) + 4". This change ensures that the buffer overflow does not occur when processing a packet with an invalid header size.
+
+Detailed Description of the Fix: 
+
+1. On lines 99 and 100, the code checks if the payload length is less than the size of the header. If the condition is true, the code treats the packet as an invalid packet.
+
+   ```c
+   if (payload_length < sizeof(struct stun_packet_header)) {
+     /* This looks like an invalid packet */
+     if(flow->protos.stun_ssl.stun.num_udp_pkts > 0) {
+       flow->guessed_host_protocol_id = NDPI_PROTOCOL_WHATSAPP_CALL;
+       return(NDPI_IS_STUN);
+     } else
+       return(NDPI_IS_NOT_STUN);
+   }
+   ```
+
+2. However, the size of the header does not include the size of the "stun_packet_header" struct itself, which is 4 bytes. So, the condition in the above code should be updated to "payload_length < sizeof(struct stun_packet_header) + 4" to account for the additional 4 bytes.
+
+   ```c
+   if (payload_length < sizeof(struct stun_packet_header) + 4) {
+     /* This looks like an invalid packet */
+     if(flow->protos.stun_ssl.stun.num_udp_pkts > 0) {
+       flow->guessed_host_protocol_id = NDPI_PROTOCOL_WHATSAPP_CALL;
+       return(NDPI_IS_STUN);
+     } else
+       return(NDPI_IS_NOT_STUN);
+   }
+   ```
+
+3. By making this change, the code ensures that it only treats packets as valid STUN packets if the payload length is greater than or equal to the size of the header plus 4 bytes. This prevents a potential buffer overflow when processing invalid packets with a smaller payload length.

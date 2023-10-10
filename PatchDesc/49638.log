@@ -1,0 +1,33 @@
+Vulnerability:
+The vulnerability fixed in this code patch is a heap-buffer-overflow. The issue can be observed by the error message shown in the diff file:
+```
+==160665==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x604000000038 at pc 0x55f7250d9a5c bp 0x7fff02c82b90 sp 0x7fff02c82350
+READ of size 4 at 0x604000000038 thread T0
+```
+The error occurs in the function `dissect_softether_ip_port` in the file "src/lib/protocols/softether.c" at line 303.
+
+Fix Summary:
+The fix for this vulnerability is to add checks to ensure that the `ip_port_separator` variable is correctly positioned within the payload and does not cause a buffer overflow. Two additional checks are inserted to verify that `ip_port_separator` is not less than the payload pointer plus the lengths of "IP=" and ",PORT=".
+
+Detailed Fix:
+The following changes were made to fix the vulnerability:
+
+1. Addition of the following check after finding `ip_port_separator`:
+```c
+if (ip_port_separator < (char const *)packet->payload + NDPI_STATICSTRING_LEN("IP="))
+{
+  return 1;
+}
+```
+This check ensures that `ip_port_separator` is not positioned before the beginning of the IP value.
+
+2. Addition of the following check after finding `ip_len`:
+```c
+if (ip_port_separator < (char const *)packet->payload + NDPI_STATICSTRING_LEN("IP=") + NDPI_STATICSTRING_LEN(",PORT="))
+{
+  return 1;
+}
+```
+This check ensures that `ip_port_separator` is not positioned before the end of the IP value and before the beginning of the port value.
+
+These additional checks prevent the heap-buffer-overflow vulnerability by ensuring that the `ip_len` and `port_len` values are calculated correctly and do not exceed the boundaries of the corresponding buffers `flow->protos.softether.ip` and `flow->protos.softether.port`.

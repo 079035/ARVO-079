@@ -1,0 +1,14 @@
+Vulnerability: This code patch fixes a potential buffer overflow vulnerability in the `CoapSecure::Process` function. 
+
+Summary of Fix: The fix adds length checks for the input arguments `argv[2]` and `argv[3]` when setting the PSK (pre-shared key) in the `CoapSecure` class. The length of these arguments is now checked against the size of the destination buffer `mPsk` and `mPskId` respectively.
+
+Detailed Description of Fix:
+1. In the original code, the length of `argv[2]` is calculated using `strlen(argv[2])` and stored in the variable `mPskLength`. Similarly, the length of `argv[3]` is calculated and stored in `mPskIdLength`. This leaves the possibility of a buffer overflow if the lengths of `argv[2]` and `argv[3]` are greater than the sizes of `mPsk` and `mPskId` buffers respectively.
+
+2. In the fix, the variable `length` is introduced to hold the length of the input arguments. The `strlen` function is then called to calculate the length and assign it to `length`. 
+
+3. Next, a check is added to verify that `length` is less than or equal to the size of the respective destination buffer (i.e., `sizeof(mPsk)` for `argv[2]` and `sizeof(mPskId)` for `argv[3]`). If the length is greater than the buffer size, the code exits with an error (`OT_ERROR_INVALID_ARGS`).
+
+4. If the length check passes, the data from `argv[2]` and `argv[3]` is copied to the respective destination buffers (`mPsk` and `mPskId`), and the `otCoapSecureSetPsk` function is called with the updated PSK and PSK ID lengths.
+
+5. This fix prevents potential buffer overflows by ensuring that the input arguments for setting the PSK are within the bounds of the destination buffers.

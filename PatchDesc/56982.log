@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability in the given diff file is that the current implementation of `Array<T, 0>` uses a zero-length C array as its storage type. This is accepted as a GNU extension, but it causes problems with UBSan (Undefined Behavior Sanitizer) in Clang 16. When compiling with Clang 16, an UBSan error is raised every time an object is accessed whose only field is a zero-length array.
+
+Fix Summary:
+The fix in this patch is to introduce a new type called `EmptyArrayStorage` in the `Detail` namespace. This type serves as the storage of 0-sized `AK::Array`s. The `EmptyArrayStorage` structure has an overloaded `operator[]` that raises an assertion to indicate that accessing the array is an unreachable code path. It also provides a `constexpr operator T*` conversion to `nullptr`. The `Array` structure is then modified to use `Conditional` to conditionally select either `Detail::EmptyArrayStorage<T>` or `T[Size]` as the storage type based on the value of `Size`.
+
+Detailed Fix:
+1. In the `AK` namespace, a new `Detail` namespace is introduced.
+2. Inside the `Detail` namespace, a new structure called `EmptyArrayStorage` is defined. This structure is templated on the type `T` and serves as the storage for 0-sized `AK::Array`s.
+3. The `EmptyArrayStorage` structure has an overloaded `operator[]` that takes a `size_t` index as input and raises an assertion using `VERIFY_NOT_REACHED()`. This assertion indicates that accessing the empty array is an unreachable code path and any attempt to do so should be caught as a bug.
+4. The `EmptyArrayStorage` structure also provides a `constexpr operator T*` conversion to `nullptr`. This conversion allows the empty array storage to be convertible to a null pointer of type `T*`. This is done to ensure that the storage type of `Array` remains compatible with other code that expects a pointer type.
+5. In the `Array` structure, the `__data` member is modified to use the `Conditional` type, which selects either `Detail::EmptyArrayStorage<T>` or `T[Size]` as the storage type based on the value of `Size`.
+6. The `Array` structure is updated to use the `__data` member for storage instead of directly using `T __data[Size]`.
+7. The various member functions and operators of `Array` are updated to work with the modified `__data` member.
+8. The `Array` structure is also updated to provide a fallback implementation for the `fill`, `max`, and `min` member functions. These functions now include static assertions to ensure that they are not called on arrays with a size of 0.
+
+Note: This fix addresses the UBSan issue with zero-length `Array` in Clang 16 by introducing a new storage type and modifying the existing `Array` structure to use the new storage type. However, it is important to note that this fix might be just a workaround for a bug in Clang 16's implementation of UBSan. The actual bug in Clang 16 has been reported separately (https://github.com/llvm/llvm-project/issues/61775).

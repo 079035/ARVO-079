@@ -1,0 +1,12 @@
+Vulnerability Patched: 
+The vulnerability that was patched in the given diff file is a logic error in the cfg_parse_scope() function. 
+
+Summary of the Fix:
+The fix involves moving the reporting of the error message for too many words to after the check for proper allocation of the output buffer.
+
+Detailed Description of the Fix:
+In the original code, if the parse_line() function returns the PARSE_ERR_TOOMANY flag, indicating that there are too many words in the line, the error message is displayed before checking if the output buffer (outline) was properly allocated. This can lead to a segmentation fault if the buffer was not allocated.
+
+To fix this, the code has been modified to check if the buffer is allocated before displaying the error message. If the buffer is not allocated, the error message is not displayed and the function jumps to the next line.
+
+After the fix, if the buffer is properly allocated and the PARSE_ERR_TOOMANY flag is encountered, the error message is displayed as before.

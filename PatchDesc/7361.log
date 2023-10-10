@@ -1,0 +1,12 @@
+Vulnerability: Uninitialized memory access
+
+Summary of the fix: The fix in this patch is to properly construct the `std::vector<AxisValueRecord>` object before assigning to it.
+
+Detailed description of the fix:
+In the original code, there is a conditional branch that is triggered when the format is 4 in the `AxisValueRecord` constructor. Inside this branch, a `AxisValueFormat4` object is created using placement-new and then assigned a value from `other_.format4`. However, the `AxisValueFormat4` object is not properly constructed before the assignment, potentially leading to uninitialized memory access.
+
+In order to fix this vulnerability, the fix in the patch is to properly construct the `AxisValueFormat4` object before assigning to it. The placement-new operator is used to create the object and then assign it the value from `other_.format4`. This ensures that the object is properly initialized before use.
+
+The fix also includes a destructor for `AxisValueRecord` which properly destructs the `AxisValueFormat4` object when the format is 4.
+
+By making these changes, the vulnerability of uninitialized memory access is addressed.

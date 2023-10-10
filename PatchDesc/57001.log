@@ -1,0 +1,7 @@
+Vulnerability: The function `OFFImporter::InternReadFile` in the `OFFLoader.cpp` file has a vulnerability that can lead to a potentially unknown write vulnerability.
+
+Summary of the Fix: The fix in this commit is to throw a `DeadlyImportError` exception with an error message when there is an error reading the number of faces from the file.
+
+Detailed Description of the Fix: 
+- Prior to the fix, in the `OFFImporter::InternReadFile` function, there is a section of code that reads the number of faces from the file and allocates memory for their indices. However, if there is an error reading the number of faces, the code will break out of the loop and continue execution without properly handling the error, which can lead to undefined behavior.
+- In the fix, the code has been modified to throw a `DeadlyImportError` exception with an error message when there is an error reading the number of faces. This ensures that the error is properly handled and prevents any potential unknown write vulnerability.

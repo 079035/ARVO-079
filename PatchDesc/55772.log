@@ -1,0 +1,12 @@
+Vulnerability: Use-after-free vulnerability
+
+Summary of the fix: The fix in this code patch is to clear the `m_oMapElementToSubstitute` map when setting a new geometry for `poGMLFeature` in two different scenarios.
+
+Detailed description of the fix:
+1. In the first scenario: If the feature already has a geometry at the specified index (`m_nGeometryPropertyIndex`), it checks for this condition and clears the `m_oMapElementToSubstitute` map before setting the new geometry. This is done to avoid invalidating any nodes that may be stored in the `m_oMapElementToSubstitute` map due to setting a new geometry.
+
+2. In the second scenario: If the feature has only one geometry property, it checks if a geometry already exists. If it does, it clears the `m_oMapElementToSubstitute` map before setting the new geometry. This is done to avoid invalidating any nodes that may be stored in the `m_oMapElementToSubstitute` map due to setting a new geometry.
+
+By clearing the `m_oMapElementToSubstitute` map in these scenarios, the use-after-free vulnerability is fixed as it prevents potential access to freed memory.
+
+Note: The vulnerability is not explicitly mentioned in the code diff, but it can be inferred from the context of the fix.

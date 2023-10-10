@@ -1,0 +1,119 @@
+{
+    "fix": "git://git.sv.nongnu.org/freetype/freetype2.git32efd8c00844646eacf07d1e1b032054a913c279",
+    "verify": "0",
+    "localId": 1034,
+    "project": "freetype2",
+    "fuzzer": "afl",
+    "sanitizer": "asan",
+    "crash_type": "Global-buffer-overflow READ 4",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 1034,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1491504652,
+                "content": "Detailed report: https://oss-fuzz.com/testcase?key=5391910787088384\n\nProject: freetype2\nFuzzer: afl_freetype2_ftfuzzer\nFuzz target binary: ftfuzzer\nJob Type: afl_asan_freetype2\nPlatform Id: linux\n\nCrash Type: Global-buffer-overflow READ 4\nCrash Address: 0x000000747648\nCrash State:\n  af_face_globals_compute_style_coverage\n  af_face_globals_new\n  af_loader_reset\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=afl_asan_freetype2&range=201704052243:201704061632\n\nReproducer Testcase: https://oss-fuzz.com/download/AMIfv95Al531CxXsEi0-Y71SsS2EqO3MQ5St8QtCUXZtJEqItWAbFGRpNrGYzOfYKv5Yg-VKW19XqzPeiqx9OYc0WUFMiD3EkmK6df9ZT0AlhumCSIF8ZZJz6taHtxORGZEcZ-6qbUMCvwg88y9088vnS_I--FbLcQLGgvVEDEvcVvzZsiAwDtG8lyFFJnxsfEI2UNKNIS2fc2HaqJ1NJrZdNGkN2IilzmGhivCRUF9Mn__CNDGSLH1HQe0gDvjy5OO0N2s_ZHPOXRRIYnJzbikle-PYLDYBEZ9pGTb5xRvDF-2Ls6mf3J9LLNmaTUFqbWxRttXatoT7PvKWr823e3L1CgBmVsgznMQikaj1meDn1dysp-OJp4EJSBSTbXgTjDzxm9mVEJ7-?testcase_id=5391910787088384\n\n\nIssue filed automatically.\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for more information.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 1034,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1491511568,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "OS-Linux"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 1034,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1736227041",
+                    "displayName": "lemzw...@googlemail.com"
+                },
+                "timestamp": 1491578696,
+                "content": "Fixed in git."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 1034,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1491635411,
+                "content": "ClusterFuzz has detected this issue as fixed in range 201704061632:201704071631.\n\nDetailed report: https://oss-fuzz.com/testcase?key=5391910787088384\n\nProject: freetype2\nFuzzer: afl_freetype2_ftfuzzer\nFuzz target binary: ftfuzzer\nJob Type: afl_asan_freetype2\nPlatform Id: linux\n\nCrash Type: Global-buffer-overflow READ 4\nCrash Address: 0x000000747648\nCrash State:\n  af_face_globals_compute_style_coverage\n  af_face_globals_new\n  af_loader_reset\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=afl_asan_freetype2&range=201704052243:201704061632\nFixed: https://oss-fuzz.com/revisions?job=afl_asan_freetype2&range=201704061632:201704071631\n\nReproducer Testcase: https://oss-fuzz.com/download/AMIfv95Al531CxXsEi0-Y71SsS2EqO3MQ5St8QtCUXZtJEqItWAbFGRpNrGYzOfYKv5Yg-VKW19XqzPeiqx9OYc0WUFMiD3EkmK6df9ZT0AlhumCSIF8ZZJz6taHtxORGZEcZ-6qbUMCvwg88y9088vnS_I--FbLcQLGgvVEDEvcVvzZsiAwDtG8lyFFJnxsfEI2UNKNIS2fc2HaqJ1NJrZdNGkN2IilzmGhivCRUF9Mn__CNDGSLH1HQe0gDvjy5OO0N2s_ZHPOXRRIYnJzbikle-PYLDYBEZ9pGTb5xRvDF-2Ls6mf3J9LLNmaTUFqbWxRttXatoT7PvKWr823e3L1CgBmVsgznMQikaj1meDn1dysp-OJp4EJSBSTbXgTjDzxm9mVEJ7-?testcase_id=5391910787088384\n\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for more information.\n\nIf you suspect that the result above is incorrect, try re-doing that job on the test case report page."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 1034,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1491641127,
+                "content": "ClusterFuzz testcase 5391910787088384 is verified as fixed, so closing issue.\n\nIf this is incorrect, please add ClusterFuzz-Wrong label and re-open the issue.",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 1034,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "4164592774",
+                    "displayName": "sheriffbot@chromium.org"
+                },
+                "timestamp": 1494248655,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 1034,
+                "sequenceNum": 6,
+                "commenter": {
+                    "userId": "2320805031",
+                    "displayName": "aarya@google.com"
+                },
+                "timestamp": 1499042057,
+                "amendments": [
+                    {
+                        "fieldName": "Cc",
+                        "newOrDeltaValue": "hinta...@gmail.com"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "32efd8c00844646eacf07d1e1b032054a913c279",
+    "repo_addr": "git://git.sv.nongnu.org/freetype/freetype2.git"
+}

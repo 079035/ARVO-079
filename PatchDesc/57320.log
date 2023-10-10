@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability in the given diff file is that the cue sheet parsing code skips the first second (S) when parsing cuepoints in the format MM:SS.SS. This leads to incorrect parsing of cuepoints, where "00:12.34" would be parsed as "00:02.34".
+
+Fix Summary:
+The fix for this vulnerability involves removing the line that skips the ":" character after parsing the minutes field.
+
+Detailed Fix Description:
+In the original code, after parsing the minutes field, the code skips the ":" character. This is not intended behavior and results in the vulnerability. Removing this line will ensure that the full cuepoint string is processed correctly.
+
+To fix the vulnerability, the following line should be removed from the code:
+
+```c
+s++; /* skip the ':' */
+```
+
+After applying the fix, the code will correctly parse the cuepoints in the format MM:SS.SS without skipping any characters.

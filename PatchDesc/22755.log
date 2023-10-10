@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the provided diff file is in the ndpi.lua script. Specifically, there is a potential buffer overflow vulnerability in the `magic` variable.
+
+Summary of the Fix:
+The fix makes the script more robust by checking the length of `eth_trailer` before accessing its elements.
+
+Detailed Description of the Fix:
+1. Previously, the script initializes `eth_trailer` as a field `f_eth_trailer()`, which is assigned to `eth_trailer` without any length check. In the fix, `eth_trailer` is modified to an array `{f_eth_trailer()}`. This allows us to access the last element of the `eth_trailer` array using `eth_trailer[#eth_trailer]`.
+
+2. After this modification, the script checks if the last element of `eth_trailer` is not nil before obtaining its value using `getval(eth_trailer[#eth_trailer])`. This ensures that we only access a valid element in the array and prevents potential buffer overflow.
+
+3. The `magic` variable is then assigned the first 11 characters of the `eth_trailer` value obtained. This remains unchanged from the original code.
+
+The fix makes the script more robust by ensuring that the `eth_trailer` array is not empty before accessing its value and avoids potential buffer overflow.

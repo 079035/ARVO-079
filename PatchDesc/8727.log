@@ -1,0 +1,9 @@
+Vulnerability: Shift value is assigned to the wrong operand in the printT2AddrModeSoRegOperand() function in the ARMInstPrinter.c file.
+
+Summary of the fix: The fix for this vulnerability is to correctly assign the shift value to the operand.
+
+Detailed description of the fix:
+1. In the original code, the shift value is assigned to the operand at index `MI->flat_insn->detail->arm.op_count - 1`, which is incorrect.
+2. In the fix, the shift value is assigned to the operand at index `MI->flat_insn->detail->arm.op_count`, which is the correct operand.
+3. This ensures that the shift value is associated with the correct operand and avoids any potential incorrect behavior.
+4. By making this fix, the shift value will be correctly printed and stored in the instruction details, providing accurate information about the ARM instruction.

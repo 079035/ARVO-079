@@ -1,0 +1,53 @@
+Vulnerability:
+
+The vulnerability in the given diff file is a heap overflow caused by integer underflow in the analysis output of the flac command line program. The issue occurs when outputting a partial frame after seeking. The FLAC__Frame passed to the write callback only has its blocksize and sample number changed to accommodate the partial frame. However, this violates several rules, such as having a predictor order larger than the blocksize.
+
+Summary of the fix:
+
+The fix introduced in the patch is to output a FLAC__Frame stating that all subframes are of the verbatim type, which has no restrictions like fixed and lpc subframes have. This ensures that the output analysis data is not junk and prevents integer underflow.
+
+Detailed description of the fix:
+
+1. Inside the `write_audio_frame_to_client_` function in `src/libFLAC/stream_decoder.c`, a loop is added to iterate over each channel in the frame.
+```
+for(channel = 0; channel < frame->header.channels; channel++) {
+    // code
+}
+```
+
+2. Inside the loop, the `newbuffer` array is assigned with the updated buffer for each channel based on the delta.
+```
+newbuffer[channel] = buffer[channel] + delta;
+```
+
+3. The subframe type of each channel in the last_frame is updated to FLAC__SUBFRAME_TYPE_VERBATIM.
+```
+decoder->private_->last_frame.subframes[channel].type = FLAC__SUBFRAME_TYPE_VERBATIM;
+```
+
+4. The data type of the verbatim subframe for each channel is set to FLAC__VERBATIM_SUBFRAME_DATA_TYPE_INT32.
+```
+decoder->private_->last_frame.subframes[channel].data.verbatim.data_type = FLAC__VERBATIM_SUBFRAME_DATA_TYPE_INT32;
+```
+
+5. The verbatim subframe data for each channel is updated with the newbuffer value.
+```
+decoder->private_->last_frame.subframes[channel].data.verbatim.data.int32 = newbuffer[channel];
+```
+
+6. The blocksize of the last_frame is adjusted by subtracting the delta.
+```
+decoder->private_->last_frame.header.blocksize -= delta;
+```
+
+7. The sample number of the last_frame is updated by adding the delta.
+```
+decoder->private_->last_frame.header.number.sample_number += (FLAC__uint64)delta;
+```
+
+8. The write_callback function is called with the updated last_frame and newbuffer to write the relevant samples.
+```
+return decoder->private_->write_callback(decoder, &decoder->private_->last_frame, newbuffer, decoder->private_->client_data);
+```
+
+This fix ensures that the FLAC__Frame passed to the write callback after seeking is properly updated by setting the subframe type to verbatim and adjusting the blocksize and sample number. This prevents the integer underflow and heap overflow vulnerability.

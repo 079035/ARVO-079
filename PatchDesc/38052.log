@@ -1,0 +1,7 @@
+Vulnerability: The vulnerability in the code is a typo in the error message. The error message "invlid contact uri" should be "invalid contact uri".
+
+Summary of the fix: The fix corrects the typo in the error message to properly indicate "invalid contact uri".
+
+Detailed description of the fix:
+1. In the diff, the line `LM_ERR("invlid contact uri\n");` is changed to `LM_ERR("invalid contact uri\n");`.
+2. This fix corrects the typo in the error message when handling an invalid contact uri.

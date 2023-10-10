@@ -1,0 +1,11 @@
+Vulnerability:
+This diff file patches a use-after-free vulnerability in the WS (WebSocket) protocol implementation in the `stream_engine_base_t::out_event` function.
+
+Summary of the Fix:
+The fix includes checking for an error condition returned by `ws_engine` and immediately returning from the `out_event` function if the error indicates a use-after-free vulnerability. This prevents further execution of the vulnerable code and avoids the use-after-free issue.
+
+Detailed Description of the Fix:
+1. In the `out_event` function, a check has been added after the line `if ((this->*_next_msg) (&_tx_msg) == -1)`. This check verifies if `errno` is set to `ECONNRESET`, which indicates an engine error caused by `ws_engine`.
+2. If `errno` is `ECONNRESET`, it means that there is a risk of a use-after-free vulnerability. In such a case, the function immediately returns, avoiding further execution of the vulnerable code.
+3. If `errno` is not `ECONNRESET`, the code continues with its normal execution, trying to encode and send data via the `_encoder`.
+4. The immediate return from the function when `errno` indicates a use-after-free vulnerability ensures that the vulnerable code is not executed and avoids the associated security risk.

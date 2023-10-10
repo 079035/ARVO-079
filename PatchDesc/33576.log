@@ -1,0 +1,12 @@
+Vulnerability:
+There is a vulnerability related to handling disabled optional blocks in earlier passes in the `libsepol/cil/src/cil_resolve_ast.c` file. The code does not destroy the optional block and its subtree when the optional block is disabled before the `CIL_PASS_CALL1` phase.
+
+Summary of Fix:
+The fix ensures that if there are any optional blocks in the `disabled_optionals` list (indicated by `changed == 1`), the optional block and its subtree will be destroyed, even if it is in a pass before `CIL_PASS_CALL1`.
+
+Detailed Description of Fix:
+1. Introduced a check to destroy the optional block and its subtree if there are optional blocks in the `disabled_optionals` list, regardless of the pass. This check is performed using the condition `if (changed)` in line 80.
+2. Added a code block to handle the resolution of disabled optional blocks. If an optional block was disabled and contained one or more declarations, the code resets the resolution process back to the `CIL_PASS_CALL1` pass. This ensures that the actions performed in preceding passes (which are not allowed in optionals) are undone properly. The reset is done by calling the `cil_reset_ast` function on the `current` node. The reset is performed within the `if (pass > CIL_PASS_CALL1)` block starting at line 84.
+3. In the reset block, the code also destroys various ordered lists (`sidorder_lists`, `classorder_lists`, `unordered_classorder_lists`, `catorder_lists`, `sensitivityorder_lists`) and corresponding lists in the `db` object (`db->sidorder`, `db->classorder`, `db->catorder`, `db->sensitivityorder`), if the current pass is greater than or equal to `CIL_PASS_MISC1`. This ensures that the lists are reset to their initial state. The destruction of the lists is done using the `cil_list_destroy` and `__cil_ordered_lists_reset` functions from lines 96 to 105.
+4. In the reset block, the code also destroys the subtree of each disabled optional block by iterating over the `disabled_optionals` list using `cil_list_for_each` and calling `cil_tree_children_destroy` on each optional block's subtree. This ensures that the memory associated with the disabled optional blocks is properly freed. The destruction of the subtrees and the `disabled_optionals` list is done from lines 107 to 110.
+5. Finally, the `disabled_optionals` list is reinitialized as an empty list using `cil_list_init` to prepare for the next loop iteration. The variable `changed` is reset to 0, indicating that no changes have been made. This is done in lines 111 and 112.

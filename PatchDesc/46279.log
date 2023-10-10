@@ -1,0 +1,41 @@
+Vulnerability: Heap-use-after-free
+
+Summary of Fix: This fix addresses a heap-use-after-free vulnerability in the RAR reader's `run_filters()` function.
+
+Detailed Description of Fix: 
+
+1. The fix starts by introducing a new variable `f` of type `struct rar_filter`, which will be used to iterate through the filter stack.
+
+2. Next, the fix iterates through each element `f` in the filter stack using a while loop that checks if `f` is equal to the current filter `filter`. If a match is found, the loop exits and sets the return value `ret` to `ARCHIVE_OK`. Otherwise, `ret` remains `ARCHIVE_FATAL`.
+
+3. If `ret` is not `ARCHIVE_OK`, the fix returns early, indicating that the filter stack was modified during the `expand()` function. This prevents the subsequent code from executing and avoids potential use-after-free vulnerabilities.
+
+4. If `ret` is `ARCHIVE_OK`, the fix proceeds to check if the expanded range `tend` is negative or not. If it is negative, the fix returns early, indicating a failure.
+
+5. The fix then checks if the expanded range `end` matches the expected value, which is the start position plus the current filter's block length. If the values do not match, the fix returns early, indicating a failure.
+
+6. Next, the fix checks if the virtual machine (`vm`) for the filters is `NULL` (not initialized), and if so, allocates memory for it using `calloc()`. If memory allocation fails, the fix returns early, indicating a failure.
+
+7. The fix then copies data from the LZSS window into the filter's virtual machine memory using the `copy_from_lzss_window()` function. If the copying fails, the fix returns early, indicating a failure.
+
+8. The fix proceeds to execute the filter using the `execute_filter()` function. If the execution fails, the fix returns early, indicating a failure.
+
+9. The fix updates the `lastfilteraddress` and `lastfilterlength` variables with the filtered block address and length of the current filter.
+
+10. The fix then updates the filter stack by setting it to the next filter.
+
+11. The fix enters a loop that executes the remaining filters as long as their block start position matches the current filter's start position and their block length matches `lastfilterlength`.
+
+12. Within the loop, the fix moves the data stored in `lastfilteraddress` to the beginning of the virtual machine memory using `memmove()`. This is necessary for subsequent filters to correctly process the filtered data.
+
+13. The fix executes the filter using `execute_filter()` and updates `lastfilteraddress` and `lastfilterlength` with the filtered block address and length of the current filter.
+
+14. The fix updates the filter stack again and deletes the current filter.
+
+15. The loop continues until there are no more filters or the block start position or block length mismatches occur.
+
+16. Next, the fix checks if there are remaining filters in the stack. If there are, it validates that the block start position of the top filter in the stack is greater than or equal to the current end position. If it is not, the fix returns early, indicating a failure.
+
+17. Finally, the fix updates the `filterstart` property of the filters struct if there are remaining filters in the stack and sets the `lastend`, `bytes`, and `bytes_ready` properties accordingly.
+
+18. The fix returns success to indicate that the patch was applied successfully.

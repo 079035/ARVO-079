@@ -1,0 +1,12 @@
+Vulnerability: Missing bound check in reader_util.c
+
+Summary of fix: Add a bound check before calling ndpi_handle_ipv6_extension_headers.
+
+Detailed description of fix:
+1. In the given code, there is a missing bound check in the switch case statement for the `case MPLS_UNI` and `case MPLS_MULTI` conditions. After reading the MPLS value from the packet, the code directly updates the `type` variable and increases the `ip_offset` without checking if it exceeds the packet boundaries.
+2. To fix this vulnerability, a bound check is added after updating the `type` variable and before increasing the `ip_offset`.
+3. If the bound check fails and the code detects that there is not enough space in the packet for the IPv6 payload, the function returns `nproto` indicating a detection failure.
+4. The bound check is performed by comparing `header->caplen` (the captured length of the packet) with `ip_offset + sizeof(struct ndpi_ipv6hdr + ntohs(iph_v6->ip6_hdr.ip6_un1_plen))` (the offset plus the size of the IPv6 payload).
+5. If the bound check passes, the code proceeds with the remaining logic and continues processing the packet.
+
+Note: The exact changes made to the code may vary depending on the context of the codebase and the surrounding code.

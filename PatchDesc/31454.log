@@ -1,0 +1,25 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential memory leak when encountering input errors in the `LLVMFuzzerTestOneInput` function.
+
+Summary of the fix:
+The fix ensures that if an input error is detected, the function frees the allocated memory and returns without leaking any resources.
+
+Detailed description of the fix:
+1. The fix adds error handling code after the `dwg_decode` function call. If `dwg_decode` returns an error code greater than or equal to `DWG_ERR_CRITICAL`, the fix executes the following steps:
+   - Calls the `dwg_free` function to free any allocated memory for the `dwg` variable.
+   - Returns 0 to exit the function without proceeding further.
+
+2. Similar error handling code is added after the `dwg_read_json` and `dwg_read_dxf` function calls. If either of these functions returns an error code greater than or equal to `DWG_ERR_CRITICAL`, the fix executes the following steps:
+   - Calls the `bit_chain_free` function to free the memory allocated for the `dat` variable if `copied` is true.
+   - Calls the `dwg_free` function to free any allocated memory for the `dwg` variable.
+   - Returns 0 to exit the function without proceeding further.
+
+3. The fix also ensures that if `copied` is true (indicating that the `enforce_null_termination` function made a copy of the data), the fix calls `bit_chain_free` to free the memory allocated for the `dat` variable before returning.
+
+4. After allocating memory for the `out_dat` variable, the fix sets the `fh` (file handle) member of `out_dat` to a file opened for writing. If the file cannot be opened, the fix continues execution without handling the error.
+
+5. Finally, the fix adds calls to `free` for the `out_dat.chain` member after the `dwg_encode`, `dwg_write_dxf`, `dwg_write_dxfb`, `dwg_write_json`, and `dwg_write_geojson` functions, depending on the selected case in the `switch` statement.
+
+6. The fix also adds a call to `dwg_free` to free any allocated memory for the `dwg` variable before closing the file handle.
+
+Note: The code that unlinks (deletes) the temporary file is commented out and not part of the fix.

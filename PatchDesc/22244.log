@@ -1,0 +1,65 @@
+Vulnerability:
+The potential vulnerability that is patched in this code is a potential heap-buffer-overflow in the function `ndpi_search_openvpn`. The vulnerability occurs when accessing the `ovpn_payload` array and modifying the `ovpn_payload_len` variable.
+
+Summary of the Fix:
+The fix introduces a new variable `ovpn_payload_len` to track the length of the `ovpn_payload` array. This new variable is then used to check for a minimum length requirement before accessing the `ovpn_payload` array. Additionally, the `ovpn_payload_len` variable is decremented when skipping elements of the array, ensuring that it does not exceed the actual length of the array.
+
+Detailed Description of the Fix:
+1. A new variable `ovpn_payload_len` of type `int16_t` is introduced to store the payload length of the `ovpn_payload` array.
+```c
+   /* No u_ */int16_t ovpn_payload_len = packet->payload_packet_len;
+```
+
+2. The condition for checking the minimum length requirement is modified to use the `ovpn_payload_len` variable instead of `packet->payload_packet_len`. This ensures that the length comparison is correct.
+```c
+   if(ovpn_payload_len >= 40) {
+```
+
+3. When skipping elements of the `ovpn_payload` array in the case of a TCP transport packet, the `ovpn_payload_len` is decremented by 2 to represent the skipped elements.
+```c
+   if(packet->tcp != NULL)
+      ovpn_payload += 2, ovpn_payload_len -= 2;
+```
+
+4. The length of the `ovpn_payload` array is replaced with the `ovpn_payload_len` variable when printing information about the packet.
+```c
+   printf("[packet_id: %u][opcode: %u][Packet ID: %d][%u <-> %u][len: %u]\n",
+ 	     flow->num_processed_pkts,
+ 	     opcode, check_pkid_and_detect_hmac_size(ovpn_payload),
+-	     htons(packet->udp->source), htons(packet->udp->dest), packet->payload_packet_len);
++	     htons(packet->udp->source), htons(packet->udp->dest), ovpn_payload_len);
+```
+
+5. When calculating the offset for accessing elements in the `ovpn_payload` array, the `offset` variable is assigned using the `hmac_size`.
+```c
+        u_int16_t offset = P_PACKET_ID_ARRAY_LEN_OFFSET(hmac_size);
+```
+
+6. The offset calculation for accessing `alen` is adjusted to start from the correct position in the `ovpn_payload` array, using the `offset` variable.
+```c
+        alen = ovpn_payload[offset];
+```
+
+7. The offset is further incremented to point to the start of the `session_remote` array, and the check for the comparison is modified to ensure that the `offset+8` does not exceed the `ovpn_payload_len` to prevent accessing beyond the array boundaries.
+```c
+	offset += 1 + alen * 4;
+
+	if((offset+8) <= ovpn_payload_len) {
+	    session_remote = &ovpn_payload[offset];
+
+	    if(memcmp(flow->ovpn_session_id, session_remote, 8) == 0) {
+	      NDPI_LOG_INFO(ndpi_struct,"found openvpn\n");
+	      ndpi_set_detected_protocol(ndpi_struct, flow, NDPI_PROTOCOL_OPENVPN, NDPI_PROTOCOL_UNKNOWN);
+	      return;
+	    } else {
+	      NDPI_LOG_DBG2(ndpi_struct,
+			    "key mismatch: %02x%02x%02x%02x%02x%02x%02x%02x\n",
+			    session_remote[0], session_remote[1], session_remote[2], session_remote[3],
+			    session_remote[4], session_remote[5], session_remote[6], session_remote[7]);
+	      failed = 1;
+	    }
+	} else
+	    failed = 1;
+```
+
+8. The `ovpn_payload_len` variable is used throughout the code to ensure that the array access and comparisons stay within the valid range. This prevents any potential heap-buffer-overflow vulnerabilities.

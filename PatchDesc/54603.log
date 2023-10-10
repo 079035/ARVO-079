@@ -1,0 +1,11 @@
+Vulnerability: Unchecked Bounds in `get_utf_8_string`
+
+Summary of Fix: The fix adds a bounds check to the `get_utf_8_string` function in the `epan/charsets.c` file. 
+
+Detailed Description of Fix: The `get_utf_8_string` function previously did not have proper bounds checking when processing a UTF-8 string. It used a while loop to iterate through the string, but did not check the buffer position as well as the length, leading to potential out-of-bounds access. 
+
+The fix introduces a bounds check by adding a condition to the while loop. Before processing the next character in the string, it now checks if there are still remaining bytes in the string by comparing the pointer positions. If there are remaining bytes, it updates the length and pointer variables accordingly. This ensures that the loop does not iterate beyond the bounds of the string. 
+
+Additionally, the code previously updated the `prev` pointer after validating the previous character, but did not update it correctly. The fix updates the `prev` pointer by adding the `valid_bytes` to it, so it correctly points to the next character.
+
+These changes improve the safety and correctness of the `get_utf_8_string` function by preventing potential out-of-bounds accesses when processing UTF-8 strings.

@@ -1,0 +1,12 @@
+Vulnerability:
+There is a vulnerability in the writeArrayDimensionsAttribute() function in the ua_services_attribute.c file. Specifically, the vulnerability lies in the freeing of the old array dimensions using the UA_free() function. 
+
+Summary of the Fix:
+The fix for the vulnerability involves replacing the UA_free() function with the UA_Array_delete() function to properly free the memory for the old array dimensions.
+
+Detailed Description of the Fix:
+1. The variable `oldArrayDimensions` is introduced to store the old array dimensions and a new variable `oldArrayDimensionsSize` is introduced to store the size of the old array dimensions.
+2. The UA_Array_copy() function is called to make a copy of the new array dimensions, and the old array dimensions are replaced with the new array dimensions. The UA_Array_copy() function also returns the status code of the operation.
+3. If the UA_Array_copy() operation is successful, the UA_Array_delete() function is called to free the memory for the old array dimensions, passing in the old array dimensions, the size of the old array dimensions, and a pointer to the appropriate data type.
+4. The `node->arrayDimensionsSize` is updated with the size of the new array dimensions.
+5. The fixed function returns the status code indicating the success or failure of the operation.

@@ -1,0 +1,99 @@
+{
+    "fix": "https://github.com/GrokImageCompression/grok/commit/080c2f14c13d0adb74019bce118ca65d97ee407d",
+    "verify": "0",
+    "localId": 46468,
+    "project": "grok",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Stack-use-after-scope WRITE 1",
+    "report": {
+        "comments": [
+            {
+                "localId": 46468,
+                "descriptionNum": 1,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=4917152181780480\n\nProject: grok\nFuzzing Engine: libFuzzer\nFuzz Target: grk_decompress_fuzzer\nJob Type: libfuzzer_asan_grok\nPlatform Id: linux\n\nCrash Type: Stack-use-after-scope WRITE 1\nCrash Address: 0x7fff60f75e40\nCrash State:\n  std::__1::__function::__func<bool grk::WaveletReverse::decompress_partial_tile<g\n  tf::Executor::_invoke\n  tf::Executor::_consume_task\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_grok&range=202204060612:202204070610\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=4917152181780480\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "timestamp": 1649352862
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-07-06"
+                    }
+                ],
+                "localId": 46468,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot",
+                    "userId": "1950284618"
+                },
+                "sequenceNum": 1,
+                "timestamp": 1649357263
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "oldValue": "New",
+                        "newOrDeltaValue": "Fixed"
+                    }
+                ],
+                "localId": 46468,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "boxe...@gmail.com",
+                    "userId": "3188657982"
+                },
+                "content": "long-standing bug - fixed with commit 6a059e49fa2cf6035c9ed58e1e5d9093318642a4",
+                "sequenceNum": 2,
+                "timestamp": 1649419153
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "oldValue": "Fixed",
+                        "newOrDeltaValue": "Verified"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ],
+                "localId": 46468,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "ClusterFuzz testcase 4917152181780480 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_grok&range=202204080608:202204090603\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 3,
+                "timestamp": 1649516197
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ],
+                "localId": 46468,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot",
+                    "userId": "1950284618"
+                },
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "sequenceNum": 4,
+                "timestamp": 1649529404
+            }
+        ]
+    },
+    "fix_commit": "080c2f14c13d0adb74019bce118ca65d97ee407d",
+    "repo_addr": "https://github.com/GrokImageCompression/grok.git"
+}

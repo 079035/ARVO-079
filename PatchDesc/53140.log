@@ -1,0 +1,21 @@
+Vulnerability:
+The vulnerability that could be patched in this diff file is that the script is assuming that the `sha256sum` command is always available. If the `sha256sum` command is not available on the system, the script will fail.
+
+Summary of the fix:
+The fix adds a check to see if the `sha256sum` command is available. If it is available, the `sha256sum` command is used. If it is not available, the `shasum` command with the `-a 256` option is used instead.
+
+Detailed description of the fix:
+1. The existing line `SHASUM=${SHASUM:-sha256sum}` is replaced with the following code:
+   ```
+   if [ $(which sha256sum) ] ; then
+     SHASUM=${SHASUM:-sha256sum}
+   else
+     SHASUM=${SHASUM:-shasum -a 256}
+   fi
+   ```
+   - The `$(which sha256sum)` command checks if the `sha256sum` command is available by searching for its executable path.
+   - If the `sha256sum` command is available, it is assigned to the `SHASUM` variable.
+   - If the `sha256sum` command is not available, the `shasum -a 256` command is assigned to the `SHASUM` variable. The `-a 256` option specifies the algorithm to use as SHA-256.
+2. The script then continues to use the `SHASUM` variable to calculate the hash of the downloaded archive, ensuring compatibility with both `sha256sum` and `shasum -a 256`.
+
+This fix allows the script to work on systems where the `sha256sum` command is not available, by falling back to using the `shasum` command with the `-a 256` option.

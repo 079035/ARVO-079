@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability that is patched in this diff file is an integer overflow condition. The code has a check to prevent output buffer overflow, but the check contains an integer overflow. Specifically, the check `(op + (1 + LASTLITERALS) + (matchCode+240)/255 > olimit)` can result in an overflow if `(1 + LASTLITERALS) + (matchCode+240)/255` is greater than the maximum value of the variable `olimit`. This can lead to undefined behavior and potentially a buffer overflow.
+
+Summary of the fix:
+The fix in this patch is to correct the check for output buffer overflow to prevent integer overflow. The expression `(op + (1 + LASTLITERALS) + (matchCode+240)/255 > olimit)` is replaced with `(op + (1 + LASTLITERALS) + ((matchCode + 240) / 255) > olimit)` to properly handle the addition and division operations without causing an overflow.
+
+Detailed description of the fix:
+In the original code, the expression `(matchCode+240)/255` is used to calculate the number of additional bytes needed to encode the match length. However, this calculation can result in an integer overflow if `matchCode` is sufficiently large. To prevent this overflow, the fix in this patch adds parentheses around the addition operation to ensure it is performed before the division operation. This ensures that the addition result is not affected by the division, preventing the overflow.
+
+With the fix, the expression becomes `((matchCode + 240) / 255)`. The addition of 240 ensures that the division is performed on a larger value, reducing the likelihood of overflow. The resulting value represents the number of additional bytes needed to encode the match length.
+
+By correcting the check for output buffer overflow, the fix prevents the potential undefined behavior and buffer overflow that could have occurred due to the integer overflow condition.

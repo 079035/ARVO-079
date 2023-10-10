@@ -1,0 +1,8 @@
+Vulnerability:
+Heap-buffer-overflow in onigenc_unicode_mbc_case_fold.
+
+Fix Summary:
+To fix the vulnerability, the condition `data_pattern == pattern` was added to check if the `data_pattern` is equal to `pattern` before calling the `search` function. Additionally, the `onigenc_is_valid_mbc_string` function was used to validate the `data_pattern` before executing the search.
+
+Fix Description:
+In the original code, there was a potential heap-buffer-overflow vulnerability in the `exec` function. The function called the `search` function with `data_pattern`, which could result in a heap-buffer-overflow if the `data_pattern` was not a valid multi-byte character string. To fix this vulnerability, the code was modified to include a condition before calling `search`. The condition checks if `data_pattern` is equal to `pattern` or if `data_pattern` is a valid multi-byte character string using the `onigenc_is_valid_mbc_string` function. If the condition is true, then `search` is called with the `data_pattern`. This prevents the heap-buffer-overflow by ensuring that the `data_pattern` is valid before executing the search.

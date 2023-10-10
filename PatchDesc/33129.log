@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability that could be patched in this diff file is a potential memory leak and possible use after free issue. 
+
+Summary of the fix:
+The fix addresses the memory leak and use after free issue by properly freeing the memory allocated for the 'str' string variable before returning from the function.
+
+Detailed description of the fix:
+1. On line 12, a variable 'msize' is declared to store the size of the 'str' string.
+2. On line 17, memory is allocated dynamically for 'str' with a size of (p->size + 1), where 'p->size' is the size of the box. This ensures enough space for the string including the null terminator.
+3. On line 20, the null terminator is set at the end of the 'str' string.
+4. Inside the while loop starting at line 23 and line 32, the 'str' string is populated with data read from the bitstream until a null byte is encountered or the end of the 'msize' is reached.
+5. After the while loop, on line 34 and line 43, a check is added to verify if the value of 'i' is equal to 'msize'. If this condition is true, it means that the loop exited without encountering a null byte, indicating a potential invalid file. In such cases, the 'str' memory is freed, and the function returns 'GF_ISOM_INVALID_FILE'.
+6. On line 47, the 'textEncoding' member of the 'p' structure is assigned a duplicate of the 'str' string using the 'gf_strdup' function.
+7. Inside the next while loop starting at line 51 and line 60, the 'str' string is populated with data read from the bitstream until a null byte is encountered or the end of the 'msize' is reached.
+8. After the while loop, a similar check as in step 5 is added on line 62 and line 71 to handle the case where the loop exited without encountering a null byte. If this condition is true, the 'str' memory is freed, and the function returns 'GF_ISOM_INVALID_FILE'.
+9. On line 75, the 'contentEncoding' member of the 'p' structure is assigned a duplicate of the 'str' string using the 'gf_strdup' function.
+10. On line 76, the 'str' memory is freed using 'gf_free'.
+11. Finally, on line 79, a check is added to verify whether the memory allocation for 'textEncoding' succeeded or if the memory allocation for 'contentEncoding' failed. If either of these conditions is true, the function returns 'GF_OUT_OF_MEM'.

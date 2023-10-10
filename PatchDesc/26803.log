@@ -1,0 +1,20 @@
+Vulnerability:
+In the given diff file, the vulnerability that is patched is related to size checks in the `wavlike_msadpcm_init` function in the `ms_adpcm.c` file.
+
+Summary of the Fix:
+The fix involves correcting the size checks by using the `samplesperblock` parameter instead of the `blockalign` parameter. Additionally, an additional check is added to ensure that the block is big enough to hold the samples it claims to hold.
+
+Detailed Description of the Fix:
+1. The `wavlike_msadpcm_init` function initializes the MSADPCM codec for reading or writing audio data. The `blockalign` parameter represents the size of a block in bytes, while the `samplesperblock` parameter represents the number of samples per block.
+2. Initially, there is a check to determine if the `psf->codec_data` is already allocated. If so, an error is logged and `SFE_INTERNAL` is returned (indicating an internal error).
+3. Next, there is a conditional check based on the file mode. If the file mode is write (`SFM_WRITE`), the `samplesperblock` value is calculated based on the `blockalign` and the number of channels.
+4. Following the conditional check, the first fix is applied. The original code had a size check using the `blockalign` parameter, which checks if it is smaller than `7 * psf->sf.channels`. However, the correct size check should use the `samplesperblock` parameter instead. Therefore, the fix updates the check to `samplesperblock < 7 * psf->sf.channels`. If this check fails, an error is logged, and `SFE_INTERNAL` is returned.
+5. The second fix is also related to size checks. The fix adds an additional check to ensure that `2 * blockalign` is greater than or equal to `samplesperblock * psf->sf.channels / 2`. This check verifies that the block is big enough to hold the samples it claims to hold. If this check fails, an error is logged, and `SFE_INTERNAL` is returned.
+6. After the size checks, memory is allocated for the codec data using the calculated `pmssize`, which accounts for the block size, channels, and samples per block.
+7. There are other initializations and assignments related to the codec data, including the `sync_error`, `samples`, `block`, `channels`, `blocksize`, and `samplesperblock`.
+8. There is also a check to ensure that `pms->blocksize` is greater than 0. If this check fails, an error is logged, and `SFE_INTERNAL` is returned.
+9. Depending on the file mode, further initializations and assignments are performed, including setting `dataremaining`, calculating the number of blocks, calculating a count value, and setting the frames.
+10. Finally, the appropriate read and write function pointers are assigned, and the codec_close and seek functions are set.
+11. The function returns 0, indicating successful initialization of the codec.
+
+Overall, the fix involves correcting the size checks by using the `samplesperblock` parameter instead of the `blockalign` parameter, and adding an additional check to ensure the block is big enough to hold the samples it claims to hold. These fixes address potential vulnerabilities in the code related to incorrect size calculations and potential memory access issues.

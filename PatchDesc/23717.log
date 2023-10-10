@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability being patched in this diff file is an issue with the `fuzz_decompress` function. It does not validate the header size before performing decompression, which could lead to unexpected behavior and potential security issues.
+
+Summary of the fix:
+The fix introduces a check for validating the header size before performing decompression. If the header size is found to be unexpected, the function returns without further processing.
+
+Detailed description of the fix:
+1. The fix adds a new check to the `fuzz_decompress` function by calling the `blosc_cbuffer_validate` function with the `data` and `size` parameters.
+2. If the return value of `blosc_cbuffer_validate` is non-zero, indicating an unexpected `nbytes` value in the Blosc header, the function returns without performing decompression.
+3. This check ensures that the header size is validated before any further processing, preventing potential vulnerabilities resulting from incorrect header values.
+4. This fix adds an additional layer of security to the decompression process, ensuring that only valid and expected headers are processed.

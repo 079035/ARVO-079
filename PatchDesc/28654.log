@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability patched in this diff file is a null-dereference read in the CIL compiler. The issue occurs when trying to compile a policy containing the following syntax:
+
+```
+(optional o (validatetrans x (eq t3 (a ()))))
+```
+
+When attempting to compile this policy, the CIL compiler reports an "Invalid syntax" error but continues the compilation process.
+
+Summary of the fix:
+The fix for this vulnerability is to stop the compilation when the `cil_fill_list()` function reports an error. 
+
+Detailed description of the fix:
+In the code before the fix, the `cil_fill_list()` function is called to fill a list with elements from the AST (Abstract Syntax Tree). If `cil_fill_list()` encounters an error, it returns a non-zero value. However, the code does not handle this error and continues the compilation process.
+
+In the patched code, the return value of `cil_fill_list()` is checked. If the return value indicates an error (`rc != SEPOL_OK`), the code destroys the list that was being filled (`cil_list_destroy()`) and exits the function. This ensures that the compilation process is stopped when an error occurs during the filling of the list.

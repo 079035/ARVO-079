@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability in this code is a potential buffer overflow. In the function `ndpi_search_tftp`, there is a memcpy operation being performed on the `flow->protos.tftp.filename` buffer without proper bounds checking. The length of the source data being copied is not limited, which could lead to a buffer overflow if the length exceeds the size of the destination buffer.
+
+Fix Summary:
+The fix involves introducing proper bounds checking and limiting the length of the source data being copied to the `flow->protos.tftp.filename` buffer.
+
+Detailed Fix Explanation:
+To fix the vulnerability, the following changes were made in the code:
+
+1. A new variable `filename_len` is introduced to store the length of the filename.
+2. The `filename_len` is initialized with the value of `packet->payload_packet_len - 2` (Opcode) - `mode_len` - 1 (NUL).
+3. An additional check is added to ensure that `filename_len` is greater than 0 and that the filename doesn't start with a null character.
+4. The `filename_len` is then limited to the maximum size of `flow->protos.tftp.filename - 1` using the `ndpi_min` function.
+5. The `filename_len` is passed as the length argument to the `memcpy` function to ensure that only a limited number of bytes are copied.
+6. Finally, a null terminator is added to the end of the `flow->protos.tftp.filename` buffer.
+
+These changes ensure that the `flow->protos.tftp.filename` buffer is not overflowed and that the copied data is properly null terminated.

@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability being patched in this code is an out-of-bounds read of a file context pattern that ends with a backslash character ("\"). This vulnerability was discovered by the OSS-Fuzz project and reported by Nicolas Iooss.
+
+Summary of the Fix:
+The fix consists of adding a check for the end of the string after encountering a backslash character. If the end of the string is reached, the function returns, avoiding the out-of-bounds read. The fix also increments the `str_len` variable when the backslash is followed by a null terminator ('\0') to be consistent with another function in the codebase.
+
+Detailed Description of the Fix:
+1. The `cil_post_fc_fill_data` function is responsible for filling the relevant data fields of a `fc_data` structure based on a given `path` string.
+2. The function iterates over each character of the `path` string until it reaches the null terminator ('\0') indicating the end of the string.
+3. Inside the loop, a switch statement is used to handle various characters.
+4. When the backslash character ('\') is encountered, the loop increments the index `c` and checks if the next character is the null terminator ('\0').
+5. If the next character is the null terminator, it means that the backslash is at the end of the string. In this case, the function checks if `fc->meta` is false (indicating that the previous character was not a metacharacter).
+6. If `fc->meta` is false, it means that the backslash is part of the stem of the file context pattern. The fix increments the `stem_len` variable to include the backslash in the stem length.
+7. Regardless of the value of `fc->meta`, the fix increments the `str_len` variable to include the backslash in the total length of the string.
+8. After the necessary increments, the fix returns from the function, avoiding the further processing of characters.
+9. This fix prevents the out-of-bounds read by correctly handling the case where the backslash is the last character of the string. Now, the backslash is properly counted in the stem or string length based on the context.

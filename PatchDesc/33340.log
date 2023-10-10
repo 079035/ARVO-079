@@ -1,0 +1,18 @@
+Vulnerability:
+The vulnerability fixed in this diff file is an AddressSanitizer (ASan) regression caused by a previous commit (commit 8fa70367). The specific issue is related to the `HUFF_DECODE_FAST` macro in the `jdhuff.h` file.
+
+Short Summary of the Fix:
+The fix involves modifying a line in the `HUFF_DECODE_FAST` macro to ensure that the result is properly masked with 0xFF.
+
+Detailed Description of the Fix:
+The vulnerability is fixed by modifying the line:
+```
+s = htbl->pub->huffval[(int)(s + htbl->valoffset[nb])];
+```
+to:
+```
+s = htbl->pub->huffval[(int)(s + htbl->valoffset[nb]) & 0xFF];
+```
+This modification applies a bitwise AND operation with 0xFF to the result before assigning it to `s`. The purpose of this change is to ensure that the result is properly masked with the value 0xFF, regardless of its original value. This masking operation prevents potential overflows or out-of-bounds accesses caused by accessing elements outside the bounds of the `huffval` array.
+
+The fix addresses the regression introduced by commit 8fa70367 and ensures that the `HUFF_DECODE_FAST` macro behaves correctly and does not introduce any ASan issues.

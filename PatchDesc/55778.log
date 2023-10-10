@@ -1,0 +1,14 @@
+Vulnerability Description:
+The vulnerability that was patched in this diff file is an overflow in the "fp_to_unsigned_bin_len" function's length check.
+
+Summary of the Fix:
+The fix involved adding a second check when `i == a->used - 1` to prevent the overflow.
+
+Detailed Description of the Fix:
+1. Before the fix, the function `fp_to_unsigned_bin_len` iterates over the digits of the `fp_int` structure `a` in a loop, and copies each digit to the output buffer `b`.
+2. The function keeps track of the current digit being processed with the `i` and `j` variables. `i` refers to the index of the current digit in `a->dp`, and `j` represents the number of bits already processed within the current digit.
+3. The loop starts from the last index of `b` and decrements `x` until it reaches 0. During each iteration, it copies the bits of the digit `a->dp[i]` to `b[x]`, starting from the most significant bit and moving toward the least significant bit.
+4. Before the fix, the length check condition `(i < a->used - 1) || ((a->dp[i] >> j) != 0)` determines if there are additional digits to process or if the current digit still has some bits to copy. If the condition evaluates to true, indicating an overflow, the function returns `FP_VAL` to indicate an error.
+5. The fix adds a second condition check after the previous condition, `if (i == a->used - 1) && ((a->dp[i] >> j) != 0)`. This condition checks if the current digit is the last digit in `a`, and if any of its remaining bits need to be copied. If the condition evaluates to true, the function also returns `FP_VAL`.
+6. The addition of the second condition ensures that any remaining bits in the last digit of `a` are correctly checked for overflow, preventing the risk of an overflow during the copy process.
+7. After the fix, if neither of the conditions evaluates to true, the function returns `FP_OKAY` to indicate a successful operation.

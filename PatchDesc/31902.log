@@ -1,0 +1,14 @@
+Vulnerability:
+There is a vulnerability in the code related to parsing strings. The code reads characters from the bitstream and stores them in a temporary string until a null character ('\0') is encountered. However, if a null character is not found before the end of the string, it will lead to a heap-based buffer overflow.
+
+Fix Summary:
+The fix involves adding a Boolean flag called "zfound" to track whether a null character is found in the temporary strings. If a null character is not found before reaching the end of the string, the code returns an error to indicate that the file is invalid.
+
+Detailed Fix Description:
+1. In the function `abst_box_read()`, declare a Boolean variable called `zfound` and initialize it to `GF_FALSE`. This flag will be used to track whether a null character is found.
+2. After declaring `zfound`, modify the code under each `while` loop that reads characters from the bitstream and stores them in `tmp_str`.
+3. Inside each `while` loop, before breaking out of the loop when a null character is encountered, set `zfound` to `GF_TRUE`.
+4. After each `while` loop, add an additional check to see if `zfound` is still `GF_FALSE`. If it is, return `GF_ISOM_INVALID_FILE` to indicate that the file is invalid.
+5. Repeat the above steps for each `while` loop that reads characters into `tmp_str`.
+
+After applying the fix, the code will now properly handle cases where a null character is not found before the end of the string, preventing a heap-based buffer overflow.

@@ -1,0 +1,20 @@
+Vulnerability:
+- The vulnerability in the given code patch is a buffer overflow. The variable `ieee1905_reporting_policy_flags` is an array of pointers that is used to pass as argument to the `proto_tree_add_bitmask_with_flags` function. However, the array is missing the NULL terminator. This can lead to an out-of-bounds read during the execution of the `proto_tree_add_bitmask_with_flags` function, potentially resulting in a crash or information leak.
+
+Fix Summary:
+- The fix adds a NULL terminator at the end of the `ieee1905_reporting_policy_flags` array.
+
+Detailed Fix Description:
+1. Initialize the `ieee1905_reporting_policy_flags` array with the required memory addresses.
+```c
+static const int *ieee1905_reporting_policy_flags[] = {
+    &hf_ieee1905_assoc_sta_traffic_stats_inclusion,
+    &hf_ieee1905_assoc_sta_link_metrics_inclusion,
+    &hf_ieee1905_reporting_policy_flags_reserved,
+    NULL
+};
+```
+2. The added NULL terminator ensures that the `proto_tree_add_bitmask_with_flags` function stops reading the array after processing all the valid elements and avoids accessing out-of-bounds memory.
+3. This fix prevents the buffer overflow vulnerability and ensures proper handling of the `ieee1905_reporting_policy_flags` array.
+
+Reference commit: [b81c5ad](https://code.wireshark.org/review/25520/commit/b81c5ad26f879bc0e949a4dc42cb5e234c2ad371)

@@ -1,0 +1,20 @@
+Vulnerability:
+The vulnerability in the code is a heap use-after-free. When the CIL compiler fails to compile a specific policy, it attempts to destroy its database. However, this leads to a heap use-after-free issue because the validatetrans AST object references a stack variable that is local to the __cil_fill_constraint_leaf_expr function.
+
+Fix Summary:
+The fix for this vulnerability involves dropping the '&' sign when adding the list, which allows the list to be added correctly.
+
+Detailed Fix Description:
+In the given diff file, the fix is made in the cil_build_ast.c file. The problematic code is as follows:
+
+```c
+cil_list_append(*leaf_expr, CIL_LIST, &sub_list);
+```
+
+To fix the vulnerability, the fix simply removes the '&' sign from the `cil_list_append` statement. The corrected code is as follows:
+
+```c
+cil_list_append(*leaf_expr, CIL_LIST, sub_list);
+```
+
+By making this change, the list is properly added without referring to the stack variable, eliminating the heap use-after-free vulnerability.

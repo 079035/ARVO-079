@@ -1,0 +1,19 @@
+Vulnerability: 
+The vulnerability in the code is related to the handling of the IFD (Image File Directory) decryption in the ArwDecoder::GetWB() function. The code mistakenly allocates the entire size of the original IFD buffer instead of allocating only the required size. This leads to uninitialized garbage at the end of the buffer.
+
+Summary of the fix:
+The fix involves making two modifications:
+1. Allocate memory for the new buffer only for off+len bytes instead of the entire size of the original IFD buffer. This ensures that only the required portion is decoded and avoids uninitialized garbage at the end.
+2. Prevent the IFD from pointing to the uninitialized garbage in the buffer by adding a check in the decryption process.
+
+Detailed description of the fix:
+1. Instead of allocating the entire size of the original IFD buffer, the fix creates a new buffer named DecryptedBuffer using the off and len values.
+   - The line `const auto EncryptedBuffer = ifd_crypt.getSubView(off, len);` creates a subview of the original IFD buffer starting from off and with a length of len.
+   - The line `const auto DecryptedBufferSize = off + EncryptedBuffer.getSize();` calculates the size required for the decrypted buffer by adding the off value and the size of the encrypted buffer.
+   - The line `auto DecryptedBuffer = Buffer::Create(DecryptedBufferSize);` creates the decrypted buffer of the calculated size.
+
+2. The fix also adds a check to prevent the decrypted root IFD from pointing to the preceding padding buffer (uninitialized garbage). This is done by creating a new buffer named Padding containing the subview of the decrypted buffer starting from position 0 with a length of off.
+   - The line `const Buffer Padding(decIFD.getSubView(0, off));` creates a subview of the decrypted buffer starting from position 0 with a length of off.
+   - The line `ifds_decoded.emplace(Padding);` adds the padding buffer to the set of decoded IFDs, ensuring that the decrypted root IFD does not point to the padding buffer.
+
+By making these modifications, the fix resolves the vulnerability by correctly handling the IFD decryption and avoiding uninitialized garbage.

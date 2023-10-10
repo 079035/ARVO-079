@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability in the code is that the `fnv_32a_buf` function does not handle zero-length buffers correctly. If the length of the buffer passed to the function is zero, it does not return the correct hash value and may result in a crash.
+
+Summary of Fix:
+The fix addresses the crash on empty strings by adding a check to return the provided hash value if the length of the buffer is zero.
+
+Detailed Fix Description:
+1. The fix begins by adding a check for the length of the buffer (`len`) at the start of the `fnv_32a_buf` function. If `len` is zero, it means the buffer is empty, so the function immediately returns the provided hash value (`hval`).
+2. If the length is not zero, the function continues with the existing code logic to calculate the hash value for the buffer.
+3. The existing code uses a switch statement and a loop to calculate the hash value based on the bytes in the buffer. This logic remains unchanged.
+4. After the loop completes, the function returns the calculated hash value as before.
+
+This fix ensures that when an empty string is passed as the buffer, the function returns the correct hash value without causing a crash.

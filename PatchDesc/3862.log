@@ -1,0 +1,22 @@
+Vulnerability:
+There was a read heap buffer overflow vulnerability in the `pe_parse_exports` function in the `libyara/modules/pe.c` file.
+
+Summary of the fix:
+The fix addressed the read heap buffer overflow vulnerability in the `pe_parse_exports` function.
+
+Detailed description of the fix:
+1. The fix added a check for available space before accessing the "names" and "ordinals" arrays:
+```c
+if (available_space(pe, names + i) < sizeof(DWORD) ||
+    available_space(pe, ordinals + i) < sizeof(WORD))
+{
+  break;
+}
+```
+This ensures that there is enough space to access the elements in the arrays before proceeding.
+
+2. The fix prevents accessing invalid memory addresses and potential buffer overflows by checking if the calculated offset is negative or if the calculated offset is beyond the size of the data buffer.
+
+3. The fix also added appropriate error handling and cleanup in case memory allocation fails.
+
+Overall, the fix ensures that proper checks are performed before accessing array elements and handles errors gracefully to prevent read heap buffer overflow vulnerabilities in the `pe_parse_exports` function.

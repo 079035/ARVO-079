@@ -1,0 +1,11 @@
+Vulnerability:
+The vulnerability that could be patched in the given diff file is the lack of proper unlocking of the mutex in the `cmsReadTag` function when the tag is not found.
+
+Summary of the Fix:
+The fix adds proper unlocking of the mutex before returning `NULL` when the tag is not found.
+
+Detailed Description of the Fix:
+1. Before the fix, if the tag is not found (`n < 0`), the code continues execution without unlocking the mutex, potentially leading to a resource leak.
+2. The fix introduces a new code block when the tag is not found. It first unlocks the mutex using `_cmsUnlockMutex(Icc->ContextID, Icc->UsrMutex)`.
+3. After unlocking, it returns `NULL` to indicate that the tag was not found.
+4. This ensures that the mutex is always unlocked before returning from the function and avoids any potential resource leaks.

@@ -1,0 +1,23 @@
+Vulnerability:
+
+The vulnerability in the given code can lead to a potential buffer overflow if the `time_len` value exceeds the size of the `tmp` buffer. This can occur when parsing time strings that do not contain the year information.
+
+Summary of the fix:
+
+The fix ensures that the `time_ptr` string passed to `flb_strptime` is properly null-terminated by copying it to the `tmp` buffer and adding a null-terminating character at the end.
+
+Detailed description of the fix:
+
+1. The code initially checks if the `time_ptr` string needs null-termination by comparing its length (`time_len`) with the size of the `tmp` buffer. If it is already small enough to fit into `tmp`, the fix is not necessary and the code proceeds to call `flb_strptime` as before.
+
+2. If the `time_ptr` string length is larger than or equal to the size of the `tmp` buffer, indicating the need for null-termination, the fix is applied.
+
+3. The string `time_ptr` is copied to the `tmp` buffer using `memcpy` and `time_len` as the length parameter. This ensures that all characters from `time_ptr` are copied to `tmp`, even if they contain null characters.
+
+4. After the `memcpy`, a null-terminating character (`'\0'`) is added at the end of the `tmp` buffer, effectively null-terminating the string.
+
+5. Finally, the `time_ptr` variable is updated to point to the `tmp` buffer, and the `time_len` value is updated to the length of the null-terminated string.
+
+6. The null-terminated `time_ptr` string is then passed to `flb_strptime` to parse the time.
+
+By ensuring that the `time_ptr` string passed to `flb_strptime` is properly null-terminated, the fix mitigates the potential buffer overflow vulnerability that could occur due to an improperly terminated string.

@@ -1,0 +1,15 @@
+Vulnerability:
+
+The vulnerability being patched in this diff file is a null-dereference WRITE in the function `MqttProps_Free`.
+
+Summary of the fix:
+
+The fix addresses the null-dereference WRITE vulnerability by modifying the code to perform additional checks before accessing the memory to prevent dereferencing a null pointer.
+
+Detailed description of the fix:
+
+In the original code, there is a section where the packet type and ID are checked to determine if the received packet matches the expected packet for waiting. However, the code does not perform proper null checks before accessing certain variables, which can result in a null-dereference WRITE vulnerability.
+
+To fix this vulnerability, the code is modified to perform additional checks before accessing the variables. Specifically, the code now checks if the packet type is a publish response packet and if the wait type is also a publish response packet. Additionally, the code checks if the wait packet ID is zero or matches the received packet ID. Only when all these conditions are met, the use_packet_obj and use_packet_type variables are updated accordingly.
+
+This fix ensures that the code only accesses the packet objects when they are valid, preventing a null-dereference WRITE vulnerability from occurring.

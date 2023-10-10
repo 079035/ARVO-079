@@ -1,0 +1,8 @@
+Vulnerability:
+There is a potential vulnerability in the code where a division by zero can occur if the parameter `Params[0]` or `Params[1]` is zero in the cases `-3` and `-6`.
+
+Summary of the fix:
+The fix prevents the division by zero by checking if `Params[0]` or `Params[1]` is zero before performing the division.
+
+Detailed description of the fix:
+In the `case -3` and `case -6`, the code checks if `Params[0]` or `Params[1]` is zero using the condition `fabs(Params[0]) < MATRIX_DET_TOLERANCE` and `fabs(Params[1]) < MATRIX_DET_TOLERANCE`. If either of them is zero, the variable `Val` is set to 0. This prevents the division by zero and ensures that the value of `Val` is valid in these cases.

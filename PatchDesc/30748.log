@@ -1,0 +1,16 @@
+Vulnerability:
+There is a vulnerability patched in the given diff file. The issue is related to a potential negative-size-param when reading `content_len` in the function `frame_get_metalayers_from_header()`. 
+
+Summary of the fix:
+The fix for this vulnerability is to add a check to ensure that the `content_len` variable is not negative before assigning it to `metalayer->content_len`. If `content_len` is negative, an error is returned.
+
+Detailed description of the fix:
+The vulnerability is fixed by adding the following check after reading the `content_len` variable:
+
+```c
+if (content_len < 0) {
+  return BLOSC2_ERROR_DATA;
+}
+```
+
+This check ensures that `content_len` is not negative. If it is negative, indicating a potential negative-size-param vulnerability, an error is returned (`BLOSC2_ERROR_DATA`). This prevents any further processing of the `metalayer` and returns the error to the caller.

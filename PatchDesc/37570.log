@@ -1,0 +1,22 @@
+Vulnerability:
+This patch fixes a vulnerability related to inadequate boundary checks for the RATIONAL and SRATIONAL format in the generic output. By not performing proper boundary checks, it could result in a buffer overflow vulnerability.
+
+Summary of fix:
+The fix includes adding boundary checks for the RATIONAL and SRATIONAL formats in the generic output.
+
+Detailed description of fix:
+1. In the case of the EXIF_FORMAT_RATIONAL format, the fix adds the following checks:
+   - It checks if the size of the data is less than the size required for the EXIF_FORMAT_RATIONAL format. If it is, it returns NULL to indicate an error.
+   - It checks if the number of components is less than 1. If it is, it returns NULL to indicate an error.
+   - It extracts the rational value using the `exif_get_rational` function.
+   - It checks if the denominator of the rational value is zero. If it is, it breaks out of the switch case.
+   - It uses the `snprintf` function to format the rational value as a string and stores it in the provided buffer.
+
+2. In the case of the EXIF_FORMAT_SRATIONAL format, the fix adds similar checks:
+   - It checks if the size of the data is less than the size required for the EXIF_FORMAT_SRATIONAL format. If it is, it returns NULL to indicate an error.
+   - It checks if the number of components is less than 1. If it is, it returns NULL to indicate an error.
+   - It extracts the signed rational value using the `exif_get_srational` function.
+   - It checks if the denominator of the signed rational value is zero. If it is, it breaks out of the switch case.
+   - It uses the `snprintf` function to format the signed rational value as a string and stores it in the provided buffer.
+
+By adding these boundary checks, the fix ensures that the code handles cases where the size or number of components is insufficient, preventing potential buffer overflows and improving the overall security of the code.

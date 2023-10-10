@@ -1,0 +1,19 @@
+Vulnerability:
+The vulnerability fixed in this diff file is not explicitly mentioned, but it can potentially be related to a security issue in handling color profiles in the ImageMagick software. The diff file includes changes to the "ProfileImage" function in "profile.c".
+
+Summary of the Fix:
+The fix in this diff file clamp the pixel values to fix colors in non-hdri builds. It ensures that the pixel values are within the valid range.
+
+Detailed Description of the Fix:
+1. The fix introduces variable declarations and assertions to ensure proper handling of the input parameters and image data.
+2. It checks if the provided profile name is "icc" or "icm". If not, it attempts to add a profile to the image.
+3. If the provided profile name is "icc", it checks if the image already has an ICC profile and if the profiles match. If they match, it checks some image properties related to color space and interoperability index.
+4. If the ICC profiles match and the image properties meet certain conditions, it returns true without further processing.
+5. If Little CMS (LCMS) delegate library is not built-in, it throws a warning message.
+6. If LCMS delegate library is available, it sets up variables and structures required for color profile transformation.
+7. It initializes the source and target profiles based on the color space of the image and the ICC profile.
+8. It initializes the transform settings based on the rendering intent and other flags.
+9. It loops over the pixels in the image and transforms their colors based on the source and target profiles using Little CMS functions.
+10. The transformed pixel values are clamped to the valid range using the "ClampToQuantum" function, and then set back to the image.
+11. Finally, it sets the color space and image type according to the transformed colors and profiles.
+12. If the source profile is not a link class profile, it attempts to set the image profile with the provided name

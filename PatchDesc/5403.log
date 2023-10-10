@@ -1,0 +1,20 @@
+Vulnerability:
+
+The vulnerability that was patched in this code change is a lack of limitation on the maximum width and height of an image. This could potentially lead to a denial of service attack or memory exhaustion by processing an image with extremely large dimensions.
+
+Summary of fix:
+
+The fix limits the maximum width and height of an image to 2048 pixels.
+
+Detailed description of fix:
+
+The code change introduces two new lines:
+
+```
+Magick::ResourceLimits::width(2048);
+Magick::ResourceLimits::height(2048);
+```
+
+These lines set the maximum width and height limits to 2048 pixels using the `ResourceLimits` class from the ImageMagick library. By setting these limits, any image with dimensions exceeding 2048 pixels in width or height will be rejected or processed with restrictions to prevent resource exhaustion.
+
+By adding this limit, it ensures that the code will reject images that exceed these dimensions, preventing potential attacks that could exploit resource consumption vulnerabilities.

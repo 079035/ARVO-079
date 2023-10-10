@@ -1,0 +1,99 @@
+{
+    "fix": "https://gitlab.xiph.org/xiph/opus.gitccb42e05cc6eb98a15874b9695361025b3ee17ab",
+    "verify": "0",
+    "localId": 45365,
+    "project": "opus",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "msan",
+    "crash_type": "Use-of-uninitialized-value",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 45365,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1646764602,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5473051121156096\n\nProject: opus\nFuzzing Engine: libFuzzer\nFuzz Target: opus_projection_encoder_fuzzer_fixed\nJob Type: libfuzzer_msan_opus\nPlatform Id: linux\n\nCrash Type: Use-of-uninitialized-value\nCrash Address: \nCrash State:\n  silk_VAD_GetSA_Q8_sse4_1\n  silk_encode_do_VAD_FIX\n  silk_Encode\n  \nSanitizer: memory (MSAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_opus&range=202203070604:202203080604\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5473051121156096\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 45365,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1646769211,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-06-06"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 45365,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1654021747,
+                "content": "This bug is approaching its deadline for being fixed, and will be automatically derestricted within 7 days. If a fix is planned within 2 weeks after the deadline has passed, a grace extension can be granted.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Deadline-Approaching"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 45365,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1654540525,
+                "content": "This bug has exceeded our disclosure deadline. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit -deadline-approaching Deadline-Exceeded"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 45365,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1656433358,
+                "content": "ClusterFuzz testcase 5473051121156096 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_msan_opus&range=202206270602:202206280609\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "ccb42e05cc6eb98a15874b9695361025b3ee17ab",
+    "repo_addr": "https://gitlab.xiph.org/xiph/opus.git"
+}

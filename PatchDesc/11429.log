@@ -1,0 +1,17 @@
+Vulnerability:
+The vulnerability in the code is an off-by-one error in the out buffer check in the "VC5Decompressor::Wavelet::HighPassBand::decode" function.
+
+Summary of the fix:
+The fix addresses the off-by-one error in the out buffer check.
+
+Detailed description of the fix:
+In the given code, there is a loop that iterates through the pixels of the wavelet's highpass band and performs some operations. Inside the loop, there is an if statement that checks if the current pixel index (iPixel) is greater than the total number of pixels (nPixels). However, this check should be an "greater than or equal to" condition instead of just a "greater than" condition.
+
+The fix modifies the if statement to use a "greater than or equal to" condition instead of just a "greater than" condition. This ensures that the loop does not attempt to access elements beyond the allocated memory for the data buffer. 
+
+After the fix, the if statement becomes:
+```
+if (iPixel >= nPixels)
+```
+
+This fix prevents the possibility of buffer overflow when writing to the data buffer, avoiding the vulnerability.

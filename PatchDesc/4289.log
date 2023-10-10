@@ -1,0 +1,12 @@
+Vulnerability:
+Upward prediction is allowed for the first two rows of pixels, even though it shouldn't be.
+
+Summary of the Fix:
+The fix adds a check to ensure that upward prediction is not used for the first two rows of pixels.
+
+Detailed Description of the Fix:
+In the code, there is a check for the direction of prediction (upward or left to right). If the direction is upward, the code performs prediction on the pixels based on the pixel values from the row above. However, the code does not check if the current row is one of the first two rows. This can lead to memory corruption or incorrect output.
+
+To fix this issue, a check is added before performing upward prediction. The check ensures that the current row is not one of the first two rows. If it is, an exception is thrown, indicating that the raw data is corrupt.
+
+This fix prevents the use of upward prediction for the first two rows, ensuring that the decompression process is performed correctly and preventing potential vulnerabilities or incorrect output.

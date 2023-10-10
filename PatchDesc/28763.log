@@ -1,0 +1,8 @@
+Vulnerability: Missing information about the AVIF image format in the README.md file.
+
+Summary of the fix: The fix adds the AV1 Image File Format (AVIF) to the list of image formats with read and write support in the README.md file.
+
+Detailed description of the fix:
+1. Previously, the README.md file listed the image formats with read and write support but did not include AVIF.
+2. The commit made by Carl Schwan adds a new bullet point with the text "AV1 Image File Format (AVIF)" to the list of supported formats.
+3. This change ensures that users are aware that the AVIF format is supported by the code.

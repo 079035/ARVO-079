@@ -1,0 +1,34 @@
+Vulnerability:
+The vulnerability in the given code patch is related to the assumption made in the `genPrecinctInfo` function. The function assumes that the number of resolutions across components is constant. However, this assumption is incorrect, as it only checks the number of resolutions for the first component (`compno == 0`) and compares it with the number of resolutions for the subsequent components (`compno > 0`).
+
+Summary of Fix:
+The fix modifies the `genPrecinctInfo` function to correctly check and enforce the constant number of resolutions across all components.
+
+Detailed Description of Fix:
+1. In the `genPrecinctInfo` function, replace the existing check `if (compno > 0 && comp->numresolutions != comps->numresolutions)` with a loop to compare the number of resolutions for all components:
+```cpp
+bool hasVariableResolutions = false;
+for (uint16_t compno = 1; compno < numcomps; ++compno) {
+    auto comp = comps + compno;
+    if (comp->numresolutions != comps[0].numresolutions) {
+        hasVariableResolutions = true;
+        break;
+    }
+}
+
+if (hasVariableResolutions) {
+    return;
+}
+```
+
+2. Update the line `precinctInfo_ = new ResPrecinctInfo[comps->numresolutions];` to use `comps[0].numresolutions` to allocate memory for `precinctInfo_`:
+```cpp
+precinctInfo_ = new ResPrecinctInfo[comps[0].numresolutions];
+```
+
+3. Inside the loop, use `comp` instead of `comps` when accessing the resolutions:
+```cpp
+auto res = comp->resolutions + resno;
+```
+
+4. Rebuild and test the code to ensure that the constant number of resolutions across all components is correctly enforced in the `genPrecinctInfo` function.

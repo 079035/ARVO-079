@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the provided diff file is that it adds new header files (`hb-subset.hh`, `hb-subset-glyf.hh`, `hb-subset-plan.hh`) to the source files `hb-subset-glyf.cc`, `hb-subset-input.cc`, `hb-subset-plan.cc` without updating the Makefile.sources file. This means that the new header files will not be included in the build process, potentially causing compilation errors or undefined behavior during the execution of the program.
+
+Summary of the Fix:
+The fix includes adding the new header files to the `Makefile.sources` file so that they are included in the build process and properly linked with the corresponding source files.
+
+Detailed Description of the Fix:
+1. Open the `Makefile.sources` file.
+2. Find the section that lists the sources for `libharfbuzz-subset` (identified by the variable `HB_SUBSET_sources`).
+3. Add the new header files `hb-subset.hh`, `hb-subset-glyf.hh`, and `hb-subset-plan.hh` to the list of sources, ensuring they are properly indented and separated by a backslash ("\").
+4. Save the `Makefile.sources` file.
+5. Run the build process again to include the newly added header files in the compilation process.

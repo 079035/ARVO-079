@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is an out-of-array read. 
+
+Summary of fix:
+The fix for this vulnerability is to check for the existence of data before reading it.
+
+Detailed description of fix:
+Before the fix, the code did not check for the existence of data before reading it. This could lead to undefined behavior if the packet does not contain any data. 
+
+The fix adds a check to see if the packet size is zero. If the packet size is zero, it checks if the cache is empty. If the cache is empty, the function returns 0, allowing side-data-only packets to pass through unchanged. If the cache is not empty, it sets a variable `res` to `AVERROR_INVALIDDATA`, indicating an error. 
+
+Overall, the fix ensures that packets without data are handled correctly to avoid undefined reads.

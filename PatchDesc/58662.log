@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability that is being patched in this code is a potential memory corruption issue. The code is using the `qsort` function to sort `rangeRecord` array in the `serialize` function. However, there is no check to ensure that the array has been allocated memory successfully before calling `qsort`. This can lead to undefined behavior and potential memory corruption if `rangeRecord` array hasn't been allocated properly.
+
+Fix Summary:
+The fix involves adding a check to ensure that the `rangeRecord` array has been allocated successfully before calling `qsort` in the `serialize` function.
+
+Detailed Fix Description:
+The fix in the code involves adding a check for memory allocation success before calling `qsort` on the `rangeRecord` array. This check is added using the `unlikely` macro. If the memory allocation fails, the code returns `false` and proceeds to handle the error case.
+
+After the check, the `qsort` function is called on the `rangeRecord` array to sort it based on the `cmp_range` comparison function. This ensures that the array is properly sorted and ready for further processing.
+
+This fix addresses the potential memory corruption issue by ensuring that the `rangeRecord` array is only sorted if it has been allocated successfully, avoiding any undefined behavior.
+
+Overall, the patch fixes a fuzzer issue related to sorting an array that failed to allocate properly.

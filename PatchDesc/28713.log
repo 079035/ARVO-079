@@ -1,0 +1,8 @@
+Vulnerability:
+The vulnerability being patched in this diff file is that the AV1 Image File Format (AVIF) was not included in the list of supported formats in the README.md file.
+
+Summary of the fix:
+The fix adds AVIF to the list of supported formats in the README.md file.
+
+Detailed description of the fix:
+The fix is a simple addition of the AVIF format to the list of supported formats in the README.md file. This ensures that users are aware that the library now supports the AVIF format for both read and write operations. The patch adds a new bullet point with the format name, "+ AV1 Image File Format (AVIF)", to the list under the section "The following image formats have read and write support". This improvement provides clarity to users and prevents any confusion regarding the supported image formats in the library.

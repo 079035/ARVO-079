@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in this diff file is a memory corruption issue in the `ap-mgmt-fuzzer` build configuration. By missing the `CONFIG_AIRTIME_POLICY` flag, the offset of the `struct hostapd_iface::prev_wmm` becomes different between `libap.a` and `ap-mgmt-fuzzer.o`. As a result, a `memcpy` operation in the code writes on top of `ctx.hapd.iface` pointer, causing odd fuzzing failures.
+
+Summary of Fix:
+The fix involves adding the `CONFIG_AIRTIME_POLICY` flag to the build configuration of `ap-mgmt-fuzzer`, ensuring that the offset of `struct hostapd_iface::prev_wmm` remains consistent across different code components.
+
+Detailed Description of Fix:
+The fix in this diff file modifies the `Makefile` of `ap-mgmt-fuzzer` by adding the `CONFIG_AIRTIME_POLICY` flag to the `CFLAGS`. This ensures that the build configuration includes the necessary flag to enable the airtime policy in the code.
+
+By including the `CONFIG_AIRTIME_POLICY` flag, the offset of `struct hostapd_iface::prev_wmm` becomes consistent between `libap.a` and `ap-mgmt-fuzzer.o`. This eliminates the memory corruption issue caused by the mismatched offsets.
+
+The fix also demonstrates credit to OSS-Fuzz for reporting the issue and provides links to the specific bug reports from Chromium's OSS-Fuzz project. Additionally, the fix is signed-off by Jouni Malinen, the author responsible for the patch.
+
+Overall, the fix ensures the correct behavior of the `ap-mgmt-fuzzer` build configuration by addressing the memory corruption vulnerability caused by the missing `CONFIG_AIRTIME_POLICY` flag.

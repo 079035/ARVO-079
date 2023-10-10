@@ -1,0 +1,9 @@
+Vulnerability: Uninitialized TargetOptions Flag
+
+Summary of the Fix: The fix puts back the initializers that were dropped in a previous commit.
+
+Detailed Description of the Fix: The vulnerability in the code is related to the `TargetOptions` class. In the diff file, it can be seen that some initializers were dropped in a previous commit. This means that certain flags of the `TargetOptions` class were not being properly initialized. The fix consists of putting back these initializers, ensuring that all flags of the `TargetOptions` class are initialized correctly.
+
+One important aspect of this fix is the addition of two new flags: `EmitCallSiteInfo` and `SupportsDebugEntryValues`. These flags control the production of call site information and debug entry values respectively. With the fix, these flags are set to `false` by default, indicating that the target does not support them. However, there is also an `EnableDebugEntryValues` flag that can be used to force the production of debug entry values even if the target does not officially support it. This flag is set to `false` by default and should only be used for testing purposes.
+
+Other than these additions, the fix ensures that all flags of the `TargetOptions` class are properly initialized, providing a more reliable and consistent behavior for the code.

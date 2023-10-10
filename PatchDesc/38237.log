@@ -1,0 +1,31 @@
+Vulnerability:
+Null-dereference WRITE in MqttProps_Free
+
+Summary of the fix:
+The fix addresses a null-dereference bug in the "MqttClient_WaitType" function. It ensures that the null checks are performed correctly before accessing the variables.
+
+Detailed description of the fix:
+In the given diff file, the fix makes changes in the "MqttClient_WaitType" function to correctly handle null checks before accessing variables. The vulnerability occurs in the following code block:
+```
+if ((wait_type == MQTT_PACKET_TYPE_ANY ||
+     wait_type == packet_type ||
+-     MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)) &&
+   (wait_packet_id == 0 || wait_packet_id == packet_id))
+{
+    use_packet_obj = packet_obj;
+    waitMatchFound = 1;
+}
+```
+The fix implements additional parentheses around the condition to ensure correct evaluation of the null checks:
+```
+if ((wait_type == MQTT_PACKET_TYPE_ANY ||
+     wait_type == packet_type ||
+     (MqttIsPubRespPacket(packet_type) &&
+      MqttIsPubRespPacket(wait_type))) &&
+    (wait_packet_id == 0 || wait_packet_id == packet_id))
+{
+    use_packet_obj = packet_obj;
+    waitMatchFound = 1;
+}
+```
+This prevents a null-dereference WRITE vulnerability by ensuring that the proper conditions for null checks are met before accessing the variables and assigning values. This fix improves the robustness and stability of the code.

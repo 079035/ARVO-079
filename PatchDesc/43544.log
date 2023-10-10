@@ -1,0 +1,24 @@
+Vulnerability:
+The vulnerability patched in the given diff file is related to uninitialized pixels in the decompression of composite data. Prior to the fix, there is a possibility of having uninitialized pixels when the image data is truncated or incomplete.
+
+Summary of the Fix:
+The fix ensures that the composite data is properly zeroed out to avoid uninitialized pixels in the decompressed image.
+
+Detailed Description of the Fix:
+1. Previously, the code checked whether the image had multiple tiles to determine if composite data allocation was required. If there was only one tile, the data from that tile would be transferred directly to the output image without allocating additional memory.
+
+2. In the fixed code, the allocation of composite data is performed regardless of the number of tiles. This ensures that all images, regardless of whether they have multiple tiles or not, go through the proper allocation process.
+
+3. The code further checks if the interleaved coding parameters can be allocated. If not, it proceeds with individual component allocation.
+
+4. For each component, the code checks if the component dimensions are valid. If the width or height is zero, it raises an error and returns false, indicating a failure.
+
+5. Next, the code checks if the component data is already allocated. If not, it calls the `allocData` function to allocate pixel data for the current component.
+
+6. In the fix, the `allocData` function is invoked with an additional parameter `true`. This parameter ensures that the allocated pixel data is properly zeroed out, preventing uninitialized pixels.
+
+7. If any allocation or initialization fails during the process, the code raises an error and returns false, indicating a failure.
+
+8. If all the allocations and initializations are successful, the code returns true, indicating that the composite data allocation was done correctly.
+
+Overall, this fix ensures that the composite data for decompression is properly allocated and zeroed out, avoiding uninitialized pixels in the decompressed image.

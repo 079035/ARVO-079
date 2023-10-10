@@ -1,0 +1,8 @@
+Vulnerability:
+There was a buffer overrun vulnerability in the code. Specifically, the variable `len_out` was not properly checked before proceeding with the `iconv()` function call. When encountering bad input, `len_out` could wrap to a large number, leading to potential buffer overrun.
+
+Fix Summary:
+The fix involves ensuring that `len_out` is non-zero before proceeding with the `iconv()` function call.
+
+Detailed Fix Description:
+In the fixed code, a check is added inside the `while` loop to ensure that `len_out` is non-zero before calling `iconv()`. This prevents the buffer overrun vulnerability by ensuring that there is enough space in the destination buffer before attempting the conversion. If `len_out` is zero, the loop is terminated. Additionally, the line `len_out--;` is moved to the end of the loop to properly decrement `len_out` after each iteration. This ensures that the correct length of the converted string is calculated. Finally, the line `dlen -= len_out + 1;` is added after the loop to calculate the correct length of the converted string and set the null terminator at the end. Overall, these modifications ensure that the buffer overrun vulnerability is fixed.

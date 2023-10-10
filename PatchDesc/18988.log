@@ -1,0 +1,13 @@
+Vulnerability: Buffer Overflow
+
+Summary of Fix: The fix for the vulnerability in the template parser harness addresses a buffer overflow issue.
+
+Detailed Description of Fix: 
+1. The vulnerability is fixed by adding a new `min` function to calculate the minimum value between two given sizes.
+2. In the `LLVMFuzzerTestOneInput` function, the code previously allowed the `size` parameter to exceed the size of the `copy` array, potentially causing a buffer overflow.
+3. With the fix, the `size` value is recalculated using the `min` function to ensure it doesn't exceed the available size of the `copy` array. This prevents any potential buffer overflow.
+4. The `min` function compares the given sizes (`sizeof(copy) - 1` and `size`) and returns the smaller of the two.
+5. The `memcpy` function is then used to safely copy the data into the `copy` array with the limited size.
+6. Finally, the `copy` array is null-terminated to ensure it is a valid C-string.
+
+This fix prevents the buffer overflow vulnerability by properly restricting the size of the input data to fit within the available buffer.

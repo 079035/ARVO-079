@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability patched in the given diff file is a logic error in the ReadRectangle() function.
+
+Summary of the fix:
+The fix ensures that the ReadRectangle() function properly handles the case where the top, left, bottom, or right coordinates of a rectangle are negative or exceed the maximum value.
+
+Detailed description of the fix:
+1. In the if statement condition, the fix checks if any of the rectangle coordinates (top, left, bottom, right) have their MSB (Most Significant Bit) set to 1. This indicates that the value is negative.
+2. Additionally, the fix checks if the bottom is less than or equal to the top, and if the right is less than or equal to the left. This addresses the case where the rectangle has no width or height (negative or zero values).
+3. If any of these conditions are true, the function returns MagickFalse, indicating that the rectangle is invalid.
+4. This fix prevents the function from attempting to process an invalid rectangle, avoiding any potential issues or vulnerabilities related to incorrect rectangle dimensions.
+
+Note: The provided diff file does not include the complete context, so there may be additional changes within the file that are not shown here.

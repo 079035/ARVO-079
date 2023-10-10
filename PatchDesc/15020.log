@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is a memory corruption issue.
+
+Summary of the fix:
+The fix in this patch is to add the `CONFIG_AIRTIME_POLICY` flag to the build configuration of the `ap-mgmt-fuzzer` test. This flag was missing previously, causing a difference in the offset of the `struct hostapd_iface::prev_wmm` between the `libap.a` library and the `ap-mgmt-fuzzer.o` object file. This resulted in memcpy overwriting the `ctx.iface->prev_wmm` and causing memory corruption.
+
+Detailed description of the fix:
+The fix in this patch addresses a build configuration issue in the `ap-mgmt-fuzzer` test. The missing `CONFIG_AIRTIME_POLICY` flag in the build configuration caused a difference in the offset of the `struct hostapd_iface::prev_wmm` between the `libap.a` library and the `ap-mgmt-fuzzer.o` object file.
+
+This mismatch in offset created a problem during the fuzzing process. A memcpy operation was performed on the `ctx.iface->prev_wmm` using the `ctx.hapd` as the source. However, due to the difference in offset, the memcpy ended up overwriting the `ctx.hapd.iface` pointer, leading to memory corruption.
+
+To fix this issue, the patch adds the `CONFIG_AIRTIME_POLICY` flag to the build configuration of the `ap-mgmt-fuzzer` test. This ensures that the offset of `struct hostapd_iface::prev_wmm` is consistent between the `libap.a` library and the `ap-mgmt-fuzzer.o` object file. With the correct offset, the memcpy operation no longer writes on top of the `ctx.hapd.iface` pointer, avoiding the memory corruption issue.
+
+This fix prevents the odd fuzzing failures caused by the memory corruption and ensures the proper functioning of the `ap-mgmt-fuzzer` test.

@@ -1,0 +1,99 @@
+{
+    "fix": "https://github.com/radareorg/radare2/commit/ce37e3e4b1776e456d5874845f2b100b5a2d8ff3",
+    "verify": "0",
+    "localId": 55182,
+    "project": "radare2",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Heap-use-after-free READ 1",
+    "severity": "High",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55182,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1674044863,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=4915931283587072\n\nProject: radare2\nFuzzing Engine: libFuzzer\nFuzz Target: ia_fuzz\nJob Type: libfuzzer_asan_radare2\nPlatform Id: linux\n\nCrash Type: Heap-use-after-free READ 1\nCrash Address: 0x60700000b620\nCrash State:\n  r_bin_filter_symbols\n  r_bin_object_set_items\n  r_bin_object_new\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: High\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_radare2&range=202212300612:202212310617\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=4915931283587072\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55182,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1674071936,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2023-04-18"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55182,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1681238068,
+                "content": "This bug is approaching its deadline for being fixed, and will be automatically derestricted within 7 days. If a fix is planned within 2 weeks after the deadline has passed, a grace extension can be granted.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Deadline-Approaching"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55182,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1681488038,
+                "content": "ClusterFuzz testcase 4915931283587072 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_radare2&range=202304130607:202304140610\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 55182,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1681497729,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit -deadline-approaching"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "ce37e3e4b1776e456d5874845f2b100b5a2d8ff3",
+    "repo_addr": "https://github.com/radareorg/radare2"
+}

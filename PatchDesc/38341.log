@@ -1,0 +1,10 @@
+Vulnerability:
+Null-dereference WRITE in MqttProps_Free
+
+Summary of the fix:
+The fix addresses a null-dereference write vulnerability in the MqttProps_Free function of the mqtt_client.c file. 
+
+Detailed description of the fix:
+The vulnerability occurs when checking if the packet type and ID have already completed in the MqttClient_WaitType function. If the check is successful, the packet response is removed and unlocked. However, there is no check for a null pointer before accessing `pendResp`, which can lead to a null-dereference write. 
+
+The fix introduces a null check for `pendResp` before accessing it. The code first checks if `pendResp` is NULL and then proceeds with accessing its fields and removing it from the response list. This ensures that a null-dereference write is avoided.

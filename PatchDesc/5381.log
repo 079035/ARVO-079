@@ -1,0 +1,9 @@
+Vulnerability: There is a lack of limit on the maximum width and height of an image in the `utils.cc` file. 
+
+Summary of the Fix: The fix limits the maximum width and height of an image to 2048 pixels.
+
+Detailed Description of the Fix:
+1. In the `utils.cc` file, a class `FuzzingLimits` is defined.
+2. In the constructor of this class, two methods from the `ResourceLimits` class are used to set the memory and map limits.
+3. The fix adds two additional method calls to set the maximum width and height limits to 2048 using the `ResourceLimits::width` and `ResourceLimits::height` methods.
+4. This fix ensures that images cannot have a width or height greater than 2048 pixels, which helps to prevent potential memory overflow or resource exhaustion vulnerabilities.

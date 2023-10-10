@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability in the given diff file is a typo in an error message string. In the function `parse_contacts()`, there is a typo in the error message printed when an invalid contact URI is encountered. The string "invlid contact uri" should be "invalid contact uri".
+
+Fix Summary:
+The fix in the code is to correct the typo in the error message string.
+
+Detailed Fix Description:
+In the given diff file, the fix is made in the `parse_contacts()` function. The error message string "invlid contact uri" is corrected to "invalid contact uri" in the line `LM_ERR("invalid contact uri\n");`.
+
+Corrected Code:
+```c
+if((c->uri.len <= 0) || (c->uri.s + c->uri.len > sv.s + sv.len)) {
+    LM_ERR("invalid contact uri\n");
+    goto error;
+}
+```

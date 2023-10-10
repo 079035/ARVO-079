@@ -1,0 +1,8 @@
+Vulnerability: The vulnerability in the code is that the build configuration for `ap-mgmt-fuzzer` does not have the `CONFIG_AIRTIME_POLICY` flag enabled.
+
+Summary of the fix: The fix for this vulnerability is to add `CFLAGS += -DCONFIG_AIRTIME_POLICY` to the `Makefile` for `ap-mgmt-fuzzer`.
+
+Detailed description of the fix: 
+The fix adds the `CONFIG_AIRTIME_POLICY` flag to the build configuration for `ap-mgmt-fuzzer`. Previously, this flag was missing, causing a mismatch in the offset of the `struct hostapd_iface::prev_wmm` between `libap.a` and `ap-mgmt-fuzzer.o`. This resulted in failures when fuzzing due to a `memcpy` operation writing on top of the `ctx.iface->prev_wmm` and overwriting the `ctx.hapd` and `ctx.hapd.iface` pointer.
+
+By adding the `CFLAGS += -DCONFIG_AIRTIME_POLICY` to the `Makefile`, the correct offset is maintained and the memory corruption issue is fixed. This ensures that the `memcpy` operation writes to the correct location without any unintended overwrites. The fix was provided as a response to multiple reported issues by OSS-Fuzz.

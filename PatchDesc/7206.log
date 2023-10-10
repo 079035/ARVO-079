@@ -1,0 +1,15 @@
+Vulnerability:
+The vulnerability in the code is that the `DecryptedBuffer` is created with a size equal to the sum of `off` and the size of `EncryptedBuffer`. This results in uninitialized garbage being present at the end of the `DecryptedBuffer`.
+
+Summary of the fix:
+The fix ensures that the `DecryptedBuffer` is created with a size equal to `off + len`, where `len` is the length of the `EncryptedBuffer`. Additionally, the code also checks that the `DecryptedBuffer` does not point to any preceding padding buffer.
+
+Detailed description of the fix:
+1. Modify the line `auto DecryptedBuffer = Buffer::Create(DecryptedBufferSize);` to `auto DecryptedBuffer = Buffer::Create(off + len);`. This ensures that the `DecryptedBuffer` is created with the correct size.
+
+2. Add the following code after creating the `decIFD` buffer:
+```
+const Buffer Padding(decIFD.getSubView(0, off));
+ifds_decoded.emplace(Padding);
+```
+This code creates a `Padding` buffer using the subview of `decIFD` from index 0 to `off`, and adds it to the `ifds_decoded` set. This ensures that the `Decrypted Root Ifd` does not point to any preceding padding buffer.

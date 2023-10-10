@@ -1,0 +1,26 @@
+Vulnerability:
+The vulnerability addressed in this diff file is a potential buffer overflow when decoding a truncated Nikon sNEF image file. The code checks if the remaining size of the input byte stream is less than the expected size of the image data. If the remaining size is less, the code attempts to calculate the height of the image based on the remaining size and sets an error message indicating that the image is truncated. However, this calculation is incorrect and may result in a negative height value.
+
+Summary of the Fix:
+The fix ensures that the code correctly handles the case where the remaining size of the input byte stream is less than the expected size of the image data. Instead of attempting to calculate the height based on the remaining size, the fix throws an input/output exception ("Not enough data to decode. Image file truncated.") indicating that there is not enough data to decode the image.
+
+Detailed Description of the Fix:
+1. The condition `if (input->getRemainSize() < (w * h * 3))` is updated to always throw an input/output exception by removing the calculation of height based on the remaining size. The fix replaces the block of code:
+   ```cpp
+   if (input->getRemainSize() < (w * h * 3)) {
+     if (static_cast<uint32>(input->getRemainSize()) > w * 3) {
+       h = input->getRemainSize() / (w * 3) - 1;
+       mRaw->setError("Image truncated (file is too short)");
+     } else
+       ThrowIOE(
+           "Not enough data to decode a single line. Image file truncated.");
+   }
+   ```
+   With the single line:
+   ```cpp
+   ThrowIOE("Not enough data to decode. Image file truncated.");
+   ```
+
+2. The fix removes the unnecessary comment `// OPTME: It would be trivial to run this multithreaded.` as it does not impact the functionality or security of the code.
+
+3. The fix does not modify any other part of the code outside the mentioned diff section.

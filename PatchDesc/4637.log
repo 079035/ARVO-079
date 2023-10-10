@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the given diff file is a buffer overflow in the `mRouteData` member variable of the class `MLETLVRouteData`.
+
+Summary of the fix:
+The fix increases the length of the `mRouteData` array to avoid buffer overflow.
+
+Detailed description of the fix:
+In the original code, the `mRouteData` array is declared with a size of `kMaxRouters`. However, `kMaxRouters` has the value of `kMaxRouterId + 1`, which indicates that it is the maximum number of routers that can be handled by the MLE protocol. 
+
+To fix the vulnerability, the fix increases the size of the `mRouteData` array to `kMaxRouterId + 1`. This ensures that the array can hold all the router data without causing a buffer overflow.
+
+By making this change, the code prevents potential buffer overflow issues that could occur when storing router data and ensures that the array has enough space to hold the required number of entries.

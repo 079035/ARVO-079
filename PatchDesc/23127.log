@@ -1,0 +1,10 @@
+Vulnerability: The vulnerability fixed in this diff file is a potential access to an out-of-bounds memory location.
+
+Summary of the Fix: The code has been rewritten to remove access to a buffer that was only happening at the source code level but not in the compiled code.
+
+Detailed Description of the Fix:
+1. In the original code, the function `MemoryRemoveTrailingZeros` loops through the buffer `auth->t.buffer` from the end (starting from `auth->t.size-1`) and checks if the current byte is non-zero. If a non-zero byte is found, the loop breaks.
+2. However, if the loop does not encounter any non-zero bytes, it continues decrementing `auth->t.size`, potentially going out of bounds of the buffer.
+3. In the fix, the loop has been replaced with a while loop that checks if `auth->t.size` is greater than 0 and if the last byte in the buffer (`auth->t.buffer[auth->t.size - 1]`) is non-zero. If it is non-zero, the loop breaks.
+4. Then, `auth->t.size` is decremented if it is greater than 0 and the last byte is zero, ensuring that the size remains within the bounds of the buffer.
+5. This rewritten code ensures that the loop terminates when `auth->t.size` reaches 0 or encounters a non-zero byte and avoids potential out-of-bounds access to the buffer.

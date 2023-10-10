@@ -1,0 +1,18 @@
+Vulnerability:
+In this code, there is a vulnerability related to error handling and memory management. When the decoding process encounters certain errors (`dsBitstreamError` or `dsDataErrorconcealed`) and the slice type is B_SLICE, the code does not properly handle the error scenario. It does not reset the reordering picture buffers, leading to a potential memory leak or corruption.
+
+Summary of the fix:
+The fix addresses the vulnerability by adding a conditional check for the error code and the slice type. If the error code contains either `dsBitstreamError` or `dsDataErrorConcealed` and the slice type is B_SLICE, the fix adds code to reset the reordering picture buffers, ensuring proper memory management.
+
+Detailed description of the fix:
+The fix modification occurs in the function `CWelsDecoder::DecodeFrame2WithCtx`. The added code is as follows:
+```
+if ((pDecContext->iErrorCode & (dsBitstreamError | dsDataErrorConcealed)) && pDecContext->eSliceType == B_SLICE) {
+  ResetReorderingPictureBuffers (&m_sReoderingStatus, m_sPictInfoList, true);
+  WelsResetRefPic (pDecContext);
+  return dsErrorFree;
+}
+```
+The code leverages the condition `pDecContext->iErrorCode & (dsBitstreamError | dsDataErrorConcealed)` to check if either `dsBitstreamError` or `dsDataErrorConcealed` is present in `pDecContext->iErrorCode`, which indicates an error in the decoding process. Additionally, it checks if the slice type is B_SLICE (`pDecContext->eSliceType == B_SLICE`). If both conditions are true, the code executes the necessary steps to reset the reordering picture buffers and references (`ResetReorderingPictureBuffers` and `WelsResetRefPic`). These functions handle the memory management for reordering picture buffers and references, ensuring that any existing memory is properly released or reset. Finally, the function returns `dsErrorFree` to indicate that the decoding process is error-free.
+
+This fix effectively addresses the vulnerability by ensuring that error scenarios are properly handled and the memory is managed correctly, avoiding potential memory leaks or corruption.

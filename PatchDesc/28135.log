@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the given diff file is an out-of-bounds read in the `ucl_strnstr` function. The `strncmp` call inside the function could read past the bounds of the haystack, potentially leading to undefined behavior or crashes.
+
+Summary of the Fix:
+The fix addresses the out-of-bounds read issue by modifying the loop condition to ensure that the loop stops when the remaining data in the haystack cannot contain the needle.
+
+Detailed Description of the Fix:
+1. In the `ucl_strnstr` function, the fix modifies the loop condition where the out-of-bounds read occurs. The previous loop condition `(sc = *s++) == 0 || len-- == 0` checked if either the current character is null or if the `len` variable (length of the haystack) has reached zero. This condition allowed the loop to continue even if `len` became negative, leading to out-of-bounds access.
+
+2. The fix updates the loop condition to `(sc = *s++) == 0 || len-- < mlen`. Now, the loop will stop if either the current character is null or if the `len` becomes less than the length of the needle (`mlen`). This change ensures that the loop only iterates until the remaining data in the haystack can still contain the needle.
+
+3. By updating the loop condition, the fix prevents the `strncmp` call from reading past the bounds of the haystack, thereby fixing the out-of-bounds read vulnerability.
+
+4. This fix addresses the vulnerability reported in the Chromium bug tracker with ID 28135 related to oss-fuzz.

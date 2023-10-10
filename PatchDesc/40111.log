@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability patched in this diff file is a potential out-of-bounds read in the htp_validate_hostname() function. Specifically, when validating an IPv6 address in square brackets, the function does not perform a bounds check to ensure that the length of the address is within the valid range.
+
+Summary of Fix:
+The fix introduces a bounds check for the length of an IPv6 address when it is enclosed in square brackets. If the length is less than 2 or greater than or equal to INET6_ADDRSTRLEN (which defines the maximum length of an IPv6 address), the function returns 0, indicating that the address is invalid.
+
+Detailed Description of Fix:
+The fix modifies the condition within the if statement that checks for the length of the address inside square brackets. The original condition only checked if the length was less than 2, but the fix adds another condition to also check if the length minus 2 is greater than or equal to INET6_ADDRSTRLEN. This ensures that the address length is within the valid range.
+
+If the condition is true, indicating that the length is either too short or too long, the function returns 0, indicating that the address is invalid. Otherwise, the function proceeds with converting the address using the inet_pton() function, as before.
+
+This fix provides a bounds check for the length of the IPv6 address, preventing potential out-of-bounds reads and ensuring that only valid addresses are accepted.

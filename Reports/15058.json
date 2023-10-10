@@ -1,0 +1,121 @@
+{
+    "fix": "https://chromium.googlesource.com/chromiumos/third_party/adhd/+/f27080e90427c1714eb894f2f749e10a618a50a6",
+    "verify": "0",
+    "localId": 15058,
+    "project": "adhd",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow READ 4",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "localId": 15058,
+                "descriptionNum": 1,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "Detailed report: https://oss-fuzz.com/testcase?key=5764245750284288\n\nProject: cras\nFuzzer: libFuzzer_cras_rclient_message\nFuzz target binary: rclient_message\nJob Type: libfuzzer_asan_cras\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow READ 4\nCrash Address: 0x602000000138\nCrash State:\n  cras_rclient_message_from_client\n  cras_rclient_buffer_from_client\n  rclient_message.cc\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_cras&range=201905310204:201906010200\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5764245750284288\n\nIssue filed automatically.\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for instructions to reproduce this bug locally.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.\n\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues.",
+                "timestamp": 1559367258
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "OS-Linux"
+                    }
+                ],
+                "localId": 15058,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "sequenceNum": 1,
+                "timestamp": 1559368207
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Fuzz-Blocker"
+                    }
+                ],
+                "localId": 15058,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "This crash occurs very frequently on linux platform and is likely preventing the fuzzer rclient_message from making much progress. Fixing this will allow more bugs to be found.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 2,
+                "timestamp": 1559409325
+            },
+            {
+                "localId": 15058,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "hychao@chromium.org",
+                    "userId": "628714437"
+                },
+                "content": "I'm working on it now.",
+                "sequenceNum": 3,
+                "timestamp": 1559537816
+            },
+            {
+                "localId": 15058,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "ClusterFuzz has detected this issue as fixed in range 201906030200:201906040159.\n\nDetailed report: https://oss-fuzz.com/testcase?key=5764245750284288\n\nProject: cras\nFuzzer: libFuzzer_cras_rclient_message\nFuzz target binary: rclient_message\nJob Type: libfuzzer_asan_cras\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow READ 4\nCrash Address: 0x602000000138\nCrash State:\n  cras_rclient_message_from_client\n  cras_rclient_buffer_from_client\n  rclient_message.cc\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_cras&range=201905310204:201906010200\nFixed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_cras&range=201906030200:201906040159\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5764245750284288\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for instructions to reproduce this bug locally.\n\nIf you suspect that the result above is incorrect, try re-doing that job on the test case report page.",
+                "sequenceNum": 4,
+                "timestamp": 1559659106
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "oldValue": "New",
+                        "newOrDeltaValue": "Verified"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ],
+                "localId": 15058,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "ClusterFuzz testcase 5764245750284288 is verified as fixed, so closing issue as verified.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 5,
+                "timestamp": 1559659819
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ],
+                "localId": 15058,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot@chromium.org",
+                    "userId": "4164592774"
+                },
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "sequenceNum": 6,
+                "timestamp": 1562254086
+            }
+        ]
+    },
+    "fix_commit": "f27080e90427c1714eb894f2f749e10a618a50a6",
+    "repo_addr": "https://chromium.googlesource.com/chromiumos/third_party/adhd"
+}

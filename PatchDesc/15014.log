@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability in the given diff file is due to the missing configuration flag `CONFIG_AIRTIME_POLICY=y` in the `tests/ap-mgmt-fuzzer/Makefile` file. This resulted in different offsets for the `prev_wmm` field in the `struct hostapd_iface` between the `libap.a` and `ap-mgmt-fuzzer.o` files. Consequently, a memory copy (`memcpy`) operation to `ctx.iface->prev_wmm` ended up overwriting the `ctx.hapd` structure and its `iface` pointer.
+
+Summary of the fix:
+The fix in this commit is to add the missing configuration flag `CONFIG_AIRTIME_POLICY` with a value of `y` to the `tests/ap-mgmt-fuzzer/Makefile`.
+
+Detailed description of the fix:
+1. In the `tests/ap-mgmt-fuzzer/Makefile`, the line `CFLAGS += -DCONFIG_AIRTIME_POLICY` is added.
+   - This adds the `CONFIG_AIRTIME_POLICY` flag to the compiler flags. 
+   - The macro `-D` sets the value of `CONFIG_AIRTIME_POLICY` to `y`.
+
+2. This change ensures that the `CONFIG_AIRTIME_POLICY` flag is properly defined during the build configuration of `ap-mgmt-fuzzer`.
+   - With the flag defined, the offset of the `prev_wmm` field in the `struct hostapd_iface` will be consistent between `libap.a` and `ap-mgmt-fuzzer.o`.
+   - This prevents the `memcpy` operation to `ctx.iface->prev_wmm` from overwriting the `ctx.hapd` structure and its `iface` pointer.
+
+In conclusion, adding the `CONFIG_AIRTIME_POLICY` flag resolves the mismatch in offset and prevents memory corruption, addressing the vulnerability reported by OSS-Fuzz.

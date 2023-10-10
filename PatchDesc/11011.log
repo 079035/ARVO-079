@@ -1,0 +1,12 @@
+Vulnerability:
+The vulnerability in the code is a potential buffer overflow.
+
+Summary of Fix:
+The fix sets the `rar->cstate.window_mask` variable to 0 when `rar->cstate.window_size` is 0. This avoids potential buffer overflows by ensuring that the window size is always properly truncated.
+
+Detailed Description of Fix:
+The `init_unpack` function initializes various fields in the `rar5` structure. In the original code, the `rar->cstate.window_mask` variable is set to `rar->cstate.window_size - 1`. However, there is a potential issue if `rar->cstate.window_size` is 0. In this case, subtracting 1 would result in a negative number, which can cause a buffer overflow when used to allocate memory.
+
+To fix this issue, the code has been modified to include an additional check: `if (rar->cstate.window_size)`. If `rar->cstate.window_size` is non-zero, then the `rar->cstate.window_mask` variable is set to `rar->cstate.window_size - 1` as before. However, if `rar->cstate.window_size` is 0, then the `rar->cstate.window_mask` is set to 0 directly, avoiding any potential negative values.
+
+This fix ensures that the window size is always properly truncated, preventing any potential buffer overflow issues.

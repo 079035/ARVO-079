@@ -1,0 +1,18 @@
+Vulnerability Description:
+In the given diff file, the vulnerability being patched is a potential runlength overrun in the ReadQOIImage() function. This vulnerability could lead to memory corruption or crashes.
+
+Summary of the Fix:
+The fix in this patch is to add a check for the end of pixel data after the decoding loop. If there is not enough pixel data available, a "CorruptImageError" exception is thrown, indicating that the image file is not properly formatted.
+
+Detailed Description of the Fix:
+1. Prior to the fix, the decoding loop in the ReadQOIImage() function iterates over the pixel data, processing each pixel. The loop is controlled by a variable 'i', which represents the current pixel index. The loop iterates until 'i' reaches the total number of pixels in the image.
+
+2. After the decoding loop, a SetImageProgress() function is called to update the image loading progress. However, there is no additional check to ensure that all pixels have been processed.
+
+3. In the fix, a check is added after the decoding loop to verify if the total number of processed pixels matches the total number of pixels expected in the image. If there is a mismatch, indicating that there is not enough pixel data available, a "CorruptImageError" exception is thrown.
+
+4. Additionally, a SyncAuthenticPixels() function is called to ensure that any pending pixel updates are applied to the image. Then, the SyncImage() function is called to synchronize the image with the underlying storage.
+
+5. Finally, the image blob is closed and the function returns the updated image.
+
+This fix prevents potential memory corruption or crashes that could occur when the image file does not contain enough pixel data to match the expected number of pixels in the image.

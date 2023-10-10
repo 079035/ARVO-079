@@ -1,0 +1,18 @@
+Vulnerability:
+This patch fixes a buffer overflow vulnerability in the `dotnet` module of the `libyara` library.
+
+Summary of the fix:
+The fix in this patch checks if the header size is larger than 0 and ensures that the end of the header does not exceed the end of the PE (Portable Executable) file.
+
+Detailed description of the fix:
+Before the fix, the code did not properly check the size of the header and if the end of the header was past the end of the PE file. This could lead to a buffer overflow if the header size was set to a value larger than the actual size of the PE file.
+
+In the fixed code, the following changes were made:
+
+1. Added a check to ensure that the header size is larger than 0: `if (us_header->Size == 0 ...`
+
+2. Added a check to ensure that the end of the header does not exceed the end of the PE file: `!fits_in_pe(pe, offset, us_header->Size)`
+
+If either of these conditions is not satisfied, the function returns early, preventing the buffer overflow.
+
+These changes ensure that the code is more resilient to invalid header sizes and correctly handles cases where the header size is 0 or exceeds the actual size of the PE file.

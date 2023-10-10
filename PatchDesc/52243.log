@@ -1,0 +1,13 @@
+Vulnerability:
+This patch fixes a buffer overflow vulnerability in the `_bfd_XX_print_ce_compressed_pdata` function in the `peXXigen.c` file. The vulnerability occurs when processing the `.pdata` section of a binary. The function uses the `stop` variable to determine the limit of iteration in the for loop, which is set to `pei_section_data(abfd, section)->virt_size`. However, if the `stop` value is not a multiple of the `onaline` value, which is set to `PDATA_ROW_SIZE` (8), a warning is printed, indicating that the `.pdata` section size is not a multiple of 8. This can indicate a potential buffer overflow vulnerability.
+
+Summary of Fix:
+The fix includes a modification to ensure that the `stop` value is not greater than the `datasize` variable, which represents the size of the section. This prevents iterating beyond the allocated buffer and eliminates the potential buffer overflow.
+
+Detailed Description of Fix:
+The patch introduces the following modification to the code:
+```
++  if (stop > datasize)
++    stop = datasize;
+```
+By adding these lines, the code checks if the `stop` value is greater than the `datasize` value and, if so, updates the `stop` value to be equal to the `datasize` value. This ensures that the iteration in the for loop does not exceed the allocated buffer size and eliminates the potential buffer overflow vulnerability.

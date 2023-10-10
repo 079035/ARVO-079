@@ -1,0 +1,115 @@
+{
+    "localId": 18744,
+    "project": "openh264",
+    "fix": "https://github.com/cisco/openh264/commit/987cc5f512416873aea6ef7b9acd8acea5b327b0",
+    "verify": "0",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "msan",
+    "crash_type": "Use-of-uninitialized-value",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "localId": 18744,
+                "descriptionNum": 1,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5169716859764736\n\nProject: openh264\nFuzzing Engine: libFuzzer\nFuzz Target: decoder_fuzzer\nJob Type: libfuzzer_msan_openh264\nPlatform Id: linux\n\nCrash Type: Use-of-uninitialized-value\nCrash Address: \nCrash State:\n  WelsDec::CWelsDecoder::ReleaseBufferedReadyPicture\n  WelsDec::CWelsDecoder::ReorderPicturesInDisplay\n  WelsDec::CWelsDecoder::DecodeFrame2WithCtx\n  \nSanitizer: memory (MSAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_openh264&range=201911040319:201911050321\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5169716859764736\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "timestamp": 1572937925
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Cc",
+                        "newOrDeltaValue": "xiaot...@gmail.com"
+                    }
+                ],
+                "localId": 18744,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "twsmith@mozilla.com",
+                    "userId": "3652352371"
+                },
+                "sequenceNum": 1,
+                "timestamp": 1572970889
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2020-02-03"
+                    }
+                ],
+                "localId": 18744,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot@chromium.org",
+                    "userId": "4164592774"
+                },
+                "sequenceNum": 2,
+                "timestamp": 1572972499
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Fuzz-Blocker"
+                    }
+                ],
+                "localId": 18744,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "This crash occurs very frequently on linux platform and is likely preventing the fuzzer decoder_fuzzer from making much progress. Fixing this will allow more bugs to be found.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 3,
+                "timestamp": 1573037723
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "oldValue": "New",
+                        "newOrDeltaValue": "Verified"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ],
+                "localId": 18744,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "ClusterFuzz-External",
+                    "userId": "382749006"
+                },
+                "content": "ClusterFuzz testcase 5169716859764736 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_msan_openh264&range=201911070320:201911080319\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "sequenceNum": 4,
+                "timestamp": 1573228563
+            },
+            {
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ],
+                "localId": 18744,
+                "projectName": "oss-fuzz",
+                "commenter": {
+                    "displayName": "sheriffbot@chromium.org",
+                    "userId": "4164592774"
+                },
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "sequenceNum": 5,
+                "timestamp": 1575823218
+            }
+        ]
+    },
+    "fix_commit": "987cc5f512416873aea6ef7b9acd8acea5b327b0",
+    "repo_addr": "https://github.com/cisco/openh264"
+}

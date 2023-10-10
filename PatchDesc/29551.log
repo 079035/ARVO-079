@@ -1,0 +1,12 @@
+Vulnerability: Out-of-bounds read in fuzz_htp.c
+
+Summary of the fix: The fix corrects the handling of gaps in the fuzz_htp.c code to prevent an out-of-bounds read.
+
+Detailed description of the fix:
+1. Before the fix, there was a vulnerability in the code that could lead to an out-of-bounds read.
+2. In the vulnerable code, when the `out_data_other` flag is set to 1 (indicating that parser needs to see the outbound stream), the `htp_connp_res_data` function is called with `out_data + out_data_offset` as the second argument.
+3. The fix improves the code by checking if `out_data` is NULL before calling `htp_connp_res_data`.
+4. If `out_data` is NULL, the fix calls `htp_connp_res_data` with NULL as the second argument, effectively ignoring the `out_data_offset` and `out_data_len` parameters.
+5. This modification prevents the out-of-bounds read that could occur when `out_data` is accessed without proper validation.
+6. The same fix is also applied to the section where the flag `in_data_other` is checked before calling `htp_connp_req_data`, ensuring consistent behavior.
+7. After the fix, the code now properly handles gaps and prevents the vulnerability from being exploited.

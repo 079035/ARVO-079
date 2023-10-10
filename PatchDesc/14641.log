@@ -1,0 +1,18 @@
+Vulnerability:
+There is a potential vulnerability in the code that could lead to a memory corruption issue. The vulnerable code is in the `sanitize_records` function of the `name` struct. It calls the `sanitize` function of the `nameRecordZ` array, passing the `count` and `string_pool` variables. However, the `string_pool` variable is not correctly calculated, which could lead to accessing invalid memory and corrupting the data.
+
+Summary of the fix:
+The fix in this code patch is to correctly calculate the `string_pool` variable in the `accelerator_t` struct's `init` function. This ensures that the `string_pool` variable points to the correct memory location and avoids accessing invalid memory.
+
+Detailed description of the fix:
+1. In the `accelerator_t` struct's `init` function, the `table` variable is set to a reference table of the `name` struct using the `hb_sanitize_context_t().reference_table<name>` function.
+2. The code checks if the length of the table is greater than or equal to `table->stringOffset` to ensure that the table is valid.
+3. The `pool` variable is then set to `(const char *) (const void *) (this->table+this->table->stringOffset)`. This step ensures that the `pool` variable points to the correct memory location where the string pool is stored.
+4. The `pool_len` variable is set to `this->table.get_length() - this->table->stringOffset`. This calculates the length of the string pool by subtracting the offset of the string pool from the total length of the table.
+5. The code creates an instance of `hb_array_t<const NameRecord>` called `all_names` using `this->table->nameRecordZ.arrayZ` and `this->table->count`. This allows accessing all the name records stored in the table.
+6. The `names` vector is initialized using `this->names.init()`.
+7. A loop iterates over all the name records in `all_names` and pushes a new entry to the `names` vector for each record. Each entry contains the name ID, language, score, and index of the corresponding name record.
+8. After the loop, the `names` vector is sorted using the `_hb_ot_name_entry_cmp` function.
+9. Another loop iterates over the sorted `names` vector and removes any duplicate entries for the same name ID and language, while also excluding unsupported encodings.
+10. The size of the `names` vector is updated to the number of remaining unique entries.
+11. The `names` vector is now ready to be used for further processing and lookup operations.

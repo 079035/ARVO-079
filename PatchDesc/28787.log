@@ -1,0 +1,9 @@
+Vulnerability: Buffer Overflow
+
+Summary of fix: The fix adds a check to ensure that the `map_sz` parameter is greater than or equal to 5 before performing any operations using it.
+
+Detailed description of fix: In the given code, there is a potential buffer overflow vulnerability. The function `mdb_map_find_next0` takes a `map_sz` parameter, which specifies the size of the `map` buffer. However, there is no check to ensure that `map_sz` is valid and greater than or equal to the expected minimum size.
+
+The fix addresses this vulnerability by adding a check at the beginning of the function to verify if `map_sz` is less than 5. If `map_sz` is less than 5, the function returns early, indicating that there are no pages to be found.
+
+By performing this check, the fix ensures that further operations in the function that rely on `map_sz` being a valid size do not cause a buffer overflow.

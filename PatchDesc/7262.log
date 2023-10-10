@@ -1,0 +1,13 @@
+Vulnerability:
+The vulnerability that was patched in this diff file is an incorrect computation of size for skipping data in the `ParseVariationDataSubtable` function in the `variations.cc` file.
+
+Summary of the fix:
+The fix involves promoting the variables `itemCount`, `shortDeltaCount`, and `regionIndexCount` to `size_t` type in order to compute the correct size for skipping data.
+
+Detailed description of the fix:
+1. In the original code, the computation of the size to skip the delta data is incorrect. It multiplies `itemCount` with the sum of `shortDeltaCount` and `regionIndexCount`. This results in an incorrect size, as it does not take into account the size of `shortDeltaCount` and `regionIndexCount` themselves.
+2. The fix addresses this issue by promoting the variables `itemCount`, `shortDeltaCount`, and `regionIndexCount` to the `size_t` type.
+3. By promoting these variables to `size_t`, the correct size calculation is achieved. The `itemCount` is multiplied with the sum of `shortDeltaCount` and `regionIndexCount` after converting them to `size_t`.
+4. This ensures that the correct size is skipped when reading the delta data, preventing any potential buffer overflows or incorrect memory access.
+5. The fix also adds a comment indicating that the fix is for the issue reported on the Chromium bug tracker. This provides a reference to the context and history of the fix.
+

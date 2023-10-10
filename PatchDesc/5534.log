@@ -1,0 +1,18 @@
+Vulnerability:
+There is a vulnerability in the code where the if condition `(x + i) < (ssize_t) image->columns && (y + j) < (ssize_t) image->rows` is checking the dimensions of the image incorrectly. This leads to an out-of-bounds write in the pixel buffer when the condition is true.
+
+Summary of fix:
+The fix for the vulnerability is to correct the if condition to check the dimensions of the image correctly. The dimensions should be checked against `image->columns` for the x-coordinate and `image->rows` for the y-coordinate.
+
+Detailed description of fix:
+In the `ReadDXT3Pixels` function, there is a loop that reads a 4x4 patch of pixels from the image and writes them to the pixel buffer. Before writing each pixel, the code checks if the coordinates `(x + i)` and `(y + j)` are within the bounds of the image. However, the condition is currently checking against the wrong dimensions.
+
+To fix the vulnerability, the condition in the if statement should be changed to `(x + i) < (ssize_t) image->columns && (y + j) < (ssize_t) image->rows`. This corrects the check for both x and y coordinates, ensuring that they are within the image boundaries.
+
+The corrected code should look like this:
+
+```
+if ((x + i) < (ssize_t) image->columns && (y + j) < (ssize_t) image->rows)
+```
+
+With this fix, the pixel buffer will no longer be overflowed, preventing the vulnerability.

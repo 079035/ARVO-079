@@ -1,0 +1,16 @@
+Vulnerability:
+The vulnerability patched in this diff file is an integer overflow. Specifically, it is possible for the variable `nextSizeData` to become negative due to the addition of negative values, leading to potential undefined behavior.
+
+Summary of Fix:
+The fix for this vulnerability involves using a safe integer addition function called `Safe::add` to calculate the value of `nextSizeData`. Additionally, an enforcement check is added to ensure that `nextSizeData` is not negative. If it is negative, an error with the code `ErrorCode::kerCorruptedMetadata` will be raised.
+
+Detailed Description of Fix:
+1. Before the fix, the code initializes the variable `nextSizeData` with the result of subtracting the current position (`pos`) from the size of the `pPsData` buffer. However, this subtraction may result in a negative value if `pos` is greater than `sizePsData`. This can happen if the previous iteration of the loop encounters an IPTC IRB that has a larger size than the remaining data.
+
+2. To fix the potential integer overflow, the code introduces the `Safe::add` function to perform the addition of `sizePsData` and `-pos`. This function ensures that the addition is performed safely and detects any potential overflow. If an overflow is detected, the function either returns a special value or raises an exception, depending on the implementation. In this case, the `Safe::add` function is used to calculate the value of `nextSizeData` to prevent it from becoming negative.
+
+3. After obtaining the new value of `nextSizeData`, an enforcement check is added to verify that the value is not negative. The `enforce` function is used to check this condition, and if the condition is false (indicating a negative value), an error with the code `ErrorCode::kerCorruptedMetadata` is raised. This error code likely represents a corrupted metadata condition, indicating that the metadata of the Photoshop file is inconsistent or invalid.
+
+4. The loop that iterates over the IPTC IRBs is modified to use the updated `nextSizeData` value. This ensures that the loop termination condition correctly checks for the presence of additional IPTC IRBs within the remaining data. The loop continues until no more IPTC IRBs are found, updating `nextSizeData` and `pos` accordingly.
+
+5. Overall, the fix introduces a safe addition operation and an enforcement check to prevent the negative value of `nextSizeData`, which could lead to undefined behavior and potential security issues. With the fix, the code handles the exceptional case of negative `nextSizeData` properly, ensuring the integrity of the code and avoiding any potential vulnerabilities.

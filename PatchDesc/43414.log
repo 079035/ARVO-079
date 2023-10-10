@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability in the given code is a potential buffer overflow due to an incorrect loop condition.
+
+Summary of the Fix:
+The fix addresses the issue by changing the data type of the loop variable `i` from `size_t` to `int`.
+
+Detailed Description of the Fix:
+The code in question is a part of the `open` function in the `IOSystem2Unzip` class from the file `ZipArchiveIOSystem.cpp`. The `for` loop in the code is used to modify the `disk_filename` based on certain conditions.
+
+The vulnerability lies in the loop condition `i >= 0`. The `i` variable is of type `size_t`, which is an unsigned type. Since `i` is compared with 0, the condition will always be true, and the loop will continue indefinitely, resulting in a potential buffer overflow.
+
+To fix this issue, the fix changes the data type of the loop variable `i` from `size_t` to `int`. By making `i` an `int`, the loop condition `i >= 0` correctly checks for negative values, allowing the loop to terminate when `i` becomes negative.
+
+This fix ensures that the loop operates as intended and avoids the possibility of a buffer overflow caused by an infinite loop.

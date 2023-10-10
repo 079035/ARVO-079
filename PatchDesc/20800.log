@@ -1,0 +1,12 @@
+Vulnerability Description:
+The vulnerability patched in the given diff file is a buffer overrun in the function `pe_parse_debug_directory()` in the `pe.c` file of the `libyara` library. The vulnerability occurs when parsing the debug directory entries of a PE (Portable Executable) file. It can lead to a buffer overflow if the PDB (Program Database) path length exceeds the maximum allowed length.
+
+Summary of the Fix:
+The fix for the vulnerability involves ensuring that the PDB path length is within the bounds of the allocated buffer. This is done by correctly calculating the maximum path length and checking for the proper conditions before copying the PDB path.
+
+Detailed Description of the Fix:
+1. Before the fix, the code checks if the PDB path length (`pdb_path_len`) is greater than 0 and less than `MAX_PATH`, but it doesn't account for the case when `pdb_path_len` is equal to `MAX_PATH`.
+2. To fix the vulnerability, the code is updated to consider the case when `pdb_path_len` is equal to `MAX_PATH`.
+3. The line `pdb_path_len = strnlen(pdb_path, yr_min(available_space(pe, pdb_path), MAX_PATH));` is modified to properly compare `pdb_path_len` with `MAX_PATH` and include `=` in the condition.
+4. This ensures that the `pdb_path_len` is limited to `MAX_PATH` in all cases, preventing a buffer overrun.
+5. By making this fix, the code now correctly handles the PDB path length, ensuring it doesn't exceed the maximum allowed length and avoiding a buffer overflow vulnerability.

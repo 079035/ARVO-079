@@ -1,0 +1,10 @@
+Vulnerability:
+The vulnerability in this code can lead to memory leaks if adding a new CData node fails.
+
+Summary of the fix:
+The fix prevents memory leaks by freeing the new CData node if adding it to the parent node fails.
+
+Detailed description of the fix:
+The code block inside the `else` statement tries to add a new CData node `ret` as a child of the current node `ctxt->node`. However, if the `xmlAddChild` function returns `NULL`, it means that adding the child node has failed. In the original code, in this case, the new CData node is not freed, resulting in a memory leak.
+
+The fix involves checking the return value of `xmlAddChild` function. If the function returns `NULL`, indicating the failure of adding the child node, the `xmlFreeNode` function is called to free the new CData node `ret`. By freeing the node, the fix prevents memory leaks that could occur if the addition fails.

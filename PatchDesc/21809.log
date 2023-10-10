@@ -1,0 +1,12 @@
+Vulnerability: 
+The vulnerability in the code is that it does not check whether `payload` is NULL before accessing its elements in lines 14 and 15. This can lead to a null pointer dereference if `payload` is NULL, causing a crash or undefined behavior.
+
+Summary of the fix:
+The fix adds a check to see whether `payload` is NULL before accessing its elements in lines 14 and 15.
+
+Detailed description of the fix:
+The fix modifies the code in the following way:
+1. Adds a check at line 14 to see whether `payload` is NULL. If `payload` is NULL, the function returns and the protocol is excluded.
+2. Adds a check at line 15 to see whether `payload` is NULL. If `payload` is NULL, the function returns and the protocol is excluded.
+
+With these modifications, the code now checks whether `payload` is NULL before accessing its elements, preventing a null pointer dereference.

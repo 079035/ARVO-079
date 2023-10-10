@@ -1,0 +1,14 @@
+Vulnerability:
+The vulnerability patched in this diff file is a memory leak in the `fuzzing/format_command_fuzzer.c` file. Specifically, it occurs in the `LLVMFuzzerTestOneInput` function.
+
+Summary of the fix:
+The fix eliminates the unnecessary allocation of memory in the `redisFormatCommand` function when it fails. The code is modified to directly check the return value of `redisFormatCommand` and free the memory if necessary.
+
+Detailed description of the fix:
+1. Previously, the code allocated memory using the `malloc` function for the `new_str` variable.
+2. The `redisFormatCommand` function was called with `cmd` as the output parameter and `new_str` as the input.
+3. A check was performed to see if `cmd` is not equal to `NULL`. If it is not `NULL`, it means that `redisFormatCommand` was successful, and thus `hi_free` (which is assumed to be a custom memory deallocation function) was called with `cmd` to free the allocated memory. However, if `cmd` is `NULL`, the allocated memory was not freed, resulting in a memory leak.
+4. The fix modifies the code to directly check the return value of `redisFormatCommand` instead of checking the value of `cmd`. If `redisFormatCommand` returns `-1`, indicating failure, the allocated memory (`cmd`) is freed using `hi_free`.
+5. Finally, the `new_str` memory is freed using `free` before returning from the function.
+
+By applying this fix, the memory leak issue in the `LLVMFuzzerTestOneInput` function is resolved.
