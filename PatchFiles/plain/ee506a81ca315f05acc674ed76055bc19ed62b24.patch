@@ -1,0 +1,47 @@
+commit ee506a81ca315f05acc674ed76055bc19ed62b24
+Author: Chris Liddell <chris.liddell@artifex.com>
+Date:   Fri Dec 17 14:15:24 2021 +0000
+
+    oss-fuzz 42448: Don't copy font from the PS to pdfi gstate
+    
+    We shouldn't transfer the font from the PS gstate to the pdfi gstate, otherwise
+    we'll run into problems trying to use it, or free it.
+
+diff --git a/pdf/ghostpdf.c b/pdf/ghostpdf.c
+index dbe8b37cc..ef71acf8a 100644
+--- a/pdf/ghostpdf.c
++++ b/pdf/ghostpdf.c
+@@ -2024,15 +2024,21 @@ void pdfi_gstate_from_PS(pdf_context *ctx, gs_gstate *pgs, pdfi_switch_t *i_swit
+     i_switch->profile_cache = pgs->icc_profile_cache;
+     pgs->icc_profile_cache = profile_cache;
+     pdfi_gstate_set_client(ctx, pgs);
++    i_switch->psfont = pgs->font;
++    pgs->font = NULL;
+     ctx->pgs = pgs;
+     return;
+ }
+ 
+ void pdfi_gstate_to_PS(pdf_context *ctx, gs_gstate *pgs, pdfi_switch_t *i_switch)
+ {
++    pdf_font *f = pdfi_get_current_pdf_font(ctx);
+     pgs->client_procs.free(pgs->client_data, pgs->memory, pgs);
+     pgs->client_data = NULL;
+     pgs->icc_profile_cache = i_switch->profile_cache;
+     gs_gstate_set_client(pgs, i_switch->client_data, &i_switch->procs, true);
++    pdfi_countdown(f);
++    ctx->pgs->font = NULL;
+     ctx->pgs = i_switch->pgs;
++    pgs->font = i_switch->psfont;
+ }
+diff --git a/pdf/ghostpdf.h b/pdf/ghostpdf.h
+index 8e1859b7d..21ff456db 100644
+--- a/pdf/ghostpdf.h
++++ b/pdf/ghostpdf.h
+@@ -38,6 +38,7 @@
+  */
+ typedef struct pdf_context_switch {
+     gs_gstate *pgs;
++    gs_font *psfont;
+     gs_gstate_client_procs procs;
+     void *client_data;
+     void *profile_cache;

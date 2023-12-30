@@ -1,0 +1,40 @@
+commit af4c2ba0b138f035efc9c207cb76861402ddbd54
+Author: michelleyswang <michelleyswang@google.com>
+Date:   Fri Jul 22 10:42:15 2022 +0000
+
+    CRAS: fix heap use after free error in fl_pcm_iodev
+    
+    Changes:
+    - In function, a2dp_pcm_iodev_destroy, pcm_free_base_resources frees
+      crasio_node, but pointer is later used in cras_iodev_list_rm_output
+      and cras_iodev_list_rm_input
+    - Moved pcm_free_base_resources after cras_iodev_list_rm_output/input
+      to prevent heap use after free error in fl_pcm_iodev
+    
+    Call path:
+    cras_fl_media -> cras_a2dp_manager -> cras_fl_pcm_iodev
+    
+    BUG=b:239914973
+    TEST=cras_fl_media_fuzzer
+    
+    Change-Id: I004cc1d3b0f9c34d9ac733b49f75e93ed922b518
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/adhd/+/3781829
+    Tested-by: Michelle Wang <michelleyswang@google.com>
+    Reviewed-by: Chih-Yang Hsia <paulhsia@chromium.org>
+    Commit-Queue: Michelle Wang <michelleyswang@google.com>
+
+diff --git a/cras/src/server/cras_fl_pcm_iodev.c b/cras/src/server/cras_fl_pcm_iodev.c
+index 0f0639d3..6e72ed26 100644
+--- a/cras/src/server/cras_fl_pcm_iodev.c
++++ b/cras/src/server/cras_fl_pcm_iodev.c
+@@ -906,9 +906,9 @@ void a2dp_pcm_iodev_destroy(struct cras_iodev *iodev)
+ 	struct fl_pcm_io *a2dpio = (struct fl_pcm_io *)iodev;
+ 
+ 	/* Free resources when device successfully removed. */
+-	pcm_free_base_resources(a2dpio);
+ 	cras_iodev_list_rm_output(iodev);
+ 	cras_iodev_free_resources(iodev);
++	pcm_free_base_resources(a2dpio);
+ 	free(a2dpio);
+ }
+ 

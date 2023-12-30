@@ -1,31 +1,8 @@
-Vulnerability Description:
-The vulnerability in the code is that the SNI (Server Name Indication) hostname buffer length is limited to 64 bytes. However, according to RFC 4366, SNI host names can be up to 255 bytes. This limitation leads to failed application matches due to truncation.
+1. Vulnerability:
+The vulnerability in the code was related to the buffer size for the Server Name Indication (SNI) hostname in the SSL protocol structure. The buffer size was initially set to 64 bytes, which was insufficient as per RFC 4366, which states that SNI hostnames can be up to 255 bytes long. This could lead to failed application matches due to truncation of the hostname.
 
-Fix Summary:
-The fix increases the SNI hostname buffer length from 64 to 256 bytes.
+2. Short Summary of the Fix:
+The fix for this vulnerability was to increase the buffer size for the SNI hostname from 64 bytes to 256 bytes. This change ensures that the buffer can accommodate the maximum length of an SNI hostname as per RFC 4366.
 
-Fix Description:
-In the provided code diff, the `struct ndpi_flow_struct` is defined. Inside this structure, the `struct` named `ssl` has a member `client_requested_server_name` of size 64. This member represents the SNI hostname.
-
-To fix the vulnerability, the size of the `client_requested_server_name` has been increased from 64 to 256. This change ensures that the buffer can accommodate SNI hostnames of up to 255 bytes as specified by RFC 4366.
-
-After the fix, the `ssl` struct looks like:
-
-```c
-struct {
-  u_int16_t ssl_version, server_names_len;
-  char client_requested_server_name[256], /* Updated buffer length from 64 to 256 */
-    *server_names, *alpn, *tls_supported_versions, *issuerDN, *subjectDN;
-  u_int32_t notBefore, notAfter;
-  char ja3_client[33], ja3_server[33];
-  u_int16_t server_cipher;
-
-  struct {
-    u_int16_t cipher_suite;
-    char *esni;
-  } encrypted_sni;
-  ndpi_cipher_weakness server_unsafe_cipher;
-} ssl;
-```
-
-This fix ensures that the SNI hostname buffer length is increased to 256 bytes, allowing for accurate parsing and matching of SNI hostnames up to 255 bytes in length.
+3. Detailed Description of the Fix:
+The fix was implemented in the `ndpi_flow_struct` structure, specifically in the `ssl` structure within the `protos` union. The `client_requested_server_name` array, which holds the SNI hostname, was initially declared with a size of 64 bytes. This was increased to 256 bytes in the fix. The comment was also updated to reflect this change and to mention the relevant RFC 4366. This change ensures that the `client_requested_server_name` array can hold SNI hostnames of up to 255 bytes, preventing truncation and the associated application match failures.

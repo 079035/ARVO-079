@@ -1,10 +1,12 @@
-Vulnerability:
-The vulnerability addressed in this patch is an invalid compressed size in the frame header.
+1. Vulnerability:
+The vulnerability in the code before the patch was that it did not perform a sanity check on the compressed sizes. This could potentially lead to issues such as buffer overflows, underflows, or other unexpected behavior if the compressed sizes were invalid or inconsistent with other data.
 
-Summary of the Fix:
-The fix adds a sanity check for the compressed sizes in the frame header.
+2. Short Summary of the Fix:
+The fix added a sanity check for the compressed sizes in the frame header. This check ensures that the compressed size is not negative, not zero when there is uncompressed data, and not smaller than the uncompressed size.
 
-Detailed Description of the Fix:
-In the `get_header_info` function, the fix adds a new sanity check for the compressed sizes. The check is performed on the variable `*cbytes`. If `*cbytes` is less than 0, or if `*nbytes` is greater than 0 and `*cbytes` is 0, or if the product of `*nchunks` and `*chunksize` is less than `*nbytes`, then an error is logged indicating an invalid compressed size in the frame header.
-
-This check ensures that the compressed size is valid and within the expected range, preventing potential issues caused by incorrect or inconsistent data in the frame header. By taking into account the number of chunks and the chunk size, the fix ensures that the compressed size is reasonable and not too large or too small for the specified parameters.
+3. Detailed Description of the Fix:
+The fix added a new conditional statement in the function `get_header_info` in the file `frame.c`. This conditional statement checks three conditions:
+- If the compressed size (`*cbytes`) is less than 0, it returns an error. This prevents negative sizes which could lead to buffer underflows.
+- If there is uncompressed data (`*nbytes > 0`) and the compressed size is 0, it returns an error. This prevents a situation where there is data to be compressed but the compressed size is incorrectly reported as zero.
+- If the total size of the chunks (`(int64_t)*nchunks * *chunksize`) is less than the uncompressed size (`*nbytes`), it returns an error. This prevents a situation where the compressed data would not fit into the allocated chunks.
+If any of these conditions are met, the function logs an error message "Invalid compressed size in frame header." and returns -1, indicating an error. This helps to prevent potential issues caused by invalid compressed sizes and makes the code more robust and secure.

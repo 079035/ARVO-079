@@ -1,0 +1,9 @@
+commit 867158a309800402f3603baf5dea7e8de9267f6e
+Merge: 719f9df4 80a0aa30
+Author: Francesc Alted <francesc@blosc.org>
+Date:   Wed Jan 13 10:14:33 2021 +0100
+
+    Merge pull request #176 from martaiborra/persistent-schunk
+    
+    Extended frame implementation
+

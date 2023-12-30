@@ -1,0 +1,44 @@
+From 202950bb01e225581fcacd865f80386322a6cee4 Mon Sep 17 00:00:00 2001
+From: Andreas Kling <kling@serenityos.org>
+Date: Sat, 6 Nov 2021 22:16:50 +0100
+Subject: [PATCH] AK: Make Error and ErrorOr<T> work in Lagom as well :^)
+
+ErrnoCode is not a thing outside __serenity__, so let's not make
+assumptions about it existing.
+---
+ AK/Error.h  | 6 ++++--
+ AK/RefPtr.h | 2 +-
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/AK/Error.h b/AK/Error.h
+index ba318e082d97f4..bdc495f889d4d9 100644
+--- a/AK/Error.h
++++ b/AK/Error.h
+@@ -56,10 +56,12 @@ class [[nodiscard]] ErrorOr {
+     {
+     }
+ 
+-    ErrorOr(ErrnoCode errno)
+-        : m_error(Error::from_errno(errno))
++#ifdef __serenity__
++    ErrorOr(ErrnoCode code)
++        : m_error(Error::from_errno(code))
+     {
+     }
++#endif
+ 
+     ErrorOr(Error&& error)
+         : m_error(move(error))
+diff --git a/AK/RefPtr.h b/AK/RefPtr.h
+index 7c56b287e8f778..db350b847f93c5 100644
+--- a/AK/RefPtr.h
++++ b/AK/RefPtr.h
+@@ -353,7 +353,7 @@ inline ErrorOr<NonnullRefPtr<T>> adopt_nonnull_ref_or_enomem(T* object)
+ {
+     auto result = adopt_ref_if_nonnull(object);
+     if (!result)
+-        return ENOMEM;
++        return Error::from_errno(ENOMEM);
+     return result.release_nonnull();
+ }
+ 

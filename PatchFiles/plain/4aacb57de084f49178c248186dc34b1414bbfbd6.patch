@@ -1,0 +1,319 @@
+commit 4aacb57de084f49178c248186dc34b1414bbfbd6
+Author: Robin Watts <Robin.Watts@artifex.com>
+Date:   Fri Jan 21 12:17:25 2022 +0000
+
+    Bug 693376: Strip out hdr_id.
+    
+    This is part of some debugging code that hoped to give every
+    memory allocation within gs (at least in single threaded mode)
+    a unique id number.
+    
+    In consultation with Chris, we decided it's never really been
+    used, so we're stripping it out.
+
+diff --git a/base/gsalloc.c b/base/gsalloc.c
+index ecf2459f8..9084983e7 100644
+--- a/base/gsalloc.c
++++ b/base/gsalloc.c
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 2001-2021 Artifex Software, Inc.
++/* Copyright (C) 2001-2022 Artifex Software, Inc.
+    All Rights Reserved.
+ 
+    This software is provided AS-IS with no warranty, either express or
+@@ -25,20 +25,6 @@
+ #include "stream.h"		/* for clearing stream list */
+ #include "malloc_.h" /* For MEMENTO */
+ 
+-#if GS_USE_MEMORY_HEADER_ID
+-gs_id hdr_id = 0;
+-#ifdef DEBUG
+-/**** BIG WARNING: Calling this could be catastrophic if "ptr" does not point
+- **** to a GS "struct" allocation.
+- ****/
+-gs_id get_mem_hdr_id (void *ptr)
+-{
+-    return (*((hdr_id_t *)((byte *)ptr) - HDR_ID_OFFSET));
+-}
+-#endif
+-#endif
+-
+-
+ /*
+  * Define whether to try consolidating space before adding a new clump.
+  * The default is not to do this, because it is computationally
+@@ -1118,7 +1104,6 @@ gs_memory_set_vm_reclaim(gs_ref_memory_t * mem, bool enabled)
+                 *pfl = *(obj_header_t **)ptr;\
+                 ptr[-1].o_size = (obj_size_t)size;\
+                 ptr[-1].o_type = pstype;\
+-                ASSIGN_HDR_ID(ptr);\
+                 /* If debugging, clear the block in an attempt to */\
+                 /* track down uninitialized data errors. */\
+                 gs_alloc_fill(ptr, gs_alloc_fill_alloc, size);
+@@ -1127,7 +1112,6 @@ gs_memory_set_vm_reclaim(gs_ref_memory_t * mem, bool enabled)
+         else if (size > max_freelist_size &&\
+                  (ptr = large_freelist_alloc(imem, size)) != 0)\
+         {	ptr[-1].o_type = pstype;\
+-                ASSIGN_HDR_ID(ptr);\
+                 /* If debugging, clear the block in an attempt to */\
+                 /* track down uninitialized data errors. */\
+                 gs_alloc_fill(ptr, gs_alloc_fill_alloc, size);
+@@ -1144,7 +1128,6 @@ gs_memory_set_vm_reclaim(gs_ref_memory_t * mem, bool enabled)
+                 ptr->o_size = (obj_size_t)size;\
+                 ptr->o_type = pstype;\
+                 ptr++;\
+-                ASSIGN_HDR_ID(ptr);\
+                 /* If debugging, clear the block in an attempt to */\
+                 /* track down uninitialized data errors. */\
+                 gs_alloc_fill(ptr, gs_alloc_fill_alloc, size);
+@@ -1624,11 +1607,6 @@ i_alloc_string(gs_memory_t * mem, size_t nbytes, client_name_t cname)
+      */
+     clump_t *cp = clump_splay_walk_init_mid(&sw, imem->cc);
+ 
+-    if (nbytes + (size_t)HDR_ID_OFFSET < nbytes)
+-        return NULL;
+-
+-    nbytes += HDR_ID_OFFSET;
+-
+ #ifdef MEMENTO
+     if (Memento_failThisEvent())
+         return NULL;
+@@ -1645,8 +1623,6 @@ top:
+                    (intptr_t)(imem->cc->ctop - nbytes));
+         str = imem->cc->ctop -= nbytes;
+         gs_alloc_fill(str, gs_alloc_fill_alloc, nbytes);
+-        str += HDR_ID_OFFSET;
+-        ASSIGN_HDR_ID(str);
+         return str;
+     }
+     /* Try the next clump. */
+@@ -1686,8 +1662,6 @@ i_alloc_string_immovable(gs_memory_t * mem, size_t nbytes, client_name_t cname)
+     size_t asize;
+     clump_t *cp;
+ 
+-    nbytes += HDR_ID_OFFSET;
+-
+ #ifdef MEMENTO
+     if (Memento_failThisEvent())
+         return NULL;
+@@ -1705,8 +1679,6 @@ i_alloc_string_immovable(gs_memory_t * mem, size_t nbytes, client_name_t cname)
+                alloc_trace_space(imem), client_name_string(cname), nbytes,
+                (intptr_t)str);
+     gs_alloc_fill(str, gs_alloc_fill_alloc, nbytes);
+-    str += HDR_ID_OFFSET;
+-    ASSIGN_HDR_ID(str);
+ 
+     return Memento_label(str, cname);
+ }
+@@ -1721,10 +1693,6 @@ i_resize_string(gs_memory_t * mem, byte * data, size_t old_num, size_t new_num,
+     if (old_num == new_num)	/* same size returns the same string */
+         return data;
+ 
+-    data -= HDR_ID_OFFSET;
+-    old_num += HDR_ID_OFFSET;
+-    new_num += HDR_ID_OFFSET;
+-
+     if ( imem->cc && data == imem->cc->ctop &&	/* bottom-most string */
+         (new_num < old_num ||
+          imem->cc->ctop - imem->cc->cbot > new_num - old_num)
+@@ -1744,8 +1712,6 @@ i_resize_string(gs_memory_t * mem, byte * data, size_t old_num, size_t new_num,
+         else
+             gs_alloc_fill(data, gs_alloc_fill_free, old_num - new_num);
+ #endif
+-        ptr += HDR_ID_OFFSET;
+-        ASSIGN_HDR_ID(ptr);
+     } else
+         if (new_num < old_num) {
+             /* trim the string and create a free space hole */
+@@ -1756,13 +1722,7 @@ i_resize_string(gs_memory_t * mem, byte * data, size_t old_num, size_t new_num,
+             if_debug5m('A', mem, "[a%d:<> ]%s(%"PRIuSIZE"->%"PRIuSIZE") "PRI_INTPTR"\n",
+                        alloc_trace_space(imem), client_name_string(cname),
+                        old_num, new_num, (intptr_t)ptr);
+-            ptr += HDR_ID_OFFSET;
+-            ASSIGN_HDR_ID(ptr);
+         } else {			/* Punt. */
+-            data += HDR_ID_OFFSET;
+-            old_num -= HDR_ID_OFFSET;
+-            new_num -= HDR_ID_OFFSET;
+-
+             ptr = gs_alloc_string(mem, new_num, cname);
+             if (ptr == 0)
+                 return 0;
+@@ -1780,8 +1740,6 @@ i_free_string(gs_memory_t * mem, byte * data, size_t nbytes,
+     gs_ref_memory_t * const imem = (gs_ref_memory_t *)mem;
+ 
+     if (data) {
+-        data -= HDR_ID_OFFSET;
+-        nbytes += HDR_ID_OFFSET;
+         if (imem->cc && data == imem->cc->ctop) {
+             if_debug4m('A', mem, "[a%d:-> ]%s(%"PRIuSIZE") "PRI_INTPTR"\n",
+                        alloc_trace_space(imem), client_name_string(cname), nbytes,
+@@ -2073,7 +2031,6 @@ done:
+         ptr->d.o.space_id = mem->space_id;
+ #   endif
+     ptr++;
+-    ASSIGN_HDR_ID(ptr);
+     gs_alloc_fill(ptr, gs_alloc_fill_alloc, lsize);
+     return Memento_label(ptr, cname);
+ }
+diff --git a/base/gxobj.h b/base/gxobj.h
+index 927e1cdc0..208deacbd 100644
+--- a/base/gxobj.h
++++ b/base/gxobj.h
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 2001-2021 Artifex Software, Inc.
++/* Copyright (C) 2001-2022 Artifex Software, Inc.
+    All Rights Reserved.
+ 
+    This software is provided AS-IS with no warranty, either express or
+@@ -27,37 +27,6 @@
+ #  define IGC_PTR_STABILITY_CHECK 0
+ #endif
+ 
+-#ifndef GS_USE_MEMORY_HEADER_ID
+-#define GS_USE_MEMORY_HEADER_ID 1
+-#endif
+-
+-#if GS_USE_MEMORY_HEADER_ID
+-
+-  typedef gs_id hdr_id_t;
+-
+-  extern hdr_id_t hdr_id;
+-
+-# define HDR_ID_OFFSET (sizeof(obj_header_t) - offset_of(obj_header_t, d.o.hdr_id))
+-
+-# ifdef DEBUG
+-
+-# define ASSIGN_HDR_ID(obj) (*(hdr_id_t *)(((byte *)obj) - HDR_ID_OFFSET)) = hdr_id++
+-
+-  gs_id get_mem_hdr_id (void *ptr);
+-
+-# else /* DEBUG */
+-
+-#  define ASSIGN_HDR_ID(obj_hdr)
+-
+-# endif /* DEBUG */
+-
+-#else
+-
+-# define ASSIGN_HDR_ID(obj_hdr)
+-# define HDR_ID_OFFSET 0
+-
+-#endif /* GS_USE_MEMORY_HEADER_ID */
+-
+ /* ================ Objects ================ */
+ 
+ /*
+@@ -130,10 +99,6 @@ typedef struct obj_header_data_s {
+ #   if IGC_PTR_STABILITY_CHECK
+     unsigned space_id:3; /* r_space_bits + 1 bit for "instability". */
+ #   endif
+-
+-#   if GS_USE_MEMORY_HEADER_ID
+-    hdr_id_t hdr_id; /* should be last, to save wasting space in the "strings" case. Makes object easier to trace thru GC */
+-#   endif
+ } obj_header_data_t;
+ 
+ /*
+diff --git a/psi/igcstr.c b/psi/igcstr.c
+index 4c4baf3cf..0e10f74b9 100644
+--- a/psi/igcstr.c
++++ b/psi/igcstr.c
+@@ -1,4 +1,4 @@
+-/* Copyright (C) 2001-2021 Artifex Software, Inc.
++/* Copyright (C) 2001-2022 Artifex Software, Inc.
+    All Rights Reserved.
+ 
+    This software is provided AS-IS with no warranty, either express or
+@@ -35,7 +35,7 @@ gc_strings_set_marks(clump_t * cp, bool mark)
+                   (intptr_t)cp->smark, cp->smark_size, (int)mark);
+         memset(cp->smark, 0, cp->smark_size);
+         if (mark)
+-            gc_mark_string(cp->sbase + HDR_ID_OFFSET, (cp->climit - cp->sbase) - HDR_ID_OFFSET, true, cp);
++            gc_mark_string(cp->sbase, (cp->climit - cp->sbase), true, cp);
+     }
+ }
+ 
+@@ -63,11 +63,11 @@ typedef string_mark_unit bword;
+ static bool
+ gc_mark_string(const byte * ptr, uint size, bool set, const clump_t * cp)
+ {
+-    uint offset = (ptr - HDR_ID_OFFSET) - cp->sbase;
++    uint offset = ptr - cp->sbase;
+     bword *bp = (bword *) (cp->smark + ((offset & -bword_bits) >> 3));
+     uint bn = offset & (bword_bits - 1);
+     bword m = bword_1s << bn;
+-    uint left = size + HDR_ID_OFFSET;
++    uint left = size;
+     bword marks = 0;
+ 
+     bword_swap_bytes(m);
+@@ -136,12 +136,12 @@ gc_string_mark(const byte * ptr, uint size, bool set, gc_state_t * gcst)
+     if (size == 0)
+         return false;
+ #define dmprintstr(mem)\
+-  dmputc(mem, '('); dmfwrite(mem, ptr - HDR_ID_OFFSET, min(size, 20));\
++  dmputc(mem, '('); dmfwrite(mem, ptr, min(size, 20));\
+   dmputs(mem, (size <= 20 ? ")" : "...)"))
+-    if (!(cp = gc_locate(ptr - HDR_ID_OFFSET, gcst))) {		/* not in a clump */
++    if (!(cp = gc_locate(ptr, gcst))) {		/* not in a clump */
+ #ifdef DEBUG
+         if (gs_debug_c('5')) {
+-            dmlprintf2(gcst->heap, "[5]"PRI_INTPTR"[%u]", (intptr_t)ptr - HDR_ID_OFFSET, size);
++            dmlprintf2(gcst->heap, "[5]"PRI_INTPTR"[%u]", (intptr_t)ptr, size);
+             dmprintstr(gcst->heap);
+             dmputs(gcst->heap, " not in a clump\n");
+         }
+@@ -151,9 +151,9 @@ gc_string_mark(const byte * ptr, uint size, bool set, gc_state_t * gcst)
+     if (cp->smark == 0)		/* not marking strings */
+         return false;
+ #ifdef DEBUG
+-    if (ptr - HDR_ID_OFFSET < cp->ctop) {
++    if (ptr < cp->ctop) {
+         lprintf4("String pointer "PRI_INTPTR"[%u] outside ["PRI_INTPTR".."PRI_INTPTR")\n",
+-                 (intptr_t)ptr - HDR_ID_OFFSET, size, (intptr_t)cp->ctop, (intptr_t)cp->climit);
++                 (intptr_t)ptr, size, (intptr_t)cp->ctop, (intptr_t)cp->climit);
+         return false;
+     } else if (ptr + size > cp->climit) {	/*
+                                                  * If this is the bottommost string in a clump that has
+@@ -168,11 +168,11 @@ gc_string_mark(const byte * ptr, uint size, bool set, gc_state_t * gcst)
+                                                  */
+         const clump_t *scp = cp;
+ 
+-        while (ptr - HDR_ID_OFFSET == scp->climit && scp->outer != 0)
++        while (ptr == scp->climit && scp->outer != 0)
+             scp = scp->outer;
+-        if (ptr - HDR_ID_OFFSET + size > scp->climit) {
++        if (ptr + size > scp->climit) {
+             lprintf4("String pointer "PRI_INTPTR"[%u] outside ["PRI_INTPTR".."PRI_INTPTR")\n",
+-                     (intptr_t)ptr - HDR_ID_OFFSET, size,
++                     (intptr_t)ptr, size,
+                      (intptr_t)scp->ctop, (intptr_t)scp->climit);
+             return false;
+         }
+@@ -183,7 +183,7 @@ gc_string_mark(const byte * ptr, uint size, bool set, gc_state_t * gcst)
+     if (gs_debug_c('5')) {
+         dmlprintf4(gcst->heap, "[5]%s%smarked "PRI_INTPTR"[%u]",
+                   (marks ? "" : "already "), (set ? "" : "un"),
+-                  (intptr_t)ptr - HDR_ID_OFFSET, size);
++                  (intptr_t)ptr, size);
+         dmprintstr(gcst->heap);
+         dmputc(gcst->heap, '\n');
+     }
+@@ -291,7 +291,6 @@ igc_reloc_string(gs_string * sptr, gc_state_t * gcst)
+         return;
+     }
+     ptr = sptr->data;
+-    ptr -= HDR_ID_OFFSET;
+ 
+     if (!(cp = gc_locate(ptr, gcst)))	/* not in a clump */
+         return;
+@@ -322,7 +321,7 @@ igc_reloc_string(gs_string * sptr, gc_state_t * gcst)
+     reloc -= byte_count_one_bits(byt);
+     if_debug2('5', "[5]relocate string "PRI_INTPTR" to 0x%lx\n",
+               (intptr_t)ptr, (intptr_t)(cp->sdest - reloc));
+-    sptr->data = (cp->sdest - reloc) + HDR_ID_OFFSET;
++    sptr->data = (cp->sdest - reloc);
+ }
+ void
+ igc_reloc_const_string(gs_const_string * sptr, gc_state_t * gcst)

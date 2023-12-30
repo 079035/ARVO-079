@@ -1,8 +1,10 @@
-Vulnerability:
-Heap-buffer-overflow in onigenc_unicode_mbc_case_fold.
+1. Vulnerability:
+The vulnerability in the code was a Heap-buffer-overflow in the `onigenc_unicode_mbc_case_fold` function. This could potentially allow an attacker to cause a program crash, resulting in a denial of service, or possibly execute arbitrary code.
 
-Fix Summary:
-To fix the vulnerability, the condition `data_pattern == pattern` was added to check if the `data_pattern` is equal to `pattern` before calling the `search` function. Additionally, the `onigenc_is_valid_mbc_string` function was used to validate the `data_pattern` before executing the search.
+2. Short Summary of the Fix:
+The fix involves adding a check to ensure that the `data_pattern` is either the same as `pattern` or a valid multi-byte character (MBC) string before performing a search operation. This prevents the search operation from being performed on an invalid or potentially harmful `data_pattern`.
 
-Fix Description:
-In the original code, there was a potential heap-buffer-overflow vulnerability in the `exec` function. The function called the `search` function with `data_pattern`, which could result in a heap-buffer-overflow if the `data_pattern` was not a valid multi-byte character string. To fix this vulnerability, the code was modified to include a condition before calling `search`. The condition checks if `data_pattern` is equal to `pattern` or if `data_pattern` is a valid multi-byte character string using the `onigenc_is_valid_mbc_string` function. If the condition is true, then `search` is called with the `data_pattern`. This prevents the heap-buffer-overflow by ensuring that the `data_pattern` is valid before executing the search.
+3. Detailed Description of the Fix:
+In the original code, the `search` function was called with `data_pattern` and `data_pattern_end` as arguments without any validation checks. This could lead to a heap-buffer-overflow if `data_pattern` was not a valid MBC string.
+
+The fix adds a conditional check before the `search` function call. It checks if `data_pattern` is the same as `pattern` or if `data_pattern` is a valid MBC string by calling the `onigenc_is_valid_mbc_string` function. If either of these conditions is true, the `search` function is called. This ensures that the `search` function is not called with an invalid or potentially harmful `data_pattern`, thus preventing the heap-buffer-overflow vulnerability.

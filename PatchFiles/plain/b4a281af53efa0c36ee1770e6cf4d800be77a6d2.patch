@@ -1,0 +1,34 @@
+commit b4a281af53efa0c36ee1770e6cf4d800be77a6d2
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Sat Jan 8 14:44:11 2022 +0000
+
+    ofz#43818 delete of uninitialized pointer
+    
+    Change-Id: I91509915c18c3e9b54cb3047462b9dd9a8c7a46b
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/128141
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/lotuswordpro/source/filter/lwpsdwdrawheader.hxx b/lotuswordpro/source/filter/lwpsdwdrawheader.hxx
+index 3153b837aaba..13696f453a74 100644
+--- a/lotuswordpro/source/filter/lwpsdwdrawheader.hxx
++++ b/lotuswordpro/source/filter/lwpsdwdrawheader.hxx
+@@ -271,6 +271,18 @@ struct SdwTextBoxRecord
+     sal_Int16 nTextRotation;
+     sal_Int16 nTextExtraSpacing;
+     sal_uInt8* pTextString;
++    SdwTextBoxRecord()
++        : nTextWidth(0)
++        , nTextHeight(0)
++        , nTextSize(0)
++        , tmpTextFaceName{}
++        , nTextAttrs(0)
++        , nTextCharacterSet(0)
++        , nTextRotation(0)
++        , nTextExtraSpacing(0)
++        , pTextString(nullptr)
++    {
++    }
+ };
+ 
+ struct SdwFMPATH

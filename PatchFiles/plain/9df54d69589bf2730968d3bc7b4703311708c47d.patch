@@ -1,0 +1,26 @@
+From 9df54d69589bf2730968d3bc7b4703311708c47d Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Thu, 30 Aug 2018 20:04:20 -0400
+Subject: [PATCH] https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=10106
+
+---
+ MagickCore/draw.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/MagickCore/draw.c b/MagickCore/draw.c
+index d3d603c89ba..0104f845b00 100644
+--- a/MagickCore/draw.c
++++ b/MagickCore/draw.c
+@@ -3994,6 +3994,12 @@ static MagickBooleanType RenderMVGContent(Image *image,
+         beta=bounds.y2-bounds.y1;
+         radius=hypot(alpha,beta);
+         coordinates=2.0*(ceil(MagickPI*radius))+6.0*BezierQuantum+360.0;
++        if (coordinates > (MaxBezierCoordinates/4))
++          {
++            (void) ThrowMagickException(exception,GetMagickModule(),DrawError,
++              "TooManyBezierCoordinates","`%s'",token);
++            status=MagickFalse;
++          }
+         break;
+       }
+       default:

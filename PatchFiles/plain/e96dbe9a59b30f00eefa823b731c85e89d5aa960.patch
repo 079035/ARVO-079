@@ -1,0 +1,23 @@
+commit e96dbe9a59b30f00eefa823b731c85e89d5aa960
+Author: Frank Morgner <frankmorgner@gmail.com>
+Date:   Sun Mar 13 23:00:03 2022 +0100
+
+    Check pkcs15 profile before initialization of DFs
+    
+    Fixes an out of bounds write in pkcs15-init
+    https://oss-fuzz.com/testcase-detail/5974179147546624
+
+diff --git a/src/pkcs15init/profile.c b/src/pkcs15init/profile.c
+index 9566c379..ce55dbaa 100644
+--- a/src/pkcs15init/profile.c
++++ b/src/pkcs15init/profile.c
+@@ -1247,7 +1247,8 @@ new_file(struct state *cur, const char *name, unsigned int type)
+ 	} else if (!strcasecmp(name+7, "AppDF")) {
+ 		file = init_file(SC_FILE_TYPE_DF);
+ 	} else {
+-		if (map_str2int(cur, name+7, &df_type, pkcs15DfNames))
++		if (map_str2int(cur, name+7, &df_type, pkcs15DfNames)
++				|| df_type >= SC_PKCS15_DF_TYPE_COUNT)
+ 			return NULL;
+ 
+ 		file = init_file(SC_FILE_TYPE_WORKING_EF);

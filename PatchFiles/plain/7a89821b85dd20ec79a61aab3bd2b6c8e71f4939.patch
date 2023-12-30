@@ -1,0 +1,42 @@
+commit 7a89821b85dd20ec79a61aab3bd2b6c8e71f4939
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Thu Apr 7 13:21:57 2022 +0100
+
+    ofz#46457 don't crash with mangled INCLUDETEXT field case
+    
+    Change-Id: I86621bce8587aeeeded90bc81ae9f17049c17f42
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/132667
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/sw/qa/core/data/ww8/pass/ofz46457-1.doc b/sw/qa/core/data/ww8/pass/ofz46457-1.doc
+new file mode 100644
+index 000000000000..c986678b5b17
+Binary files /dev/null and b/sw/qa/core/data/ww8/pass/ofz46457-1.doc differ
+diff --git a/sw/source/filter/ww8/ww8par5.cxx b/sw/source/filter/ww8/ww8par5.cxx
+index a78fa37f2e45..661a0d549691 100644
+--- a/sw/source/filter/ww8/ww8par5.cxx
++++ b/sw/source/filter/ww8/ww8par5.cxx
+@@ -590,9 +590,21 @@ sal_uInt16 SwWW8ImplReader::End_Field()
+                 break;
+             case ww::eMERGEINC:
+             case ww::eINCLUDETEXT:
++            {
+                 //Move outside the section associated with this type of field
+-                *m_pPaM->GetPoint() = m_aFieldStack.back().maStartPos;
++                SwPosition aRestorePos(m_aFieldStack.back().maStartPos);
++
++                SwContentNode* pNd = aRestorePos.nNode.GetNode().GetContentNode();
++                sal_Int32 nMaxValidIndex = pNd ? pNd->Len() : 0;
++                if (aRestorePos.nContent.GetIndex() > nMaxValidIndex)
++                {
++                    SAL_WARN("sw.ww8", "Attempt to restore to invalid content position");
++                    aRestorePos.nContent.Assign(pNd, nMaxValidIndex);
++                }
++
++                *m_pPaM->GetPoint() = aRestorePos;
+                 break;
++            }
+             case ww::eIF: // IF-field
+             {
+                 // conditional field parameters

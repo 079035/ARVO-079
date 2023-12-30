@@ -1,0 +1,22 @@
+From 10484f613d7f583ceac160fb9d1226fd0c470af2 Mon Sep 17 00:00:00 2001
+From: Peter Hoddie <peter@moddable.tech>
+Date: Fri, 20 Jan 2023 15:44:09 -0800
+Subject: [PATCH] oss-fuzz: integer overflow
+
+---
+ xs/sources/xsDataView.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/xs/sources/xsDataView.c b/xs/sources/xsDataView.c
+index db2c38f90f..7df1c65e87 100644
+--- a/xs/sources/xsDataView.c
++++ b/xs/sources/xsDataView.c
+@@ -1346,7 +1346,7 @@ void fx_TypedArray(txMachine* the)
+ 			info = fxGetBufferInfo(the, mxArgv(0));
+ 			if (size >= 0) {
+ 				txInteger delta = size << shift;
+-				txInteger end = offset + delta;
++				txInteger end = fxAddChunkSizes(the, offset, delta);
+ 				if ((info->value.bufferInfo.length < end) || (end < offset))
+ 					mxRangeError("out of range length %ld", size);
+ 				size = delta;

@@ -1,0 +1,43 @@
+commit b2a77ab54dca3ba6a957dd2e6fa98365103bf95f
+Author: En-Shuo Hsu <enshuo@chromium.org>
+Date:   Wed Oct 12 05:06:09 2022 +0000
+
+    CRAS: Add floss_media_a2dp_set_active_device mock
+    
+    Unblock the fuzzing of cras_fl_media_fuzzer.
+    
+    BUG=b:253137006, oss-fuzz:51059
+    TEST=rerun the test case
+    
+    Change-Id: I4c2cfb7e28ac194fa1686a241927a53ad9478f1d
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/adhd/+/3946379
+    Auto-Submit: En-Shuo Hsu <enshuo@chromium.org>
+    Reviewed-by: Chih-Yang Hsia <paulhsia@chromium.org>
+    Tested-by: En-Shuo Hsu <enshuo@chromium.org>
+    Commit-Queue: Chih-Yang Hsia <paulhsia@chromium.org>
+
+diff --git a/cras/src/server/cras_fl_media.c b/cras/src/server/cras_fl_media.c
+index 5f978b15..c8650689 100644
+--- a/cras/src/server/cras_fl_media.c
++++ b/cras/src/server/cras_fl_media.c
+@@ -349,6 +349,12 @@ int floss_media_hfp_suspend(struct fl_media *fm)
+ 	return 0;
+ }
+ 
++#if defined(HAVE_FUZZER)
++int floss_media_a2dp_set_active_device(struct fl_media *fm, const char *addr)
++{
++	return 0;
++}
++#else
+ int floss_media_a2dp_set_active_device(struct fl_media *fm, const char *addr)
+ {
+ 	DBusMessage *method_call, *reply;
+@@ -394,6 +400,7 @@ int floss_media_a2dp_set_active_device(struct fl_media *fm, const char *addr)
+ 
+ 	return 0;
+ }
++#endif
+ 
+ int floss_media_a2dp_set_audio_config(struct fl_media *fm, unsigned int rate,
+ 				      unsigned int bps, unsigned int channels)

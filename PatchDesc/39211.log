@@ -1,25 +1,10 @@
-Vulnerability:
-The vulnerability that could be patched in the given diff file is an out-of-bounds read. Specifically, in the function `MathVariants::collect_coverage_and_indices()`, the `for` loop iterates over elements in `this+coverage` without checking the bounds. This could result in reading beyond the end of the array if `i >= end_index`. Additionally, in the same function, there is a missing check for a null `coverage` value before proceeding with the loop.
+1. Vulnerability:
+The vulnerability in the code is related to an out-of-bounds read. This could potentially lead to a crash or unauthorized data access. The issue arises from the `collect_coverage_and_indices` function, which iterates over the `glyphset` without checking if the index `i` exceeds the end index.
 
-Summary of the fix:
-The fix in this patch includes two changes. First, a check for a null `coverage` value is added at the beginning of the `collect_coverage_and_indices()` function, and if the value is null, the function immediately returns. This prevents accessing `this+coverage` when `coverage` is null. Second, an additional check is added in the `for` loop to exit the loop if `i >= end_index`. This ensures that the loop does not iterate beyond the valid range.
+2. Short Summary of the Fix:
+The fix involves adding checks to ensure that the index `i` does not exceed the end index in the `collect_coverage_and_indices` function. This prevents the function from reading beyond the bounds of the array.
 
-Detailed description of the fix:
-1. In the function `MathVariants::collect_coverage_and_indices()`, add a check for a null `coverage` value at the beginning of the function:
-   - Insert the following code snippet before the `for` loop:
-     ```
-     if (!coverage) return;
-     ```
+3. Detailed Description of the Fix:
+The fix modifies the `collect_coverage_and_indices` function to include an additional parameter `end_index`. This parameter is used to specify the upper limit for the index `i`. Inside the function, a check is added to return from the function if `i` is greater than or equal to `end_index`. This prevents the function from reading beyond the bounds of the array.
 
-2. In the `for` loop in the same function, add a check to exit the loop if `i >= end_index`:
-   - Replace the existing line:
-     ```
-     for (const auto _ : (this+coverage).iter ())
-     ```
-     with the following code snippet:
-     ```
-     for (const auto _ : (this+coverage).iter ()) {
-       if (i >= end_index) return;
-       // Rest of the loop code
-     }
-     ```
+In the `subset` function, where `collect_coverage_and_indices` is called, the `end_index` is now passed as an argument. For `new_vert_coverage`, `vertGlyphCount` is passed as `end_index`, and for `new_hori_coverage`, the sum of `vertGlyphCount` and `horizGlyphCount` is passed as `end_index`. This ensures that the function does not read beyond the bounds of the respective arrays.

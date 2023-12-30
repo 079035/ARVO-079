@@ -1,0 +1,71 @@
+commit 00ca6261e812dc9c4b1cd882b76617b77a86e4e4
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Thu May 5 12:00:50 2022 +0100
+
+    ofz#47239 Heap-use-after-free
+    
+    since
+    
+    commit 9bb83eefc1a1dda5c48efc5d09ef4a6840bf8b58
+    Date:   Tue May 3 16:30:20 2022 +0200
+    
+        use more string_view in oox::vml::ConversionHelper
+    
+    ==169915== Invalid read of size 2
+    ==169915==    at 0x484E2C0: memmove (vg_replace_strmem.c:1382)
+    ==169915==    by 0x49D0EE6: char16_t* std::__copy_move<false, true, std::random_access_iterator_tag>::__copy_m<char16_t>(char16_t const*, char16_t const*, char16_t*) (stl_algobase.h:431)
+    ==169915==    by 0x49D0E94: char16_t* std::__copy_move_a2<false, char16_t const*, char16_t*>(char16_t const*, char16_t const*, char16_t*) (stl_algobase.h:494)
+    ==169915==    by 0x49D0E64: char16_t* std::__copy_move_a1<false, char16_t const*, char16_t*>(char16_t const*, char16_t const*, char16_t*) (stl_algobase.h:522)
+    ==169915==    by 0x49D0E03: char16_t* std::__copy_move_a<false, char16_t const*, char16_t*>(char16_t const*, char16_t const*, char16_t*) (stl_algobase.h:530)
+    ==169915==    by 0x49D0D84: char16_t* std::copy<char16_t const*, char16_t*>(char16_t const*, char16_t const*, char16_t*) (stl_algobase.h:619)
+    ==169915==    by 0x49D0C2E: void rtl::str::Copy<char16_t>(char16_t*, char16_t const*, int) (strtmpl.hxx:122)
+    ==169915==    by 0x49CF83E: void rtl::str::newFromStr_WithLength<_rtl_uString, char16_t>(_rtl_uString**, char16_t const*, int, int) (strtmpl.hxx:955)
+    ==169915==    by 0x49E3A44: rtl_uString_newFromStr_WithLength (ustring.cxx:1238)
+    ==169915==    by 0x2B76A771: rtl::OUString::operator=(std::basic_string_view<char16_t, std::char_traits<char16_t> >) (ustring.hxx:653)
+    ==169915==    by 0x2BC69DB4: oox::vml::TextBoxContext::TextBoxContext(oox::core::ContextHandler2Helper const&, oox::vml::TextBox&, oox::AttributeList const&, oox::GraphicHelper const&) (vmltextboxcontext.cxx:199)
+    ==169915==    by 0x2BC46E5A: oox::vml::ShapeContext::onCreateContext(int, oox::AttributeList const&) (vmlshapecontext.cxx:555)
+    ==169915==  Address 0x267e1264 is 52 bytes inside a block of size 68 free'd
+    ==169915==    at 0x48470E4: free (vg_replace_malloc.c:872)
+    ==169915==    by 0x49CFB73: void rtl::str::release<_rtl_uString>(_rtl_uString*) (strtmpl.hxx:879)
+    ==169915==    by 0x49CF8B4: void rtl::str::newFromStr_WithLength<_rtl_uString, char16_t>(_rtl_uString**, char16_t const*, int, int) (strtmpl.hxx:966)
+    ==169915==    by 0x49E3A44: rtl_uString_newFromStr_WithLength (ustring.cxx:1238)
+    ==169915==    by 0x2B76A771: rtl::OUString::operator=(std::basic_string_view<char16_t, std::char_traits<char16_t> >) (ustring.hxx:653)
+    ==169915==    by 0x2BC69C87: oox::vml::TextBoxContext::TextBoxContext(oox::core::ContextHandler2Helper const&, oox::vml::TextBox&, oox::AttributeList const&, oox::GraphicHelper const&) (vmltextboxcontext.cxx:194)
+    ==169915==    by 0x2BC46E5A: oox::vml::ShapeContext::onCreateContext(int, oox::AttributeList const&) (vmlshapecontext.cxx:555)
+    ==169915==    by 0x2BC47AE0: oox::vml::RectangleShapeContext::onCreateContext(int, oox::AttributeList const&) (vmlshapecontext.cxx:715)
+    ==169915==    by 0x2BC47B24: non-virtual thunk to oox::vml::RectangleShapeContext::onCreateContext(int, oox::AttributeList const&) (vmlshapecontext.cxx:0)
+    ==169915==    by 0x2B7341ED: oox::core::ContextHandler2Helper::implCreateChildContext(int, com::sun::star::uno::Reference<com::sun::star::xml::sax::XFastAttributeList> const&) (contexthandler2.cxx:100)
+    ==169915==    by 0x2B734A7A: oox::core::ContextHandler2::createFastChildContext(int, com::sun::star::uno::Reference<com::sun::star::xml::sax::XFastAttributeList> const&) (contexthandler2.cxx:204)
+    ==169915==    by 0x2B735464: non-virtual thunk to oox::core::ContextHandler2::createFastChildContext(int, com::sun::star::uno::Reference<com::sun::star::xml::sax::XFastAttributeList> const&) (contexthandler2.cxx:0)
+    ==169915==  Block was alloc'd at
+    ==169915==    at 0x484486F: malloc (vg_replace_malloc.c:381)
+    ==169915==    by 0x49CFA18: _rtl_uString* rtl::str::Alloc<_rtl_uString>(int) (strtmpl.hxx:838)
+    ==169915==    by 0x49E0D72: rtl_uString_ImplAlloc(int) (ustring.cxx:1194)
+    ==169915==    by 0x49E1355: rtl_string2UString_status(_rtl_uString**, char const*, int, unsigned short, unsigned int, unsigned int*) (ustring.cxx:466)
+    ==169915==    by 0x49E1117: rtl_string2UString (ustring.cxx:576)
+    ==169915==    by 0x205735F3: rtl::OUString::OUString(char const*, int, unsigned short, unsigned int) (ustring.hxx:451)
+    ==169915==    by 0x20571680: sax_fastparser::FastAttributeList::getOptionalValue(int) (fastattribs.cxx:283)
+    ==169915==    by 0x205716DC: non-virtual thunk to sax_fastparser::FastAttributeList::getOptionalValue(int) (fastattribs.cxx:0)
+    ==169915==    by 0x2BA85A6B: oox::AttributeList::getString(int) const (attributelist.cxx:173)
+    ==169915==    by 0x2BC69B06: oox::vml::TextBoxContext::TextBoxContext(oox::core::ContextHandler2Helper const&, oox::vml::TextBox&, oox::AttributeList const&, oox::GraphicHelper const&) (vmltextboxcontext.cxx:186)
+    ==169915==    by 0x2BC46E5A: oox::vml::ShapeContext::onCreateContext(int, oox::AttributeList const&) (vmlshapecontext.cxx:555)
+    ==169915==    by 0x2BC47AE0: oox::vml::RectangleShapeContext::onCreateContext(int, oox::AttributeList const&) (vmlshapecontext.cxx:715)
+    
+    Change-Id: I745d8b718cccf894bda774b0343c2b17f49b0eed
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/133880
+    Tested-by: Jenkins
+    Tested-by: Caolán McNamara <caolanm@redhat.com>
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/oox/source/vml/vmlformatting.cxx b/oox/source/vml/vmlformatting.cxx
+index 80e38c2b318b..8f00eb47b8a4 100644
+--- a/oox/source/vml/vmlformatting.cxx
++++ b/oox/source/vml/vmlformatting.cxx
+@@ -89,6 +89,7 @@ bool ConversionHelper::separatePair( std::u16string_view& orValue1, std::u16stri
+     else
+     {
+         orValue1 = o3tl::trim(rValue);
++        orValue2 = std::u16string_view();
+     }
+     return !orValue1.empty() && !orValue2.empty();
+ }

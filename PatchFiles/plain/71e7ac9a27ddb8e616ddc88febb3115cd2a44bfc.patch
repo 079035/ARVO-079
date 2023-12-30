@@ -1,0 +1,25 @@
+From 71e7ac9a27ddb8e616ddc88febb3115cd2a44bfc Mon Sep 17 00:00:00 2001
+From: Nguyen Anh Quynh <aquynh@gmail.com>
+Date: Thu, 28 Feb 2019 07:57:58 +0800
+Subject: [PATCH] cstest: add issue #1259
+
+---
+ suite/cstest/issues.cs | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/suite/cstest/issues.cs b/suite/cstest/issues.cs
+index b4de1eff09..c7697b29c7 100644
+--- a/suite/cstest/issues.cs
++++ b/suite/cstest/issues.cs
+@@ -1,3 +1,11 @@
++!# issue 1259
++!# CS_ARCH_X86, CS_MODE_64, None
++0x0f,0x0d,0x44,0x11,0x40 == prefetch byte ptr [rcx + rdx + 0x40]
++
++!# issue 1259
++!# CS_ARCH_X86, CS_MODE_64, None
++0x41,0x0f,0x0d,0x44,0x12,0x40 == prefetch byte ptr [r10 + rdx + 0x40]
++
+ !# issue 1304
+ !# CS_ARCH_X86, CS_MODE_64, CS_OPT_DETAIL
+ 0x66,0x0f,0x7f,0x4c,0x24,0x40 == movdqa xmmword ptr [rsp + 0x40], xmm1 ; operands[0].access: WRITE

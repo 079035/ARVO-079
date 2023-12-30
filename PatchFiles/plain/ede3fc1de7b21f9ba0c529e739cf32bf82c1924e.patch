@@ -1,0 +1,88 @@
+commit ede3fc1de7b21f9ba0c529e739cf32bf82c1924e
+Author: CaolÃ¡n McNamara <caolanm@redhat.com>
+Date:   Thu Feb 24 10:16:00 2022 +0000
+
+    ofz#44997 Use-of-uninitialized-value
+    
+    Change-Id: I3803232ddc7346967e22770ae2bdbc3378779f8b
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/130488
+    Tested-by: Jenkins
+    Reviewed-by: CaolÃ¡n McNamara <caolanm@redhat.com>
+
+diff --git a/hwpfilter/qa/cppunit/data/pass/ofz44997-1.hwp b/hwpfilter/qa/cppunit/data/pass/ofz44997-1.hwp
+new file mode 100644
+index 000000000000..76a8e05ee452
+--- /dev/null
++++ b/hwpfilter/qa/cppunit/data/pass/ofz44997-1.hwp
+@@ -0,0 +1 @@
++HWP Document File V3.00                                                      ÿÿÿÿ         ÿÿÿÿ                                                   ÿÿ ÿÿÿÿÿÿÿ   ÿ                           ÿÿÿ                    ÿÿÿÿÿÿÿÿÿ ÿÿÿÿ                                                                                                                                        ÿÿÿÿÿÿÿ              ÿÿ                                                           ÿÿ ÿ ÿ                                                 ÿ                                 ÿÿÿÿÿÿÿÿ ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ ÿÿÿÿ                                                                                                                             ÿÿÿÿÿ ÿÿÿÿ                                                                                                                                        ÿÿÿÿÿÿÿ              ÿÿ                                                           ÿÿ ÿ ÿ                                                  ÿÿÿÿÿÿÿÿ ÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿ ÿÿÿÿ                                                                                                                                               bf```082áÿ ÿ
+\ No newline at end of file
+diff --git a/hwpfilter/source/hinfo.cxx b/hwpfilter/source/hinfo.cxx
+index bc1d61021d99..f842f0d683ff 100644
+--- a/hwpfilter/source/hinfo.cxx
++++ b/hwpfilter/source/hinfo.cxx
+@@ -258,6 +258,18 @@ void ParaShape::Read(HWPFile & hwpf)
+     hwpf.ReadBlock(reserved, 2);
+ }
+ 
++CharShape::CharShape()
++    : index(0)
++    , size(0)
++    , font{0}
++    , ratio{0}
++    , space{0}
++    , color{0}
++    , shade(0)
++    , attr(0)
++    , reserved{0}
++{
++}
+ 
+ void CharShape::Read(HWPFile & hwpf)
+ {
+diff --git a/hwpfilter/source/hinfo.h b/hwpfilter/source/hinfo.h
+index c415783e26a2..c0381787f7d9 100644
+--- a/hwpfilter/source/hinfo.h
++++ b/hwpfilter/source/hinfo.h
+@@ -228,6 +228,8 @@ struct CharShape
+     unsigned char reserved[4];
+ 
+     void Read(HWPFile &);
++
++    CharShape();
+ };
+ 
+ /* ?? ?????? ???? ?????? */
+diff --git a/hwpfilter/source/hpara.cxx b/hwpfilter/source/hpara.cxx
+index 736188f1ad9e..9ac169ab4382 100644
+--- a/hwpfilter/source/hpara.cxx
++++ b/hwpfilter/source/hpara.cxx
+@@ -78,7 +78,6 @@ HWPPara::HWPPara()
+     , cshape(std::make_shared<CharShape>())
+     , pshape(std::make_shared<ParaShape>())
+ {
+-    memset(cshape.get(), 0, sizeof(CharShape));
+ }
+ 
+ HWPPara::~HWPPara()
+@@ -145,7 +144,6 @@ bool HWPPara::Read(HWPFile & hwpf, unsigned char flag)
+         for (ii = 0; ii < nch; ii++)
+         {
+             cshapep[ii] = std::make_shared<CharShape>();
+-            memset(cshapep[ii].get(), 0, sizeof(CharShape));
+ 
+             unsigned char same_cshape(0);
+             hwpf.Read1b(same_cshape);
+diff --git a/hwpfilter/source/hstyle.cxx b/hwpfilter/source/hstyle.cxx
+index 23ae86c68538..39709f9ea97f 100644
+--- a/hwpfilter/source/hstyle.cxx
++++ b/hwpfilter/source/hstyle.cxx
+@@ -97,7 +97,7 @@ void HWPStyle::SetCharShape(int n, CharShape const* cshapep)
+         if (cshapep)
+             style[n].cshape = *cshapep;
+         else
+-            memset(&style[n].cshape, 0, sizeof(CharShape));
++            style[n].cshape = CharShape();
+     }
+ }
+ 

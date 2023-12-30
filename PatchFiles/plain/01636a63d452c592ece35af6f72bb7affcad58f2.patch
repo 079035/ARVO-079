@@ -1,0 +1,28 @@
+commit 01636a63d452c592ece35af6f72bb7affcad58f2
+Author: Michael Niedermayer <michael@niedermayer.cc>
+Date:   Wed Jan 11 18:59:16 2023 +0100
+
+    avcodec/utils: allocate a line more for VC1 and WMV3
+    
+    Fixes: out of array read on 32bit
+    Fixes: 54857/clusterfuzz-testcase-minimized-ffmpeg_AV_CODEC_ID_VC1_fuzzer-5840588224462848
+    
+    The chroma MC code reads over the currently allocated frame.
+    Alternative fixes would be allocating a few bytes more at the end instead of a whole
+    line extra or to adjust the threshold where the edge emu code is activated
+    
+    Found-by: continuous fuzzing process https://github.com/google/oss-fuzz/tree/master/projects/ffmpeg
+    Signed-off-by: Michael Niedermayer <michael@niedermayer.cc>
+
+diff --git a/libavcodec/utils.c b/libavcodec/utils.c
+index 3b58c8a2ed..701bebe337 100644
+--- a/libavcodec/utils.c
++++ b/libavcodec/utils.c
+@@ -323,6 +323,7 @@ void avcodec_align_dimensions2(AVCodecContext *s, int *width, int *height,
+     *width  = FFALIGN(*width, w_align);
+     *height = FFALIGN(*height, h_align);
+     if (s->codec_id == AV_CODEC_ID_H264 || s->lowres ||
++        s->codec_id == AV_CODEC_ID_VC1  || s->codec_id == AV_CODEC_ID_WMV3 ||
+         s->codec_id == AV_CODEC_ID_VP5  || s->codec_id == AV_CODEC_ID_VP6 ||
+         s->codec_id == AV_CODEC_ID_VP6F || s->codec_id == AV_CODEC_ID_VP6A
+     ) {

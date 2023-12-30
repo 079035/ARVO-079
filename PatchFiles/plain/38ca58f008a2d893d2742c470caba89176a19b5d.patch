@@ -1,0 +1,36 @@
+From 38ca58f008a2d893d2742c470caba89176a19b5d Mon Sep 17 00:00:00 2001
+From: Aaron Boxer <boxerab@gmail.com>
+Date: Thu, 6 Jan 2022 18:20:21 -0500
+Subject: [PATCH] fuzzer: add missing header_info initialization
+
+---
+ tests/fuzzers/grk_decompress_fuzzer.cpp | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/tests/fuzzers/grk_decompress_fuzzer.cpp b/tests/fuzzers/grk_decompress_fuzzer.cpp
+index ace0f5a78..6474047da 100644
+--- a/tests/fuzzers/grk_decompress_fuzzer.cpp
++++ b/tests/fuzzers/grk_decompress_fuzzer.cpp
+@@ -46,10 +46,10 @@
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-#include <limits.h>
+-#include <stddef.h>
+-#include <stdint.h>
+-#include <string.h>
++#include <climits>
++#include <cstddef>
++#include <cstdint>
++#include <cstring>
+ 
+ #include "grok.h"
+ 
+@@ -143,6 +143,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *buf, size_t len) {
+   grk_decompress_init(codec, &parameters);
+   grk_image *psImage = nullptr;
+   grk_header_info header_info;
++  memset(&header_info,0,sizeof(grk_header_info));
+   uint32_t x0, y0, width, height;
+   if (!grk_decompress_read_header(codec, &header_info))
+     goto cleanup;

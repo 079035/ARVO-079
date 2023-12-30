@@ -1,0 +1,11 @@
+commit f59c3864fe692c0191b40712e1b7a6a05a126c44
+Merge: 66aae99 3fe5adf
+Author: Xin Li <delphij@google.com>
+Date:   Mon Nov 23 13:14:11 2020 -0800
+
+    Merge rvc-qpr-dev-plus-aosp-without-vendor@6881855
+    
+    Bug: 172690556
+    Merged-In: I829eb4215ea9aa15adf66e8bbdb37ec88a9bb6a4
+    Change-Id: I2e739d3606ba9f0938ebc2363cb9443ec3dec912
+

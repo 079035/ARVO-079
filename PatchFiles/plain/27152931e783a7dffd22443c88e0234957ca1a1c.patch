@@ -1,0 +1,22 @@
+commit 27152931e783a7dffd22443c88e0234957ca1a1c
+Author: Chris Liddell <chris.liddell@artifex.com>
+Date:   Wed Aug 17 09:57:37 2022 +0100
+
+    oss-fuzz 50307: free temporary forwarding device on error
+
+diff --git a/devices/vector/gdevpdfi.c b/devices/vector/gdevpdfi.c
+index 724e36547..1de48cee6 100644
+--- a/devices/vector/gdevpdfi.c
++++ b/devices/vector/gdevpdfi.c
+@@ -2214,8 +2214,10 @@ pdf_image3x_make_mcde(gx_device *dev, const gs_gstate *pgs,
+     code = pdf_begin_typed_image
+         ((gx_device_pdf *)dev, pgs, pmat, pic, prect, pdcolor, pcpath, mem,
+          pinfo, PDF_IMAGE_TYPE3_DATA);
+-    if (code < 0)
++    if (code < 0) {
++        rc_decrement(*pmcdev, "pdf_image3x_make_mcde");
+         return code;
++    }
+     if ((*pinfo)->procs != &pdf_image_enum_procs) {
+         /* We couldn't handle the image.  Bail out. */
+         gx_image_end(*pinfo, false);

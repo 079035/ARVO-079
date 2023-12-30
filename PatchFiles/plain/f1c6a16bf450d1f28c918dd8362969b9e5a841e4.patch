@@ -1,0 +1,47 @@
+commit f1c6a16bf450d1f28c918dd8362969b9e5a841e4
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Sat Feb 26 21:40:20 2022 +0000
+
+    ofz#45073 don't dereference null pointer on bogus font
+    
+    Change-Id: I28616696833b87c300d2ee7061a15921042934b9
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/130613
+    Tested-by: Caolán McNamara <caolanm@redhat.com>
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/vcl/source/fontsubset/sft.cxx b/vcl/source/fontsubset/sft.cxx
+index 999cf07de1d2..c58ee46a277a 100644
+--- a/vcl/source/fontsubset/sft.cxx
++++ b/vcl/source/fontsubset/sft.cxx
+@@ -2090,8 +2090,13 @@ void GetTTGlobalFontInfo(TrueTypeFont *ttf, TTGlobalFontInfo *info)
+ 
+ GlyphData *GetTTRawGlyphData(AbstractTrueTypeFont *ttf, sal_uInt32 glyphID)
+ {
++    sal_uInt32 hmtxlength;
++    const sal_uInt8* hmtx = ttf->table(O_hmtx, hmtxlength);
++
++    if (!hmtxlength)
++        return nullptr;
++
+     sal_uInt32 length;
+-    const sal_uInt8* hmtx = ttf->table(O_hmtx, length);
+     const sal_uInt8* glyf = ttf->table(O_glyf, length);
+     int n;
+ 
+diff --git a/vcl/source/fontsubset/ttcr.cxx b/vcl/source/fontsubset/ttcr.cxx
+index b9839b727f40..77db531c54dc 100644
+--- a/vcl/source/fontsubset/ttcr.cxx
++++ b/vcl/source/fontsubset/ttcr.cxx
+@@ -1250,7 +1250,11 @@ static void ProcessTables(TrueTypeCreator *tt)
+     glyf = FindTable(tt, T_glyf);
+     glyphlist = static_cast<list>(glyf->data);
+     nGlyphs = listCount(glyphlist);
+-    assert(nGlyphs != 0);
++    if (!nGlyphs)
++    {
++        SAL_WARN("vcl.fonts", "no glyphs found in ProcessTables");
++        return;
++    }
+     gid = static_cast<sal_uInt32*>(scalloc(nGlyphs, sizeof(sal_uInt32)));
+ 
+     RemoveTable(tt, T_loca);

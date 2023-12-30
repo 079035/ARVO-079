@@ -1,0 +1,50 @@
+commit 7bbb91fbf47fc0775cc9705673caf0c47a81f94b
+Author: Werner Lemberg <wl@gnu.org>
+Date:   Wed Mar 8 15:09:41 2017 +0100
+
+    [sfnt] Another fix for buggy variation fonts.
+    
+    Reported as
+    
+      https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=759
+    
+    * src/sfnt/sfobjs.c (sfnt_init_face): While setting number of
+    instances to zero for `CFF' fonts table, ensure that there is no
+    `CFF2' present also (which gets priority).
+
+diff --git a/ChangeLog b/ChangeLog
+index 8d428e30b..b1158369b 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,3 +1,15 @@
++2017-03-08  Werner Lemberg  <wl@gnu.org>
++
++	[sfnt] Another fix for buggy variation fonts.
++
++	Reported as
++
++	  https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=759
++
++	* src/sfnt/sfobjs.c (sfnt_init_face): While setting number of
++	instances to zero for `CFF' fonts table, ensure that there is no
++	`CFF2' present also (which gets priority).
++
+ 2017-03-07  Werner Lemberg  <wl@gnu.org>
+ 
+ 	[sfnt] Improve handling for buggy variation fonts.
+diff --git a/src/sfnt/sfobjs.c b/src/sfnt/sfobjs.c
+index 0d5161f7e..54912c500 100644
+--- a/src/sfnt/sfobjs.c
++++ b/src/sfnt/sfobjs.c
+@@ -1058,8 +1058,10 @@
+       FT_FREE( default_values );
+       FT_FREE( instance_values );
+ 
+-      /* we don't support Multiple Master CFFs yet */
++      /* we don't support Multiple Master CFFs yet; */
++      /* note that `glyf' or `CFF2' have precedence */
+       if ( face->goto_table( face, TTAG_glyf, stream, 0 ) &&
++           face->goto_table( face, TTAG_CFF2, stream, 0 ) &&
+            !face->goto_table( face, TTAG_CFF, stream, 0 ) )
+         num_instances = 0;
+ 

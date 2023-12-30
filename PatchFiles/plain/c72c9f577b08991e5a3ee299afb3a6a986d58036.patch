@@ -1,0 +1,22 @@
+commit c72c9f577b08991e5a3ee299afb3a6a986d58036
+Author: Albert Astals Cid <aacid@kde.org>
+Date:   Tue Jan 5 21:20:35 2021 +0100
+
+    ani: Make sure riffSizeData is of the correct size before doing the quint32_le cast dance
+    
+    oss-fuzz/29290
+
+diff --git a/src/imageformats/ani.cpp b/src/imageformats/ani.cpp
+index 47d89a9..72eb09e 100644
+--- a/src/imageformats/ani.cpp
++++ b/src/imageformats/ani.cpp
+@@ -325,6 +325,9 @@ bool ANIHandler::ensureScanned() const
+     }
+ 
+     const auto riffSizeData = device()->read(sizeof(quint32_le));
++    if (riffSizeData.size() != sizeof(quint32_le)) {
++        return false;
++    }
+     const auto riffSize = *(reinterpret_cast<const quint32_le *>(riffSizeData.data()));
+     // TODO do a basic sanity check if the size is enough to hold some metadata and a frame?
+     if (riffSize == 0) {

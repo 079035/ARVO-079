@@ -1,0 +1,53 @@
+From 7e43b65c51cdad7c46a83eea9a3103d2dbac303c Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Sun, 28 Jan 2018 09:42:42 -0500
+Subject: [PATCH] https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5522
+
+---
+ Magick++/lib/Image.cpp | 6 ++++++
+ MagickCore/blob.c      | 1 +
+ 2 files changed, 7 insertions(+)
+
+diff --git a/Magick++/lib/Image.cpp b/Magick++/lib/Image.cpp
+index 3629931687e..9e4f7196af6 100644
+--- a/Magick++/lib/Image.cpp
++++ b/Magick++/lib/Image.cpp
+@@ -4877,6 +4877,8 @@ void Magick::Image::write(Blob *blob_)
+   data=ImagesToBlob(constImageInfo(),image(),&length,exceptionInfo);
+   if (length > 0)
+     blob_->updateNoCopy(data,length,Blob::MallocAllocator);
++  if (data != NULL)
++    data=RelinquishMagickMemory(data);
+   ThrowImageException;
+ }
+ 
+@@ -4894,6 +4896,8 @@ void Magick::Image::write(Blob *blob_,const std::string &magick_)
+   data=ImagesToBlob(constImageInfo(),image(),&length,exceptionInfo);
+   if (length > 0)
+     blob_->updateNoCopy(data,length,Blob::MallocAllocator);
++  if (data != NULL)
++    data=RelinquishMagickMemory(data);
+   ThrowImageException;
+ }
+ 
+@@ -4913,6 +4917,8 @@ void Magick::Image::write(Blob *blob_,const std::string &magick_,
+   data=ImagesToBlob(constImageInfo(),image(),&length,exceptionInfo);
+   if (length > 0)
+     blob_->updateNoCopy(data,length,Blob::MallocAllocator);
++  if (data != NULL)
++    data=RelinquishMagickMemory(data);
+   ThrowImageException;
+ }
+ 
+diff --git a/MagickCore/blob.c b/MagickCore/blob.c
+index 226f03e91b7..85c91858d33 100644
+--- a/MagickCore/blob.c
++++ b/MagickCore/blob.c
+@@ -1913,6 +1913,7 @@ MagickExport void *ImageToBlob(const ImageInfo *image_info,
+           else
+             blob=ResizeQuantumMemory(blob,*length+1,sizeof(unsigned char));
+         }
++      blob_info->blob=RelinquishMagickMemory(blob_info->blob);
+     }
+   else
+     {

@@ -1,0 +1,165 @@
+commit d2052278f24b3279503d5fa215a7834c2d21f91c
+Author: Behdad Esfahbod <behdad@behdad.org>
+Date:   Fri Aug 11 15:12:25 2017 -0700
+
+    [util] Add --verify to hb-shape / hb-view that verifies shape results
+    
+    Right now it checks for monotone cluster values.  Other checks to be added.
+
+diff --git a/util/hb-shape.cc b/util/hb-shape.cc
+index 6adfbadd..cab0eb21 100644
+--- a/util/hb-shape.cc
++++ b/util/hb-shape.cc
+@@ -94,13 +94,10 @@ struct output_buffer_t
+     format.serialize_buffer_of_text (buffer, line_no, text, text_len, font, gs);
+     fprintf (options.fp, "%s", gs->str);
+   }
+-  void shape_failed (hb_buffer_t  *buffer,
+-		     const char   *text,
+-		     unsigned int  text_len,
+-		     hb_bool_t     utf8_clusters)
++  void error (const char *message)
+   {
+     g_string_set_size (gs, 0);
+-    format.serialize_message (line_no, "msg: all shapers failed", gs);
++    format.serialize_message (line_no, message, gs);
+     fprintf (options.fp, "%s", gs->str);
+   }
+   void consume_glyphs (hb_buffer_t  *buffer,
+diff --git a/util/options.cc b/util/options.cc
+index 2aba6d40..1269ba65 100644
+--- a/util/options.cc
++++ b/util/options.cc
+@@ -338,6 +338,7 @@ shape_options_t::add_options (option_parser_t *parser)
+     {"utf8-clusters",	0, 0, G_OPTION_ARG_NONE,	&this->utf8_clusters,		"Use UTF8 byte indices, not char indices",	NULL},
+     {"cluster-level",	0, 0, G_OPTION_ARG_INT,		&this->cluster_level,		"Cluster merging level (default: 0)",	"0/1/2"},
+     {"normalize-glyphs",0, 0, G_OPTION_ARG_NONE,	&this->normalize_glyphs,	"Rearrange glyph clusters in nominal order",	NULL},
++    {"verify",		0, 0, G_OPTION_ARG_NONE,	&this->verify,			"Perform sanity checks on shaping results",	NULL},
+     {"num-iterations",	0, 0, G_OPTION_ARG_INT,		&this->num_iterations,		"Run shaper N times (default: 1)",	"N"},
+     {NULL}
+   };
+@@ -874,6 +875,7 @@ format_options_t::serialize_message (unsigned int  line_no,
+ 				     GString      *gs)
+ {
+   serialize_line_no (line_no, gs);
++  g_string_append_printf (gs, "message: ");
+   g_string_append_printf (gs, "%s", msg);
+   g_string_append_c (gs, '\n');
+ }
+diff --git a/util/options.hh b/util/options.hh
+index 521263d5..fedd1217 100644
+--- a/util/options.hh
++++ b/util/options.hh
+@@ -187,6 +187,7 @@ struct shape_options_t : option_group_t
+     utf8_clusters = false;
+     cluster_level = HB_BUFFER_CLUSTER_LEVEL_DEFAULT;
+     normalize_glyphs = false;
++    verify = false;
+     num_iterations = 1;
+ 
+     add_options (parser);
+@@ -243,12 +244,46 @@ struct shape_options_t : option_group_t
+     setup_buffer (buffer);
+   }
+ 
+-  hb_bool_t shape (hb_font_t *font, hb_buffer_t *buffer)
++  hb_bool_t shape (hb_font_t *font, hb_buffer_t *buffer, const char **error=NULL)
+   {
+-    hb_bool_t res = hb_shape_full (font, buffer, features, num_features, shapers);
++    if (!hb_shape_full (font, buffer, features, num_features, shapers))
++    {
++      if (error)
++        *error = "all shapers failed.";
++      return false;
++    }
++
+     if (normalize_glyphs)
+       hb_buffer_normalize_glyphs (buffer);
+-    return res;
++
++    if (verify && !verify_buffer (buffer, error))
++      return false;
++
++    return true;
++  }
++
++  bool verify_buffer (hb_buffer_t *buffer, const char **error=NULL)
++  {
++    /* Check that clusters are monotone. */
++    if (cluster_level == HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES ||
++	cluster_level == HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS)
++    {
++      bool is_forward = HB_DIRECTION_IS_FORWARD (hb_buffer_get_direction (buffer));
++
++      unsigned int num_glyphs;
++      hb_glyph_info_t *info = hb_buffer_get_glyph_infos (buffer, &num_glyphs);
++
++      for (unsigned int i = 1; i < num_glyphs; i++)
++	if (info[i-1].cluster != info[i].cluster &&
++	    (info[i-1].cluster < info[i].cluster) != is_forward)
++	{
++	  if (error)
++	    *error = "clusters are not monotone.";
++	  return false;
++	}
++    }
++
++    return true;
+   }
+ 
+   void shape_closure (const char *text, int text_len,
+@@ -277,6 +312,7 @@ struct shape_options_t : option_group_t
+   hb_bool_t utf8_clusters;
+   hb_buffer_cluster_level_t cluster_level;
+   hb_bool_t normalize_glyphs;
++  hb_bool_t verify;
+   unsigned int num_iterations;
+ };
+ 
+diff --git a/util/shape-consumer.hh b/util/shape-consumer.hh
+index cfab4497..0a09053e 100644
+--- a/util/shape-consumer.hh
++++ b/util/shape-consumer.hh
+@@ -58,15 +58,19 @@ struct shape_consumer_t
+ 
+     for (unsigned int n = shaper.num_iterations; n; n--)
+     {
++      const char *error = NULL;
++
+       shaper.populate_buffer (buffer, text, text_len, text_before, text_after);
+       if (n == 1)
+ 	output.consume_text (buffer, text, text_len, shaper.utf8_clusters);
+-      if (!shaper.shape (font, buffer))
++      if (!shaper.shape (font, buffer, &error))
+       {
+ 	failed = true;
+-	hb_buffer_set_length (buffer, 0);
+-	output.shape_failed (buffer, text, text_len, shaper.utf8_clusters);
+-	return;
++	output.error (error);
++	if (hb_buffer_get_content_type (buffer) == HB_BUFFER_CONTENT_TYPE_GLYPHS)
++	  break;
++	else
++	  return;
+       }
+     }
+ 
+diff --git a/util/view-cairo.hh b/util/view-cairo.hh
+index ef229ff7..d3e59afa 100644
+--- a/util/view-cairo.hh
++++ b/util/view-cairo.hh
+@@ -57,12 +57,9 @@ struct view_cairo_t
+ 		     hb_bool_t     utf8_clusters)
+   {
+   }
+-  void shape_failed (hb_buffer_t  *buffer,
+-		     const char   *text,
+-		     unsigned int  text_len,
+-		     hb_bool_t     utf8_clusters)
++  void error (const char *message)
+   {
+-    fail (false, "all shapers failed");
++    fail (false, "%s", message);
+   }
+   void consume_glyphs (hb_buffer_t  *buffer,
+ 		       const char   *text,

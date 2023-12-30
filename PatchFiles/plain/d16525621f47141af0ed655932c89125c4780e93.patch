@@ -1,0 +1,198 @@
+From d16525621f47141af0ed655932c89125c4780e93 Mon Sep 17 00:00:00 2001
+From: Aaron Boxer <boxerab@gmail.com>
+Date: Wed, 25 Nov 2020 21:52:37 -0500
+Subject: [PATCH] decompress: more permissive treatment of truncated packets
+
+---
+ src/lib/jp2/codestream/BitIO.cpp        |  2 +-
+ src/lib/jp2/codestream/CodingParams.cpp | 30 ++++++++--------------
+ src/lib/jp2/t2/T2Decompress.cpp         | 33 ++++++++++++++++---------
+ src/lib/jp2/util/grk_exceptions.h       |  2 +-
+ 4 files changed, 33 insertions(+), 34 deletions(-)
+
+diff --git a/src/lib/jp2/codestream/BitIO.cpp b/src/lib/jp2/codestream/BitIO.cpp
+index d3ac3c188..7fb7ba65e 100644
+--- a/src/lib/jp2/codestream/BitIO.cpp
++++ b/src/lib/jp2/codestream/BitIO.cpp
+@@ -69,7 +69,7 @@ bool BitIO::byteout_stream() {
+ 
+ void BitIO::bytein() {
+ 	if (offset == buf_len)
+-		throw TruncatedStreamException();
++		throw TruncatedPacketHeaderException();
+ 	if (read0xFF && (buf >= 0x90)){
+ 		uint16_t marker = (uint16_t)(((uint16_t)0xFF<< 8) | (uint16_t)buf);
+ 		GRK_ERROR("Invalid marker 0x%x detected in packet header",marker);
+diff --git a/src/lib/jp2/codestream/CodingParams.cpp b/src/lib/jp2/codestream/CodingParams.cpp
+index 48b06d28f..970073aeb 100644
+--- a/src/lib/jp2/codestream/CodingParams.cpp
++++ b/src/lib/jp2/codestream/CodingParams.cpp
+@@ -166,20 +166,15 @@ bool DecoderState::findNextTile(CodeStream *codeStream){
+ 	if (m_state != J2K_DEC_STATE_EOC) {
+ 		try {
+ 		if (!codeStream->read_marker()) {
+-			GRK_WARN(
+-					"findNextTile: Not enough data to read another marker.\n"
++			GRK_WARN("findNextTile: Not enough data to read another marker.\n"
+ 							"Tile may be truncated.");
+ 			return true;
+ 		}
+ 		} catch (InvalidMarkerException &ume){
+-			auto bytesLeft = stream->get_number_byte_left();
+-			// not enough bytes left for another marker - file ends without EOC marker
+-			if (bytesLeft <= 2) {
+-				m_state = J2K_DEC_STATE_NO_EOC;
+-				GRK_WARN("findNextTile:  file ends without EOC marker.");
+-			} else {
+-				return false;
+-			}
++			m_state = J2K_DEC_STATE_NO_EOC;
++			GRK_WARN("findNextTile: expected EOC or SOT "
++					"but found invalid marker 0x%x.", codeStream->m_curr_marker);
++			throw DecodeUnknownMarkerAtEndOfTileException();
+ 		}
+ 		switch (codeStream->m_curr_marker) {
+ 		// we found the EOC marker - set state accordingly and return true;
+@@ -194,16 +189,11 @@ bool DecoderState::findNextTile(CodeStream *codeStream){
+ 			break;
+ 		default: {
+ 			auto bytesLeft = stream->get_number_byte_left();
+-			// no bytes left - file ends without EOC marker
+-			if (bytesLeft == 0) {
+-				m_state = J2K_DEC_STATE_NO_EOC;
+-				GRK_WARN("findNextTile: stream does not end with EOC");
+-			} else {
+-				GRK_WARN("findNextTile: expected EOC or SOT "
+-						"but found marker 0x%x.\nIgnoring %d bytes "
+-						"remaining in the stream.", codeStream->m_curr_marker, bytesLeft+2);
+-				throw DecodeUnknownMarkerAtEndOfTileException();
+-			}
++			m_state = J2K_DEC_STATE_NO_EOC;
++			GRK_WARN("findNextTile: expected EOC or SOT "
++					"but found marker 0x%x.\nIgnoring %d bytes "
++					"remaining in the stream.", codeStream->m_curr_marker, bytesLeft+2);
++			throw DecodeUnknownMarkerAtEndOfTileException();
+ 		}
+ 			break;
+ 		}
+diff --git a/src/lib/jp2/t2/T2Decompress.cpp b/src/lib/jp2/t2/T2Decompress.cpp
+index c7808b418..7a3752bb7 100644
+--- a/src/lib/jp2/t2/T2Decompress.cpp
++++ b/src/lib/jp2/t2/T2Decompress.cpp
+@@ -120,7 +120,7 @@ bool T2Decompress::decompress_packets(uint16_t tile_no, ChunkBuffer *src_buf,
+ 					}
+ 				}
+ 				p_tile->packno++;
+-			} 	catch (TruncatedStreamException &tex){
++			} 	catch (TruncatedPacketHeaderException &tex){
+ 				GRK_WARN("Truncated packet: tile=%d component=%02d resolution=%02d precinct=%03d layer=%02d",
+ 				 tile_no, current_pi->compno, current_pi->resno,
+ 				 current_pi->precno, current_pi->layno);
+@@ -250,7 +250,7 @@ bool T2Decompress::read_packet_header(TileCodingParams *p_tcp, PacketIter *p_pi,
+ 	if (p_tcp->csty & J2K_CP_CSTY_SOP) {
+ 		if (max_length < 6) {
+ 			//GRK_WARN("Not enough space for expected SOP marker");
+-			throw TruncatedStreamException();
++			throw TruncatedPacketHeaderException();
+ 		} else if ((*active_src) != 0xff || (*(active_src + 1) != 0x91)) {
+ 			GRK_WARN("Expected SOP marker");
+ 		} else {
+@@ -301,7 +301,7 @@ bool T2Decompress::read_packet_header(TileCodingParams *p_tcp, PacketIter *p_pi,
+ 	}
+ 
+ 	if (!*modified_length_ptr)
+-		throw TruncatedStreamException();
++		throw TruncatedPacketHeaderException();
+ 
+ 	uint32_t present = 0;
+ 	std::unique_ptr<BitIO> bio(new BitIO(header_data, *modified_length_ptr, false));
+@@ -479,7 +479,7 @@ bool T2Decompress::read_packet_header(TileCodingParams *p_tcp, PacketIter *p_pi,
+ 		if ((*modified_length_ptr
+ 				- (uint32_t) (header_data - *header_data_start)) < 2U) {
+ 			//GRK_WARN("Not enough space for expected EPH marker");
+-			throw TruncatedStreamException();
++			throw TruncatedPacketHeaderException();
+ 		} else if ((*header_data) != 0xff || (*(header_data + 1) != 0x92)) {
+ 			GRK_WARN("Expected EPH marker");
+ 		} else {
+@@ -497,7 +497,7 @@ bool T2Decompress::read_packet_header(TileCodingParams *p_tcp, PacketIter *p_pi,
+ 	src_buf->incr_cur_chunk_offset(*p_data_read);
+ 
+ 	if (!present && !*p_data_read)
+-		throw TruncatedStreamException();
++		throw TruncatedPacketHeaderException();
+ 
+ 	return true;
+ }
+@@ -529,6 +529,8 @@ bool T2Decompress::read_packet_data(Resolution *res, PacketIter *p_pi,
+ 			uint32_t numPassesInPacket = cblk->numPassesInPacket;
+ 			do {
+ 				size_t maxLen = src_buf->getRemainingLength();
++				if (maxLen == 0)
++					return true;
+ 				// Check possible overflow on segment length
+ 				if (((seg->numBytesInPacket) > maxLen)) {
+ //					GRK_WARN("read packet data:\nSegment segment length %u\n"
+@@ -542,8 +544,10 @@ bool T2Decompress::read_packet_data(Resolution *res, PacketIter *p_pi,
+ 					if (tileProcessor->m_cp->tcps[0].isHT){
+ 						cblk->numSegments = 0;
+ 						cblk->cleanup_seg_buffers();
++					} else {
++						seg->numBytesInPacket = 0;
+ 					}
+-					throw TruncatedStreamException();
++					break;
+ 				}
+ 				//initialize dataindex to current contiguous size of code block
+ 				if (seg->numpasses == 0)
+@@ -602,12 +606,16 @@ bool T2Decompress::skip_packet_data(Resolution *res, PacketIter *p_pi,
+ 		uint64_t *p_data_read, uint64_t max_length) {
+ 	*p_data_read = 0;
+ 	for (uint32_t bandno = 0; bandno < res->numBandWindows; ++bandno) {
++		if (max_length - *p_data_read == 0)
++			return true;
+ 		auto band = res->bandWindow + bandno;
+ 		if (band->isEmpty())
+ 			continue;
+ 
+ 		auto prc = &band->precincts[p_pi->precno];
+ 		for (uint64_t cblkno = 0; cblkno < prc->getNumCblks(); ++cblkno) {
++			if (max_length - *p_data_read == 0)
++				return true;
+ 			auto cblk = prc->getDecompressedBlockPtr() + cblkno;
+ 			if (!cblk->numPassesInPacket) {
+ 				/* nothing to do */
+@@ -628,13 +636,14 @@ bool T2Decompress::skip_packet_data(Resolution *res, PacketIter *p_pi,
+ 			}
+ 			uint32_t numPassesInPacket = cblk->numPassesInPacket;
+ 			do {
+-				/* Check possible overflow then size */
+-				if (((*p_data_read + seg->numBytesInPacket) < (*p_data_read))
+-						|| ((*p_data_read + seg->numBytesInPacket) > max_length)) {
+-					GRK_ERROR("skip: segment too long (%u) with max (%u) for codeblock %u (p=%u, b=%u, r=%u, c=%u)",
+-							seg->numBytesInPacket, max_length, cblkno,
++				if (max_length - *p_data_read == 0)
++					return true;
++				/* Check possible overflow  */
++				if (((*p_data_read + seg->numBytesInPacket) > max_length)) {
++					GRK_WARN("skip: segment bytes (%u) too large for remaining stream bytes (%u) in codeblock %u (p=%u, b=%u, r=%u, c=%u). Truncating segment",
++							seg->numBytesInPacket, max_length - *p_data_read, cblkno,
+ 							p_pi->precno, bandno, p_pi->resno, p_pi->compno);
+-					return false;
++					seg->numBytesInPacket = (uint32_t)(max_length - *p_data_read);
+ 				}
+ 
+ 				//GRK_INFO( "skip packet: p_data_read = %u, bytes in packet =  %u ",
+diff --git a/src/lib/jp2/util/grk_exceptions.h b/src/lib/jp2/util/grk_exceptions.h
+index dbf3288b2..19f3ecbcf 100644
+--- a/src/lib/jp2/util/grk_exceptions.h
++++ b/src/lib/jp2/util/grk_exceptions.h
+@@ -24,7 +24,7 @@ namespace grk {
+ class DecodeUnknownMarkerAtEndOfTileException: public std::exception {};
+ class PluginDecodeUnsupportedException: public std::exception {};
+ class CorruptJP2BoxException: public std::exception {};
+-class TruncatedStreamException: public std::exception {};
++class TruncatedPacketHeaderException: public std::exception {};
+ class InvalidMarkerException: public std::exception {
+ public:
+ 	explicit InvalidMarkerException(uint16_t marker) : m_marker(marker)

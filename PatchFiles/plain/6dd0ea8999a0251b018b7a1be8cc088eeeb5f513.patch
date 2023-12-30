@@ -1,0 +1,22 @@
+commit 6dd0ea8999a0251b018b7a1be8cc088eeeb5f513
+Author: Veronika Hanulikova <vhanulik@redhat.com>
+Date:   Fri May 13 12:14:59 2022 +0200
+
+    Free app when clearing p15card
+    
+    Thank oss-fuzz
+    https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=47302
+
+diff --git a/src/libopensc/pkcs15.c b/src/libopensc/pkcs15.c
+index 957a29de..23bb2a32 100644
+--- a/src/libopensc/pkcs15.c
++++ b/src/libopensc/pkcs15.c
+@@ -859,6 +859,8 @@ sc_pkcs15_card_clear(struct sc_pkcs15_card *p15card)
+ 		p15card->tokeninfo->seInfo     = NULL;
+ 		p15card->tokeninfo->num_seInfo = 0;
+ 	}
++
++	sc_pkcs15_free_app(p15card);
+ }
+ 
+ 

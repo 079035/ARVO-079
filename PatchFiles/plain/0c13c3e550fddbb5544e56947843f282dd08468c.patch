@@ -1,0 +1,212 @@
+From 0c13c3e550fddbb5544e56947843f282dd08468c Mon Sep 17 00:00:00 2001
+From: Volodymyr Shymanskyy <vshymanskyi@gmail.com>
+Date: Sat, 17 Apr 2021 23:15:34 +0300
+Subject: [PATCH] Improve backtraces
+
+---
+ platforms/app/main.c | 10 ++++++++++
+ source/m3_env.c      |  4 ++++
+ source/m3_env.h      |  2 ++
+ source/m3_exec.h     |  8 +-------
+ source/m3_function.h |  4 ----
+ source/m3_module.c   | 31 +++++++++++++++++++++++++++----
+ source/m3_parse.c    | 20 ++++++++++++--------
+ 7 files changed, 56 insertions(+), 23 deletions(-)
+
+diff --git a/platforms/app/main.c b/platforms/app/main.c
+index 7f9f264b..7c63cc6c 100644
+--- a/platforms/app/main.c
++++ b/platforms/app/main.c
+@@ -92,6 +92,14 @@ M3Result link_all  (IM3Module module)
+     return res;
+ }
+ 
++const char* moduleNameFromFn(const char* fn)
++{
++	const char* off = strrchr(fn, '/');
++	if (off) return off+1;
++	off = strrchr(fn, '\\');
++	if (off) return off+1;
++	return fn;
++}
+ 
+ M3Result repl_load  (const char* fn)
+ {
+@@ -136,6 +144,8 @@ M3Result repl_load  (const char* fn)
+     result = m3_LoadModule (runtime, module);
+     if (result) goto on_error;
+ 
++    m3_SetModuleName(module, moduleNameFromFn(fn));
++
+     result = link_all (module);
+     if (result) goto on_error;
+ 
+diff --git a/source/m3_env.c b/source/m3_env.c
+index 9a3e233b..6805c5b6 100644
+--- a/source/m3_env.c
++++ b/source/m3_env.c
+@@ -561,6 +561,10 @@ _   (InitElements (io_module));
+     // Start func might use imported functions, which are not liked here yet,
+     // so it will be called before a function call is attempted (in m3_FindFunction)
+ 
++#ifdef DEBUG
++    Module_GenerateNames(io_module);
++#endif
++
+     io_module->next = io_runtime->modules;
+     io_runtime->modules = io_module;
+     return result; // ok
+diff --git a/source/m3_env.h b/source/m3_env.h
+index 5f5c482c..33d0e00f 100644
+--- a/source/m3_env.h
++++ b/source/m3_env.h
+@@ -123,6 +123,8 @@ M3Result                    Module_AddGlobal            (IM3Module io_module, IM
+ M3Result                    Module_AddFunction          (IM3Module io_module, u32 i_typeIndex, IM3ImportInfo i_importInfo /* can be null */);
+ IM3Function                 Module_GetFunction          (IM3Module i_module, u32 i_functionIndex);
+ 
++void                        Module_GenerateNames        (IM3Module i_module);
++
+ void                        FreeImportInfo              (M3ImportInfo * i_info);
+ 
+ //---------------------------------------------------------------------------------------------------------------------------------
+diff --git a/source/m3_exec.h b/source/m3_exec.h
+index fc69524a..154d5341 100644
+--- a/source/m3_exec.h
++++ b/source/m3_exec.h
+@@ -744,13 +744,7 @@ d_m3Op  (Entry)
+         }
+ 
+ #if d_m3EnableStrace >= 2
+-        u16 numNames = 0;
+-        cstr_t *names = GetFunctionNames(function, &numNames);
+-        if (numNames) {
+-            d_m3TracePrint("%s %s {", names[0], SPrintFunctionArgList (function, _sp));
+-        } else {
+-            d_m3TracePrint("$%d %s {", function->index, SPrintFunctionArgList (function, _sp));
+-        }
++        d_m3TracePrint("%s %s {", m3_GetFunctionName(function), SPrintFunctionArgList (function, _sp));
+         trace_rt->callDepth++;
+ #endif
+ 
+diff --git a/source/m3_function.h b/source/m3_function.h
+index c9f756b2..46418e60 100644
+--- a/source/m3_function.h
++++ b/source/m3_function.h
+@@ -59,10 +59,6 @@ typedef struct M3Function
+     u32                     hits;
+ #endif
+ 
+-# if d_m3EnableStrace >= 2 || d_m3LogCompile
+-    u32                     index;
+-# endif
+-
+     u16                     maxStackSlots;
+ 
+     u16                     numRetSlots;
+diff --git a/source/m3_module.c b/source/m3_module.c
+index eeb6fdbf..babb5111 100644
+--- a/source/m3_module.c
++++ b/source/m3_module.c
+@@ -81,15 +81,12 @@ _try {
+ 
+     IM3Function func = Module_GetFunction (io_module, index);
+     func->funcType = ft;
+-#if d_m3EnableStrace >= 2 || d_m3LogCompile
+-    func->index = index;
+-#endif
+ 
+     if (i_importInfo and func->numNames == 0)
+     {
+         func->import = * i_importInfo;
+-        func->numNames = 1;
+         func->names[0] = i_importInfo->fieldUtf8;
++        func->numNames = 1;
+     }
+ 
+     m3log (module, "   added function: %3d; sig: %d", index, i_typeIndex);
+@@ -98,6 +95,32 @@ _try {
+     return result;
+ }
+ 
++void  Module_GenerateNames  (IM3Module i_module)
++{
++    for (u32 i = 0; i < i_module->numFunctions; ++i)
++    {
++        IM3Function func = & i_module->functions [i];
++
++        if (func->numNames == 0)
++        {
++            char* buff = m3_AllocArray(char, 16);
++            snprintf(buff, 16, "$func%d", i);
++            func->names[0] = buff;
++            func->numNames = 1;
++        }
++    }
++    for (u32 i = 0; i < i_module->numGlobals; ++i)
++    {
++        IM3Global global = & i_module->globals [i];
++
++        if (global->name == NULL)
++        {
++            char* buff = m3_AllocArray(char, 16);
++            snprintf(buff, 16, "$global%d", i);
++            global->name = buff;
++        }
++    }
++}
+ 
+ IM3Function  Module_GetFunction  (IM3Module i_module, u32 i_functionIndex)
+ {
+diff --git a/source/m3_parse.c b/source/m3_parse.c
+index 81f55f56..4ea7bb14 100644
+--- a/source/m3_parse.c
++++ b/source/m3_parse.c
+@@ -127,6 +127,8 @@ _   (ReadLEB_u32 (& numFunctions, & i_bytes, i_end));
+ 
+     _throwif("too many functions", numFunctions > d_m3MaxSaneFunctionsCount);
+ 
++    // TODO: prealloc functions
++
+     for (u32 i = 0; i < numFunctions; ++i)
+     {
+         u32 funcTypeIndex;
+@@ -236,18 +238,19 @@ _       (ReadLEB_u32 (& index, & i_bytes, i_end));
+         if (exportKind == d_externalKind_function)
+         {
+             _throwif(m3Err_wasmMalformed, index >= io_module->numFunctions);
+-            u16 numNames = io_module->functions [index].numNames;
+-            if (numNames < d_m3MaxDuplicateFunctionImpl)
++            IM3Function func = &(io_module->functions [index]);
++            if (func->numNames < d_m3MaxDuplicateFunctionImpl)
+             {
+-                io_module->functions [index].numNames++;
+-                io_module->functions [index].names[numNames] = utf8;
++                func->names[func->numNames++] = utf8;
+                 utf8 = NULL; // ownership transferred to M3Function
+             }
+         }
+         else if (exportKind == d_externalKind_global)
+         {
+             _throwif(m3Err_wasmMalformed, index >= io_module->numGlobals);
+-            io_module->globals[index].name = utf8;
++            IM3Global global = &(io_module->globals [index]);
++            m3_Free (global->name);
++            global->name = utf8;
+             utf8 = NULL; // ownership transferred to M3Global
+         }
+ 
+@@ -506,10 +509,11 @@ _               (Read_utf8 (& name, & i_bytes, i_end));
+ 
+                 if (index < io_module->numFunctions)
+                 {
+-                    if (io_module->functions [index].numNames == 0)
++                    IM3Function func = &(io_module->functions [index]);
++                    if (func->numNames == 0)
+                     {
+-                        io_module->functions [index].numNames = 1;
+-                        io_module->functions [index].names[0] = name;        m3log (parse, "    naming function%5d:  %s", index, name);
++                        func->names[0] = name;        m3log (parse, "    naming function%5d:  %s", index, name);
++                        func->numNames = 1;
+                         name = NULL; // transfer ownership
+                     }
+ //                          else m3log (parse, "prenamed: %s", io_module->functions [index].name);

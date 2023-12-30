@@ -1,8 +1,15 @@
-Vulnerability:
-The vulnerability in the code is a heap-buffer-overflow error when decoding the variable literal length. This occurs when copying literals to the output buffer.
+1. Vulnerability:
+The vulnerability in the code is a heap-buffer-overflow error. This occurs when the program writes more data to a block of allocated memory (heap) than it can hold. This can lead to overwriting of adjacent memory and can cause erratic program behavior, including memory access errors, incorrect results, a crash, or a breach of system security.
 
-Summary of the fix:
-The fix for this vulnerability involves adding overflow detection checks before the literal length calculation and the copying of literals to the output buffer.
+2. Short Summary of the Fix:
+The fix involves adding checks to prevent buffer overflow when decoding variable literal length. This is done by ensuring that the pointer to the literals does not exceed the end of the buffer before reading the length of the literals.
 
-Detailed description of the fix:
-1. Overfl
+3. Detailed Description of the Fix:
+The fix involves adding checks before reading the length of literals from the buffer. The checks are added in the following places:
+- Before reading a single byte length, a check is added to ensure that the literals pointer does not exceed the end of the buffer by 1 byte.
+- Before reading a 2-byte length, a check is added to ensure that the literals pointer does not exceed the end of the buffer by 2 bytes.
+- Before reading a 3-byte length, a check is added to ensure that the literals pointer does not exceed the end of the buffer by 3 bytes.
+
+If any of these checks fail, the program jumps to the error handling code, preventing a buffer overflow. The literals pointer is also incremented after reading the length, ensuring that it always points to valid data in the buffer.
+
+In addition, the fix also moves the incrementation of the literals pointer to after the length check. This ensures that the pointer is not incremented beyond the end of the buffer if the maximum length is read.

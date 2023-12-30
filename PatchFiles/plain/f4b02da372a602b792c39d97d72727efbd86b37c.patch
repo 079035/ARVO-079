@@ -1,0 +1,289 @@
+commit f4b02da372a602b792c39d97d72727efbd86b37c
+Author: Qt Submodule Update Bot <qt_submodule_update_bot@qt-project.org>
+Date:   Thu May 14 23:47:06 2020 +0200
+
+    Update submodules on '5.15' in qt/qt5
+    
+    Change-Id: I6e5027ff7b70605a77f35b42f07a0e3ad9bb2f12
+    Reviewed-by: Qt Submodule Update Bot <qt_submodule_update_bot@qt-project.org>
+
+diff --git a/qt3d b/qt3d
+index e11ffc0d..1f1f4b77 160000
+--- a/qt3d
++++ b/qt3d
+@@ -1 +1 @@
+-Subproject commit e11ffc0d4f2703904355f25ea076bda41e7c4ec2
++Subproject commit 1f1f4b779382289abba98c5914ff18f593124bac
+diff --git a/qtactiveqt b/qtactiveqt
+index a0ddb6ac..bd9c3d98 160000
+--- a/qtactiveqt
++++ b/qtactiveqt
+@@ -1 +1 @@
+-Subproject commit a0ddb6ace7a8cb9114d01d64e0722b0e00e5b0b3
++Subproject commit bd9c3d98febae9065366dcd20109690bc05e1005
+diff --git a/qtandroidextras b/qtandroidextras
+index aa346dcc..a943ae88 160000
+--- a/qtandroidextras
++++ b/qtandroidextras
+@@ -1 +1 @@
+-Subproject commit aa346dcc8d8fbab9f5877d4822c06a92f521ce7b
++Subproject commit a943ae881a897f0bacfdda94725a2bfd6028766e
+diff --git a/qtbase b/qtbase
+index 538223d1..76fe3664 160000
+--- a/qtbase
++++ b/qtbase
+@@ -1 +1 @@
+-Subproject commit 538223d10d133d23133db1ec7a50cb2775aca657
++Subproject commit 76fe36645eb41fa35e526a97874f1e15a39c3823
+diff --git a/qtcharts b/qtcharts
+index 7cdded63..df3f638f 160000
+--- a/qtcharts
++++ b/qtcharts
+@@ -1 +1 @@
+-Subproject commit 7cdded63b5d9d6b81c9d03a2f39d94d7b5230ccb
++Subproject commit df3f638f19c4a7bb506a23c72d7ff9a51681f78b
+diff --git a/qtdatavis3d b/qtdatavis3d
+index 24c043fb..8ea21240 160000
+--- a/qtdatavis3d
++++ b/qtdatavis3d
+@@ -1 +1 @@
+-Subproject commit 24c043fbffdbd7c0e060f05f67ad28824ac05e6b
++Subproject commit 8ea21240c33ded74bc30f1dd2accf5718eb07574
+diff --git a/qtdeclarative b/qtdeclarative
+index 8279fb44..3ed33ec7 160000
+--- a/qtdeclarative
++++ b/qtdeclarative
+@@ -1 +1 @@
+-Subproject commit 8279fb44cba551e139f307217da24d3f26a86c2e
++Subproject commit 3ed33ec74b70bbac016dd080889bb3df3a78d90c
+diff --git a/qtdoc b/qtdoc
+index 1c7c6961..d16c0c0f 160000
+--- a/qtdoc
++++ b/qtdoc
+@@ -1 +1 @@
+-Subproject commit 1c7c69619028bf5247309d49a8edd9359ef6649f
++Subproject commit d16c0c0fa8ae7754c38babf192082fb7c0a0180e
+diff --git a/qtgamepad b/qtgamepad
+index 996ccf5b..f1e9844f 160000
+--- a/qtgamepad
++++ b/qtgamepad
+@@ -1 +1 @@
+-Subproject commit 996ccf5bbacab0d16cbd961987c08385279ad6c5
++Subproject commit f1e9844fa72f755efdf52040cd08844a7a46a3e7
+diff --git a/qtgraphicaleffects b/qtgraphicaleffects
+index 7665821b..8c8a715a 160000
+--- a/qtgraphicaleffects
++++ b/qtgraphicaleffects
+@@ -1 +1 @@
+-Subproject commit 7665821bc4baed9c6595d22dcaf2857e2dda77f7
++Subproject commit 8c8a715a5ad0f3a7405f95c58f7e6586b7835161
+diff --git a/qtimageformats b/qtimageformats
+index 26c54809..ec15f82b 160000
+--- a/qtimageformats
++++ b/qtimageformats
+@@ -1 +1 @@
+-Subproject commit 26c548096b8f77b0e2f0cf0602a64d65e7958d67
++Subproject commit ec15f82b67b851d9dc789cc292c662a988100534
+diff --git a/qtlottie b/qtlottie
+index f5cc3184..a0918d13 160000
+--- a/qtlottie
++++ b/qtlottie
+@@ -1 +1 @@
+-Subproject commit f5cc3184f30c9fa1b81d931430aaa4f6f23267a3
++Subproject commit a0918d137c318d8c9cad6f7db1ffca1f18c305c6
+diff --git a/qtmacextras b/qtmacextras
+index 66a5de12..061b6abf 160000
+--- a/qtmacextras
++++ b/qtmacextras
+@@ -1 +1 @@
+-Subproject commit 66a5de12b601e3de8ec336ae42c795002f539a8d
++Subproject commit 061b6abfc2309e9d513cfa758b0201985b3f1a6d
+diff --git a/qtmultimedia b/qtmultimedia
+index 54144064..89f92578 160000
+--- a/qtmultimedia
++++ b/qtmultimedia
+@@ -1 +1 @@
+-Subproject commit 541440649aac5488a8cb44f0c867095b18405c49
++Subproject commit 89f92578ece66aaa50e03cacd81434cd18006185
+diff --git a/qtnetworkauth b/qtnetworkauth
+index 5f9fbc2a..9f6f71d7 160000
+--- a/qtnetworkauth
++++ b/qtnetworkauth
+@@ -1 +1 @@
+-Subproject commit 5f9fbc2a6e3f06ae388af259e074b00c491c163d
++Subproject commit 9f6f71d7b1eaf7821a0083894863b1b3d2a1e3ef
+diff --git a/qtpurchasing b/qtpurchasing
+index c9a2a6dc..ac5a9b96 160000
+--- a/qtpurchasing
++++ b/qtpurchasing
+@@ -1 +1 @@
+-Subproject commit c9a2a6dcb858d2de5c908914cfe6564fa0740469
++Subproject commit ac5a9b9615ba80e5b7b57c689cfba2b657b4e612
+diff --git a/qtquick3d b/qtquick3d
+index 2e8515c4..080d5770 160000
+--- a/qtquick3d
++++ b/qtquick3d
+@@ -1 +1 @@
+-Subproject commit 2e8515c4e8fe899ba37c32fc82a6abe9778cd068
++Subproject commit 080d5770395dd4491ab57c643b278a1ecbde3e8f
+diff --git a/qtquickcontrols b/qtquickcontrols
+index 83a41de4..340e1d21 160000
+--- a/qtquickcontrols
++++ b/qtquickcontrols
+@@ -1 +1 @@
+-Subproject commit 83a41de459cd8605878842b4410521410132dcb3
++Subproject commit 340e1d21a5ad3976f9131641da9cbdc7b3fbacb4
+diff --git a/qtquickcontrols2 b/qtquickcontrols2
+index 80a1ea20..645cfaef 160000
+--- a/qtquickcontrols2
++++ b/qtquickcontrols2
+@@ -1 +1 @@
+-Subproject commit 80a1ea20d66dea11c74d0a40e1c75b8a782f38a1
++Subproject commit 645cfaef177fd5962ab1536bc06326a55d4a49e2
+diff --git a/qtquicktimeline b/qtquicktimeline
+index 05c2a520..e993bd51 160000
+--- a/qtquicktimeline
++++ b/qtquicktimeline
+@@ -1 +1 @@
+-Subproject commit 05c2a52042e8ac7f73da643bfa9107c10c346537
++Subproject commit e993bd51b8a6a4dcab9303b9e1991a271e086c60
+diff --git a/qtremoteobjects b/qtremoteobjects
+index 0b98fb2b..be49da7e 160000
+--- a/qtremoteobjects
++++ b/qtremoteobjects
+@@ -1 +1 @@
+-Subproject commit 0b98fb2b3f59143ff8f71f7f53309e153e5af81e
++Subproject commit be49da7ec275e4fbbc678810bf7264197099eeee
+diff --git a/qtrepotools b/qtrepotools
+index 062a1654..b4d7abe9 160000
+--- a/qtrepotools
++++ b/qtrepotools
+@@ -1 +1 @@
+-Subproject commit 062a16545b7c870e392ad9e6f0ce7976659d259e
++Subproject commit b4d7abe9eb7018b2013bc23371d7d2454a73c598
+diff --git a/qtscript b/qtscript
+index a5c819ce..00258fe3 160000
+--- a/qtscript
++++ b/qtscript
+@@ -1 +1 @@
+-Subproject commit a5c819cef6efa06c8273c9b5e5e6406a0ae9c469
++Subproject commit 00258fe35231b8d42fe00c39ba5bd1b00a8dc278
+diff --git a/qtscxml b/qtscxml
+index db8b84e1..cc1239fd 160000
+--- a/qtscxml
++++ b/qtscxml
+@@ -1 +1 @@
+-Subproject commit db8b84e117905b4792524aacddba314ae4a2f7ba
++Subproject commit cc1239fd22b9de56ca13204f4ec67a50032e808a
+diff --git a/qtsensors b/qtsensors
+index 5acdc122..be24a7a4 160000
+--- a/qtsensors
++++ b/qtsensors
+@@ -1 +1 @@
+-Subproject commit 5acdc122a455bae920e9054bec4f3d769cce105e
++Subproject commit be24a7a43cfe4db4c9a9d95f9321c8abec3b0ae7
+diff --git a/qtserialbus b/qtserialbus
+index 1d5fa84e..c12af883 160000
+--- a/qtserialbus
++++ b/qtserialbus
+@@ -1 +1 @@
+-Subproject commit 1d5fa84ed9b450954a0d82e598570ec2107a5953
++Subproject commit c12af8832389785b8be7ffcdddcdb8480c1e124d
+diff --git a/qtserialport b/qtserialport
+index c24fd462..49335de3 160000
+--- a/qtserialport
++++ b/qtserialport
+@@ -1 +1 @@
+-Subproject commit c24fd46221b98eb2e9248765ae32c0fccbebcd35
++Subproject commit 49335de3e7690ae6d7992dace29b86ef4ae246d1
+diff --git a/qtspeech b/qtspeech
+index 387f4b6b..919fabda 160000
+--- a/qtspeech
++++ b/qtspeech
+@@ -1 +1 @@
+-Subproject commit 387f4b6b379ac82ff4625ced5a2f1af7c4ee865e
++Subproject commit 919fabda135581968dce297b62eb9b69da7a772f
+diff --git a/qtsvg b/qtsvg
+index a26b32e1..d882e195 160000
+--- a/qtsvg
++++ b/qtsvg
+@@ -1 +1 @@
+-Subproject commit a26b32e157e4e7cd8ce90b933c4c45ed5360b388
++Subproject commit d882e195406ccedd418f529ecf6320659abf0b5e
+diff --git a/qttools b/qttools
+index 87a86281..814f95db 160000
+--- a/qttools
++++ b/qttools
+@@ -1 +1 @@
+-Subproject commit 87a862817ccdabb3f7c0e34a2b27c94663e3a1f8
++Subproject commit 814f95db87f469abf8386825cf2db2ecc208c62b
+diff --git a/qtvirtualkeyboard b/qtvirtualkeyboard
+index a50db98b..2d0686c8 160000
+--- a/qtvirtualkeyboard
++++ b/qtvirtualkeyboard
+@@ -1 +1 @@
+-Subproject commit a50db98b23526737a4f7680d4e02ccd455309699
++Subproject commit 2d0686c879240f5d47347439da39f499f0434434
+diff --git a/qtwayland b/qtwayland
+index 1a5b7938..76eda41d 160000
+--- a/qtwayland
++++ b/qtwayland
+@@ -1 +1 @@
+-Subproject commit 1a5b7938c1384381a482448cf079bc682395b54b
++Subproject commit 76eda41dab9ddccf4c2a38d981c9b03bc7f051d0
+diff --git a/qtwebchannel b/qtwebchannel
+index e38d01e7..3342da90 160000
+--- a/qtwebchannel
++++ b/qtwebchannel
+@@ -1 +1 @@
+-Subproject commit e38d01e78530048339722f711d58d1404b2484c0
++Subproject commit 3342da908955187a4543cdc38e0fad2e78e936e7
+diff --git a/qtwebengine b/qtwebengine
+index c7352983..4242f2e6 160000
+--- a/qtwebengine
++++ b/qtwebengine
+@@ -1 +1 @@
+-Subproject commit c7352983348d666ed1a72cdda7ee48467898fbfa
++Subproject commit 4242f2e65493349af091c0f588182493090dbed2
+diff --git a/qtwebglplugin b/qtwebglplugin
+index 219abce4..942de9e9 160000
+--- a/qtwebglplugin
++++ b/qtwebglplugin
+@@ -1 +1 @@
+-Subproject commit 219abce4c8fcfbbae13b66c142ee0fd1afd04313
++Subproject commit 942de9e990a64cf012f3c7c42304d3eda5121139
+diff --git a/qtwebsockets b/qtwebsockets
+index 593466b4..432176cc 160000
+--- a/qtwebsockets
++++ b/qtwebsockets
+@@ -1 +1 @@
+-Subproject commit 593466b4b902536743050e088a0e4eee9f007c76
++Subproject commit 432176cc8f377046e2216ade3fb4c43d27ec8938
+diff --git a/qtwebview b/qtwebview
+index a15f2b83..1b514c3b 160000
+--- a/qtwebview
++++ b/qtwebview
+@@ -1 +1 @@
+-Subproject commit a15f2b83c42286ab7f4b4c406e4795b6a1a9a13e
++Subproject commit 1b514c3b7d1b5d6ddfbfd818cf878a425d2b5f8b
+diff --git a/qtwinextras b/qtwinextras
+index acb8cbb1..b8d402e1 160000
+--- a/qtwinextras
++++ b/qtwinextras
+@@ -1 +1 @@
+-Subproject commit acb8cbb19c8cda386e02e1c898291cc95e1be031
++Subproject commit b8d402e143627916214b1a7552da9d84920063c6
+diff --git a/qtx11extras b/qtx11extras
+index e05196b4..17a9d40a 160000
+--- a/qtx11extras
++++ b/qtx11extras
+@@ -1 +1 @@
+-Subproject commit e05196b4648e8ea28bbeea3491754c1c6db4a60c
++Subproject commit 17a9d40a3e808145aef8de08b79d21cf7df45421
+diff --git a/qtxmlpatterns b/qtxmlpatterns
+index fe5abadd..0c04a447 160000
+--- a/qtxmlpatterns
++++ b/qtxmlpatterns
+@@ -1 +1 @@
+-Subproject commit fe5abadda4ed0cfe7401ac8cfde29736c52a022e
++Subproject commit 0c04a447ca53642e33fde1f4ada6debc435837e7

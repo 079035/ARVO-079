@@ -1,0 +1,32 @@
+commit 32017745b0b4cb6d69ced6250dd67d9faf6282f8
+Author: Ravi Chaudhary <ravi.chaudhary@ittiam.com>
+Date:   Fri Sep 14 14:04:31 2018 +0530
+
+    Fix initialization in loop restoration mt
+    
+    When luma loop restoration is disabled, the initialization of
+    cur_sb_col in lr_sync was not happening correctly.
+    
+    BUG=b/114647746
+    BUG=oss-fuzz:10252
+    
+    Change-Id: I842a4a142680fdc78265c2f037b8bb1641f5e5d3
+
+diff --git a/av1/common/thread_common.c b/av1/common/thread_common.c
+index 1206cdda3b..8df4c9a09d 100644
+--- a/av1/common/thread_common.c
++++ b/av1/common/thread_common.c
+@@ -716,10 +716,12 @@ static void foreach_rest_unit_in_planes_mt(AV1LrStruct *lr_ctxt,
+   int num_rows_lr = 0;
+ 
+   for (int plane = 0; plane < num_planes; plane++) {
++    if (cm->rst_info[plane].frame_restoration_type == RESTORE_NONE) continue;
++
+     const AV1PixelRect tile_rect = ctxt[plane].tile_rect;
+     const int max_tile_h = tile_rect.bottom - tile_rect.top;
+ 
+-    const int unit_size = cm->seq_params.sb_size == BLOCK_128X128 ? 128 : 64;
++    const int unit_size = cm->rst_info[plane].restoration_unit_size;
+ 
+     num_rows_lr =
+         AOMMAX(num_rows_lr, av1_lr_count_units_in_tile(unit_size, max_tile_h));

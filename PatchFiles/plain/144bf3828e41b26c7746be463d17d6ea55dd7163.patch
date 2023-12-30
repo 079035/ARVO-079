@@ -1,0 +1,144 @@
+commit 144bf3828e41b26c7746be463d17d6ea55dd7163
+Author: paulhsia <paulhsia@chromium.org>
+Date:   Fri May 8 02:17:23 2020 +0800
+
+    CRAS: Fix cras_config_global_remix usage
+    
+    1. Change CRAS_MAX_REMIX_CHANNELS to 8
+    2. coefficient stores a matrix of values and
+       we limit num_channels by CRAS_MAX_REMIX_CHANNELS in rclient.
+       Therefore, the structure should hold a buffer with size
+       CRAS_MAX_REMIX_CHANNELS^2.
+    3. In cras_control_rclient, we should
+       - create a local coefficient array with
+         `len = m->num_channels * m->num_channels`
+       - copy m->num_channels * m->num_channels of data to the array
+       since the coefficient array is a matrix. Or
+       audio_thread_config_global_remix will access invalid heap memory.
+       This bug was introduced by 3fdcd82ac7dc648ea93cca5072e59cd5c33ebeaa.
+    4. Add unit test to simulate audio_thread_config_global_remix memory
+       accessing. The test can fail old behavior in (3).
+    
+    BUG=chromium:1097308
+    TEST=`FEATURES=test USE=asam emerge-${BOARD} adhd`
+    TEST=cras_rclient_message_fuzzer in ClusterFuzz
+    
+    Change-Id: I7a5e5b6c552c4b3d3cb18c08d6f8e84610d2aa1f
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/adhd/+/2188072
+    Commit-Queue: Chih-Yang Hsia <paulhsia@chromium.org>
+    Tested-by: Chih-Yang Hsia <paulhsia@chromium.org>
+    Reviewed-by: Dylan Reid <dgreid@chromium.org>
+
+diff --git a/cras/src/common/cras_messages.h b/cras/src/common/cras_messages.h
+index 4b8d42b6..70218080 100644
+--- a/cras/src/common/cras_messages.h
++++ b/cras/src/common/cras_messages.h
+@@ -20,7 +20,7 @@
+ #define CRAS_SERV_MAX_MSG_SIZE 256
+ #define CRAS_CLIENT_MAX_MSG_SIZE 256
+ #define CRAS_MAX_HOTWORD_MODELS 243
+-#define CRAS_MAX_REMIX_CHANNELS 32
++#define CRAS_MAX_REMIX_CHANNELS 8
+ #define CRAS_MAX_TEST_DATA_LEN 224
+ #define CRAS_AEC_DUMP_FILE_NAME_LEN 128
+ 
+@@ -425,7 +425,7 @@ static inline void cras_fill_suspend_message(struct cras_server_message *m,
+ struct __attribute__((__packed__)) cras_config_global_remix {
+ 	struct cras_server_message header;
+ 	unsigned int num_channels;
+-	float coefficient[CRAS_MAX_REMIX_CHANNELS];
++	float coefficient[CRAS_MAX_REMIX_CHANNELS * CRAS_MAX_REMIX_CHANNELS];
+ };
+ 
+ static inline void
+diff --git a/cras/src/server/cras_control_rclient.c b/cras/src/server/cras_control_rclient.c
+index 79c73394..1e5f9462 100644
+--- a/cras/src/server/cras_control_rclient.c
++++ b/cras/src/server/cras_control_rclient.c
+@@ -458,6 +458,8 @@ static int ccr_handle_message_from_client(struct cras_rclient *client,
+ 		const struct cras_config_global_remix *m =
+ 			(const struct cras_config_global_remix *)msg;
+ 		float *coefficient;
++		const size_t coefficient_len =
++			m->num_channels * m->num_channels;
+ 
+ 		if (!MSG_LEN_VALID(msg, struct cras_config_global_remix) ||
+ 		    m->num_channels > CRAS_MAX_REMIX_CHANNELS)
+@@ -467,10 +469,16 @@ static int ccr_handle_message_from_client(struct cras_rclient *client,
+ 					     sizeof(m->coefficient[0]);
+ 		if (size_with_coefficients != msg->length)
+ 			return -EINVAL;
++
+ 		coefficient =
+-			(float *)calloc(m->num_channels, sizeof(coefficient));
+-		for (unsigned i = 0; i < m->num_channels; i++)
+-			coefficient[i] = m->coefficient[i];
++			(float *)calloc(coefficient_len, sizeof(coefficient));
++		if (!coefficient) {
++			syslog(LOG_ERR,
++			       "Failed to create local coefficient array.");
++			break;
++		}
++		memcpy(coefficient, m->coefficient,
++		       coefficient_len * sizeof(coefficient));
+ 
+ 		audio_thread_config_global_remix(
+ 			cras_iodev_list_get_audio_thread(), m->num_channels,
+diff --git a/cras/src/tests/control_rclient_unittest.cc b/cras/src/tests/control_rclient_unittest.cc
+index e0e34b6f..189d22a4 100644
+--- a/cras/src/tests/control_rclient_unittest.cc
++++ b/cras/src/tests/control_rclient_unittest.cc
+@@ -20,6 +20,9 @@ extern "C" {
+ }
+ 
+ //  Stub data.
++static int audio_thread_config_global_remix_called;
++static float audio_thread_config_global_remix_copy[CRAS_MAX_REMIX_CHANNELS *
++                                                   CRAS_MAX_REMIX_CHANNELS];
+ static int cras_rstream_create_return;
+ static struct cras_rstream* cras_rstream_create_stream_out;
+ static int cras_iodev_attach_stream_retval;
+@@ -58,6 +61,9 @@ static struct cras_observer_ops cras_observer_ops_are_empty_empty_ops;
+ static size_t cras_observer_remove_called;
+ 
+ void ResetStubData() {
++  audio_thread_config_global_remix_called = 0;
++  memset(audio_thread_config_global_remix_copy, 0,
++         sizeof(audio_thread_config_global_remix_copy));
+   cras_rstream_create_return = 0;
+   cras_rstream_create_stream_out = (struct cras_rstream*)NULL;
+   cras_iodev_attach_stream_retval = 0;
+@@ -433,6 +439,23 @@ TEST_F(RClientMessagesSuite, DumpSnapshots) {
+   EXPECT_EQ(1, cras_system_state_dump_snapshots_called);
+ }
+ 
++TEST_F(RClientMessagesSuite, ConfigGlobalRemix) {
++  int rc;
++  struct cras_config_global_remix msg;
++  const int num_channels = 2;
++  float coefficient[4] = {0.1, 0.2, 0.3, 0.4};
++  cras_fill_config_global_remix_command(&msg, num_channels, coefficient,
++                                        num_channels * num_channels);
++
++  rc =
++      rclient_->ops->handle_message_from_client(rclient_, &msg.header, NULL, 0);
++  EXPECT_EQ(0, rc);
++  EXPECT_EQ(1, audio_thread_config_global_remix_called);
++  for (unsigned i = 0; i < (unsigned)num_channels * num_channels; i++) {
++    EXPECT_EQ(audio_thread_config_global_remix_copy[i], coefficient[i]);
++  }
++}
++
+ void RClientMessagesSuite::RegisterNotification(
+     enum CRAS_CLIENT_MESSAGE_ID msg_id,
+     void* callback,
+@@ -745,6 +768,9 @@ int audio_thread_resume(struct audio_thread* thread) {
+ int audio_thread_config_global_remix(struct audio_thread* thread,
+                                      unsigned int num_channels,
+                                      const float* coefficient) {
++  audio_thread_config_global_remix_called++;
++  memcpy(audio_thread_config_global_remix_copy, coefficient,
++         num_channels * num_channels * sizeof(coefficient));
+   return 0;
+ }
+ 

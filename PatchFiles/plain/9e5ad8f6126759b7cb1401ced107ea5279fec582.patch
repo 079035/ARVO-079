@@ -1,0 +1,48 @@
+From 9e5ad8f6126759b7cb1401ced107ea5279fec582 Mon Sep 17 00:00:00 2001
+From: Cristy <mikayla-grace@urban-warrior.org>
+Date: Wed, 17 Jun 2020 18:55:56 -0400
+Subject: [PATCH] https://github.com/ImageMagick/ImageMagick/issues/2153
+
+---
+ MagickCore/annotate.c | 8 +++++---
+ MagickCore/type.c     | 1 -
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/MagickCore/annotate.c b/MagickCore/annotate.c
+index 8b0fa19cd4e..3c649ae3463 100644
+--- a/MagickCore/annotate.c
++++ b/MagickCore/annotate.c
+@@ -963,8 +963,9 @@ static MagickBooleanType RenderType(Image *image,const DrawInfo *draw_info,
+   if ((type_info == (const TypeInfo *) NULL) &&
+       (draw_info->family != (const char *) NULL))
+     {
+-      type_info=GetTypeInfoByFamily(draw_info->family,draw_info->style,
+-        draw_info->stretch,draw_info->weight,exception);
++      if (strchr(draw_info->family,',') == (char *) NULL)
++        type_info=GetTypeInfoByFamily(draw_info->family,draw_info->style,
++          draw_info->stretch,draw_info->weight,exception);
+       if (type_info == (const TypeInfo *) NULL)
+         {
+           char
+@@ -984,7 +985,8 @@ static MagickBooleanType RenderType(Image *image,const DrawInfo *draw_info,
+           {
+             type_info=GetTypeInfoByFamily(family[i],draw_info->style,
+               draw_info->stretch,draw_info->weight,exception);
+-            if (type_info != (const TypeInfo *) NULL)
++            if ((type_info != (const TypeInfo *) NULL) &&
++                (LocaleCompare(family[i],type_info->family) == 0))
+               break;
+           }
+           for (i=0; i < (ssize_t) number_families; i++)
+diff --git a/MagickCore/type.c b/MagickCore/type.c
+index 52c24700e1d..50f830b3cb5 100644
+--- a/MagickCore/type.c
++++ b/MagickCore/type.c
+@@ -319,7 +319,6 @@ MagickExport const TypeInfo *GetTypeInfo(const char *name,
+ %    o exception: return any errors or warnings in this structure.
+ %
+ */
+-
+ MagickExport const TypeInfo *GetTypeInfoByFamily(const char *family,
+   const StyleType style,const StretchType stretch,const size_t weight,
+   ExceptionInfo *exception)

@@ -1,0 +1,25 @@
+From 2c8dcdafb71eff280cf6597606c6a3d933725e1c Mon Sep 17 00:00:00 2001
+From: Roman Lebedev <lebedev.ri@gmail.com>
+Date: Mon, 11 Nov 2019 20:34:04 +0300
+Subject: [PATCH] NefDecoder::DecodeD100Uncompressed(): sanitize input
+ existence before we assert that
+
+---
+ src/librawspeed/decoders/NefDecoder.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/librawspeed/decoders/NefDecoder.cpp b/src/librawspeed/decoders/NefDecoder.cpp
+index 774e3f82a..6b874f906 100644
+--- a/src/librawspeed/decoders/NefDecoder.cpp
++++ b/src/librawspeed/decoders/NefDecoder.cpp
+@@ -352,6 +352,10 @@ void NefDecoder::DecodeD100Uncompressed() {
+   mRaw->dim = iPoint2D(width, height);
+   mRaw->createData();
+ 
++  ByteStream bs(DataBuffer(mFile->getSubView(offset), Endianness::little));
++  if (bs.getRemainSize() == 0)
++    ThrowRDE("No input to decode!");
++
+   UncompressedDecompressor u(
+       ByteStream(DataBuffer(mFile->getSubView(offset), Endianness::little)),
+       mRaw);

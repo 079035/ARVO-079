@@ -1,0 +1,9 @@
+commit e57e43d68d5f5c9394860fefd1df62eae56ff800
+Merge: e977ff7 4a0745a
+Author: Guido Vranken <guidovranken@users.noreply.github.com>
+Date:   Thu Apr 27 20:08:32 2023 +0200
+
+    Merge pull request #3 from jvoisin/moar
+    
+    Add 3 more fuzzers: plist, toml and config
+

@@ -1,0 +1,69 @@
+From 79129613e5999addbe62bc12d67a829aba79f976 Mon Sep 17 00:00:00 2001
+From: "Todd C. Miller" <Todd.Miller@sudo.ws>
+Date: Wed, 11 Aug 2021 10:16:36 -0600
+Subject: [PATCH] If SSL_shutdown() returns 0 it needs to be called one more
+ time.
+
+---
+ logsrvd/logsrvd.c            | 3 ++-
+ logsrvd/logsrvd_relay.c      | 3 ++-
+ logsrvd/sendlog.c            | 3 ++-
+ plugins/sudoers/log_client.c | 3 ++-
+ 4 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/logsrvd/logsrvd.c b/logsrvd/logsrvd.c
+index 76cea5050f..eb2ce4ce44 100644
+--- a/logsrvd/logsrvd.c
++++ b/logsrvd/logsrvd.c
+@@ -122,7 +122,8 @@ connection_closure_free(struct connection_closure *closure)
+ 	    /* Must call SSL_shutdown() before closing closure->sock. */
+ 	    sudo_debug_printf(SUDO_DEBUG_INFO|SUDO_DEBUG_LINENO,
+ 		"closing down TLS connection from %s", closure->ipaddr);
+-	    SSL_shutdown(closure->ssl);
++	    if (SSL_shutdown(closure->ssl) == 0)
++		SSL_shutdown(closure->ssl);
+ 	    SSL_free(closure->ssl);
+ 	}
+ #endif
+diff --git a/logsrvd/logsrvd_relay.c b/logsrvd/logsrvd_relay.c
+index 4dc8c7b74c..2f8b3f6708 100644
+--- a/logsrvd/logsrvd_relay.c
++++ b/logsrvd/logsrvd_relay.c
+@@ -83,7 +83,8 @@ relay_closure_free(struct relay_closure *relay_closure)
+ 	sudo_debug_printf(SUDO_DEBUG_INFO|SUDO_DEBUG_LINENO,
+ 	    "closing down TLS connection to %s",
+ 	    relay_closure->relay_name.name);
+-	SSL_shutdown(relay_closure->tls_client.ssl);
++	if (SSL_shutdown(relay_closure->tls_client.ssl) == 0)
++	    SSL_shutdown(relay_closure->tls_client.ssl);
+ 	SSL_free(relay_closure->tls_client.ssl);
+     }
+ #endif
+diff --git a/logsrvd/sendlog.c b/logsrvd/sendlog.c
+index 151b48ac36..0a8b79e03c 100644
+--- a/logsrvd/sendlog.c
++++ b/logsrvd/sendlog.c
+@@ -1379,7 +1379,8 @@ client_closure_free(struct client_closure *closure)
+ 	TAILQ_REMOVE(&connections, closure, entries);
+ #if defined(HAVE_OPENSSL)
+         if (closure->tls_client.ssl != NULL) {
+-            SSL_shutdown(closure->tls_client.ssl);
++            if (SSL_shutdown(closure->tls_client.ssl) == 0)
++		SSL_shutdown(closure->tls_client.ssl);
+             SSL_free(closure->tls_client.ssl);
+         }
+ 	sudo_ev_free(closure->tls_client.tls_connect_ev);
+diff --git a/plugins/sudoers/log_client.c b/plugins/sudoers/log_client.c
+index c643bd08bb..5d3ed9127c 100644
+--- a/plugins/sudoers/log_client.c
++++ b/plugins/sudoers/log_client.c
+@@ -627,7 +627,8 @@ client_closure_free(struct client_closure *closure)
+ #if defined(HAVE_OPENSSL)
+     /* Shut down the TLS connection cleanly and free SSL data. */
+     if (closure->ssl != NULL) {
+-	SSL_shutdown(closure->ssl);
++	if (SSL_shutdown(closure->ssl) == 0)
++	    SSL_shutdown(closure->ssl);
+ 	SSL_free(closure->ssl);
+     }
+     SSL_CTX_free(closure->ssl_ctx);

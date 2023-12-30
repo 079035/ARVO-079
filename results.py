@@ -9,7 +9,7 @@ from utils import *
 This script summarizes the result in the log file and show us the statistics of our dataset 
 '''
 LOG_FILE = "./Data/FixMeta.json"
-RESULTS = Path(oss_reproducer_dir) / "Results.json"
+RESULTS = oss_reproducer_dir / "Results.json"
 '''
         Statistics
         These functions are used to dump the statistics of the result/dataset

@@ -1,0 +1,25 @@
+From f00f545b17cbb9958e9da054d137dbf0edd60331 Mon Sep 17 00:00:00 2001
+From: Nathan Moinvaziri <nathan@nathanm.com>
+Date: Sat, 23 Jan 2021 18:41:11 -0800
+Subject: [PATCH] Fixed ASAN error due to invalid header length.
+ https://oss-fuzz.com/testcase-detail/6021380745330688
+
+---
+ blosc/frame.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/blosc/frame.c b/blosc/frame.c
+index a87d691eb..40b4a9b6c 100644
+--- a/blosc/frame.c
++++ b/blosc/frame.c
+@@ -423,8 +423,8 @@ int get_header_info(blosc2_frame *frame, int32_t *header_len, int64_t *frame_len
+     swap_store(typesize, framep + FRAME_TYPESIZE, sizeof(*typesize));
+   }
+ 
+-  if (*header_len > *frame_len) {
+-    BLOSC_TRACE_ERROR("Header length exceeds length of the frame.");
++  if (*header_len <= 0 || *header_len > *frame_len) {
++    BLOSC_TRACE_ERROR("Header length is invalid or exceeds length of the frame.");
+     return -1;
+   }
+ 

@@ -1,0 +1,22 @@
+From 1631b96b4bea8503cd63db4d16b15653aedf5bae Mon Sep 17 00:00:00 2001
+From: "Christoph M. Becker" <cmbecker69@gmx.de>
+Date: Mon, 12 Jul 2021 23:36:21 +0200
+Subject: [PATCH] exit_status is no longer a true global
+
+---
+ sapi/cli/php_cli.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sapi/cli/php_cli.c b/sapi/cli/php_cli.c
+index 8bc0ae7d4ecab..62bc619db63d1 100644
+--- a/sapi/cli/php_cli.c
++++ b/sapi/cli/php_cli.c
+@@ -1064,7 +1064,7 @@ static int do_cli(int argc, char **argv) /* {{{ */
+ 						zend_printf("Exception: %s\n", Z_STRVAL_P(msg));
+ 						zend_object_release(EG(exception));
+ 						EG(exception) = NULL;
+-						exit_status = 1;
++						EG(exit_status) = 1;
+ 					} else {
+ 						zend_print_zval(&ref, 0);
+ 						zend_write("\n", 1);

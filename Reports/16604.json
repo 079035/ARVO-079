@@ -1,5 +1,5 @@
 {
-    "fix": "https://android.googlesource.com/platform/external/libmpeg2/+/6f28264c1170fae4f6c847625f4a6d4467a3262b",
+    "fix": "https://android.googlesource.com/platform/external/libmpeg2/+/6f28264c1170fae4f6c847625f4a6d4467a3262b%5E%21/",
     "verify": "0",
     "localId": 16604,
     "project": "libmpeg2",

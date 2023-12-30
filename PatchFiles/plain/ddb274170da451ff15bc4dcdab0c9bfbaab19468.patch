@@ -1,0 +1,19 @@
+commit ddb274170da451ff15bc4dcdab0c9bfbaab19468
+Author: David Garske <david@wolfssl.com>
+Date:   Thu Mar 31 15:09:55 2022 -0700
+
+    Fix to ensure the packet object is reset after use.
+
+diff --git a/src/mqtt_client.c b/src/mqtt_client.c
+index 102c550..ceb6951 100644
+--- a/src/mqtt_client.c
++++ b/src/mqtt_client.c
+@@ -1033,6 +1033,8 @@ wait_again:
+                 break;
+             }
+         #endif
++            /* Make sure shared packet object is reset */
++            XMEMSET(&client->msg, 0, sizeof(client->msg));
+ 
+             /* handle success case */
+             if (rc >= 0) {

@@ -1,0 +1,10 @@
+commit bf400c0bb05a7e2bb6bce16808a5cd97e0c4c9eb
+Merge: e0b810f a469393
+Author: hamzeh <hamzeh@google.com>
+Date:   Fri Aug 30 09:18:04 2019 -0700
+
+    Merge "Making liblog static in libhevc fuzzer"
+    am: a469393436
+    
+    Change-Id: I9d52bb1e8bfb30352e8207e3fd411a770a3e4276
+

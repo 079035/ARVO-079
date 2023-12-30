@@ -1,0 +1,20 @@
+commit 67b144340b46bbc2585363cc1fb2de6b662e7b36
+Author: Eduardo Silva <eduardo@calyptia.com>
+Date:   Fri Mar 25 22:25:53 2022 -0600
+
+    config_format: on exception return NULL
+    
+    Signed-off-by: Eduardo Silva <eduardo@calyptia.com>
+
+diff --git a/src/config_format/flb_cf_fluentbit.c b/src/config_format/flb_cf_fluentbit.c
+index 0a930a087..08b878fab 100644
+--- a/src/config_format/flb_cf_fluentbit.c
++++ b/src/config_format/flb_cf_fluentbit.c
+@@ -742,6 +742,7 @@ struct flb_cf *flb_cf_fluentbit_create(struct flb_cf *cf,
+ 
+     if (ret == -1 && created) {
+         flb_cf_destroy(cf);
++        return NULL;
+     }
+ 
+     return cf;

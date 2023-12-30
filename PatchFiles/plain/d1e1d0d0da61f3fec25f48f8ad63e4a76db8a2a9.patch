@@ -1,0 +1,25 @@
+From d1e1d0d0da61f3fec25f48f8ad63e4a76db8a2a9 Mon Sep 17 00:00:00 2001
+From: Jose Ulises Nino Rivera <junr03@users.noreply.github.com>
+Date: Tue, 21 Dec 2021 10:10:22 -0800
+Subject: [PATCH] connection: update connecting log line to log event (#19328)
+
+Signed-off-by: Jose Nino <jnino@lyft.com>
+---
+ source/common/network/connection_impl.cc | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/source/common/network/connection_impl.cc b/source/common/network/connection_impl.cc
+index 2d4f847a8c458..50ccff526f18c 100644
+--- a/source/common/network/connection_impl.cc
++++ b/source/common/network/connection_impl.cc
+@@ -888,8 +888,8 @@ ClientConnectionImpl::ClientConnectionImpl(
+ }
+ 
+ void ClientConnectionImpl::connect() {
+-  ENVOY_CONN_LOG(debug, "connecting to {}", *this,
+-                 socket_->connectionInfoProvider().remoteAddress()->asString());
++  ENVOY_CONN_LOG_EVENT(debug, "client_connection", "connecting to {}", *this,
++                       socket_->connectionInfoProvider().remoteAddress()->asString());
+   const Api::SysCallIntResult result =
+       socket_->connect(socket_->connectionInfoProvider().remoteAddress());
+   stream_info_.upstreamInfo()->upstreamTiming().onUpstreamConnectStart(dispatcher_.timeSource());

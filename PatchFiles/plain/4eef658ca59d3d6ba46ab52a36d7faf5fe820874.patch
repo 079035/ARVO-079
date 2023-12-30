@@ -1,0 +1,26 @@
+commit 4eef658ca59d3d6ba46ab52a36d7faf5fe820874
+Author: Michael Niedermayer <michael@niedermayer.cc>
+Date:   Wed Jan 11 19:39:38 2023 +0100
+
+    avcodec/utils: Ensure linesize for SVQ3
+    
+    Fixes: Assertion block_w * sizeof(uint8_t) <= ((buf_linesize) >= 0 ? (buf_linesize) : (-(buf_linesize))
+    Fixes: 54861/clusterfuzz-testcase-minimized-ffmpeg_AV_CODEC_ID_SVQ3_fuzzer-5352418248622080
+    
+    Found-by: continuous fuzzing process https://github.com/google/oss-fuzz/tree/master/projects/ffmpeg
+    Signed-off-by: Michael Niedermayer <michael@niedermayer.cc>
+
+diff --git a/libavcodec/utils.c b/libavcodec/utils.c
+index 701bebe337..599da21dba 100644
+--- a/libavcodec/utils.c
++++ b/libavcodec/utils.c
+@@ -337,6 +337,9 @@ void avcodec_align_dimensions2(AVCodecContext *s, int *width, int *height,
+         // the next rounded up width is 32
+         *width = FFMAX(*width, 32);
+     }
++    if (s->codec_id == AV_CODEC_ID_SVQ3) {
++        *width = FFMAX(*width, 32);
++    }
+ 
+     for (i = 0; i < 4; i++)
+         linesize_align[i] = STRIDE_ALIGN;

@@ -1,0 +1,22 @@
+From 9e8030cffe7466e7a40f2ff965020f7648ab33ac Mon Sep 17 00:00:00 2001
+From: Dirk Farin <dirk.farin@gmail.com>
+Date: Tue, 23 Feb 2021 08:26:11 +0100
+Subject: [PATCH] fix typo in color conversion
+
+---
+ libheif/heif_colorconversion.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libheif/heif_colorconversion.cc b/libheif/heif_colorconversion.cc
+index 08646214db..20976448ab 100644
+--- a/libheif/heif_colorconversion.cc
++++ b/libheif/heif_colorconversion.cc
+@@ -727,7 +727,7 @@ Op_RGB_to_YCbCr<Pixel>::convert_colorspace(const std::shared_ptr<const HeifPixel
+ 
+         if (!full_range_flag) {
+           cb = (cb * 224) / 256;
+-          cr = (cb * 224) / 256;
++          cr = (cr * 224) / 256;
+         }
+ 
+         out_cb[(y / subV) * out_cb_stride + (x / subH)] = (Pixel) clip_f_u16(cb + halfRange, fullRange);

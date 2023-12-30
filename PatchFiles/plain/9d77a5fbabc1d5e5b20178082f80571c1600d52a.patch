@@ -1,0 +1,78 @@
+From 9d77a5fbabc1d5e5b20178082f80571c1600d52a Mon Sep 17 00:00:00 2001
+From: Denis Ovsienko <denis@ovsienko.info>
+Date: Wed, 9 Sep 2020 01:45:49 +0100
+Subject: [PATCH] Fixup pcap_datalink_val_to_description_or_dlt(). [skip ci]
+
+Add some missing autoconf and CMake bits, list the new function in
+pcap(3PCAP) and fix some formatting in pcap_datalink_val_to_name(3PCAP).
+This is a follow-up to commit 6e95542.
+---
+ CMakeLists.txt                  | 1 +
+ Makefile.in                     | 1 +
+ pcap.3pcap.in                   | 6 +++++-
+ pcap_datalink_val_to_name.3pcap | 3 ++-
+ 4 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2bb58b9184..ddbe4a6324 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -2692,6 +2692,7 @@ if(NOT MSVC)
+         endforeach(TEMPLATE_MANPAGE)
+         install(FILES ${MAN3PCAP} DESTINATION ${CMAKE_INSTALL_MANDIR}/man3)
+         install_manpage_symlink(pcap_datalink_val_to_name.3pcap pcap_datalink_val_to_description.3pcap ${CMAKE_INSTALL_MANDIR}/man3)
++        install_manpage_symlink(pcap_datalink_val_to_name.3pcap pcap_datalink_val_to_description_or_dlt.3pcap ${CMAKE_INSTALL_MANDIR}/man3)
+         install_manpage_symlink(pcap_dump_open.3pcap pcap_dump_fopen.3pcap ${CMAKE_INSTALL_MANDIR}/man3)
+         install_manpage_symlink(pcap_findalldevs.3pcap pcap_freealldevs.3pcap ${CMAKE_INSTALL_MANDIR}/man3)
+         install_manpage_symlink(pcap_geterr.3pcap pcap_perror.3pcap ${CMAKE_INSTALL_MANDIR}/man3)
+diff --git a/Makefile.in b/Makefile.in
+index 1f5d56ab4e..ad2a9e029c 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -724,6 +724,7 @@ uninstall: uninstall-shared uninstall-rpcapd
+ 	for i in $(MAN3PCAP); do \
+ 		rm -f $(DESTDIR)$(mandir)/man3/$$i; done
+ 	rm -f $(DESTDIR)$(mandir)/man3/pcap_datalink_val_to_description.3pcap
++	rm -f $(DESTDIR)$(mandir)/man3/pcap_datalink_val_to_description_or_dlt.3pcap
+ 	rm -f $(DESTDIR)$(mandir)/man3/pcap_dump_fopen.3pcap
+ 	rm -f $(DESTDIR)$(mandir)/man3/pcap_freealldevs.3pcap
+ 	rm -f $(DESTDIR)$(mandir)/man3/pcap_perror.3pcap
+diff --git a/pcap.3pcap.in b/pcap.3pcap.in
+index c9fc5f0485..14db47c87b 100644
+--- a/pcap.3pcap.in
++++ b/pcap.3pcap.in
+@@ -17,7 +17,7 @@
+ .\" WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
+ .\" MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+ .\"
+-.TH PCAP 3PCAP "29 January 2020"
++.TH PCAP 3PCAP "9 September 2020"
+ .SH NAME
+ pcap \- Packet Capture library
+ .SH SYNOPSIS
+@@ -573,7 +573,11 @@ set link-layer header type for a device
+ get name for a link-layer header type
+ .TP
+ .BR pcap_datalink_val_to_description (3PCAP)
++.PD 0
++.TP
++.BR pcap_datalink_val_to_description_or_dlt (3PCAP)
+ get description for a link-layer header type
++.PD
+ .TP
+ .BR pcap_datalink_name_to_val (3PCAP)
+ get link-layer header type corresponding to a name
+diff --git a/pcap_datalink_val_to_name.3pcap b/pcap_datalink_val_to_name.3pcap
+index 81eae2b8ba..119e8b0528 100644
+--- a/pcap_datalink_val_to_name.3pcap
++++ b/pcap_datalink_val_to_name.3pcap
+@@ -57,7 +57,8 @@ value.
+ .PP
+ .BR pcap_datalink_val_to_description_or_dlt ()
+ translates a link-layer header type value to a short description of that
+-link-layer header type just like pcap_datalink_val_to_description.
++link-layer header type just like
++.BR pcap_datalink_val_to_description ().
+ If the type value does not correspond to a known
+ .B DLT_
+ value, the string "DLT n" is returned, where n is the value of

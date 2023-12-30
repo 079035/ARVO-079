@@ -1,0 +1,86 @@
+commit 872d8d0beabd9a81c08fc34ec83285c690228aa8
+Author: Namyoon Woo <namyoon@google.com>
+Date:   Mon Mar 23 10:37:53 2020 -0700
+
+    reduce command set to CC_S_CROS_ONLY for cr50 dev image
+    
+    This patch reduces the TPM command set from CC_S_COMMON_SET to
+    CC_S_CROS_ONLY. Techincally, it excludes CC_S_TCG_MUST, CC_S_WIN_MUST
+    and CC_WIN_REC. It reduces flash usage by 12.6 kbytes.
+    
+    BUG=b:151758820
+    TEST=ran trunks_client tests on octopus fleex.
+    $ trunks_client --regression_test
+    $ trunks_client --stress_test
+    $ trunks_client --ext_command_test
+    
+    Ran platform/login tests, and checked them pass:
+      login_CryptohomeDataLeak
+      login_CryptohomeOwnerQuery
+      login_LoginSuccess
+      login_LoginSuccess.stress
+      platform_BootLockboxServer
+      platform_BootPerf
+      platform_CryptohomeBadPerms
+      platform_CryptohomeChangePassword
+      platform_CryptohomeFio
+      platform_CryptohomeFio.dirty_setting
+      platform_CryptohomeFio.stress
+      platform_CryptohomeGetEnrollmentId
+      platform_CryptohomeKeyEviction
+      platform_CryptohomeLECredentialManagerServer
+      platform_CryptohomeMigrateKey
+      platform_CryptohomeMount
+      platform_CryptohomeMultiple
+      platform_CryptohomeNonDirs
+      platform_CryptohomeStress
+      platform_CryptohomeStress.surfing
+      platform_CryptohomeTPMReOwnServer
+      platform_CryptohomeTestAuth
+      platform_CryptohomeTpmLiveTestServer
+      platform_LogoutPerf
+      platform_Pkcs11InitOnLogin
+    
+    Ran tast hwsec tests, and checked them pass:
+      hwsec.Login
+      hwsec.LoginGuest
+      hwsec.AttestationEID
+      hwsec.ChallengeResponseMount
+      hwsec.CryptohomeTPMLiveTests
+      hwsec.RecreateUserVault
+      hwsec.ClearOwnership
+      hwsec.CryptohomeKeysAndMountSanity
+      hwsec.InstallAttributes
+      hwsec.LoginDuringTakingOwnership
+      hwsec.RetakeOwnership
+      hwsec.RetakeOwnershipFlushPassword
+      hwsec.RetakeOwnershipLatePreparation
+    
+    Change-Id: I702c8e89a84647fb856ec9f8ccb2c44fa6fee4f5
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/tpm2/+/2115943
+    Tested-by: Namyoon Woo <namyoon@chromium.org>
+    Reviewed-by: Andrey Pronin <apronin@chromium.org>
+    Commit-Queue: Namyoon Woo <namyoon@chromium.org>
+
+diff --git a/Implementation.h b/Implementation.h
+index 829f1af..767a652 100644
+--- a/Implementation.h
++++ b/Implementation.h
+@@ -147,7 +147,7 @@
+ #define CC_S_ALL_MUST (CC_S_CROS_MUST | CC_S_WINDOWS | CC_S_TCG_MUST)
+ 
+ // Flags to select supported environment (for CC_ENABLED_SET)
+-// CC_S_CROS_ONLY - Only ChromeOS / Coreboot / FW Upgrade required commands
++// CC_S_CROS_ONLY - Only ChromeOS / Coreboot
+ // CC_S_WINDOWS_ONLY - Support only Windows mandatory and recommended
+ // CC_S_COMMON_SET - Common subset of mandatory and recommended
+ //          commands, excluding OPTIONAL
+@@ -157,7 +157,7 @@
+ 
+ // CC_ENABLED_SET defines flags to select supported environment
+ #ifndef CC_ENABLED_SET
+-#define CC_ENABLED_SET CC_S_COMMON_SET
++#define CC_ENABLED_SET (CC_S_CROS_ONLY)
+ #endif
+ 
+ #define CC_SET(mask) ((CC_ENABLED_SET & (mask)) ? CC_YES : CC_NO)

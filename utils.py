@@ -17,7 +17,6 @@ import FailPool
 from utils_exec import *
 from utils_docker import *
 from DB_Manager import *
-import inspect
 #==================================================================
 #
 #                          Global Settings
@@ -25,21 +24,23 @@ import inspect
 #==================================================================
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = _profile.gcloud_key
 oss_fuzz_dir = Path(_profile.oss_fuzz_dir)
-oss_reproducer_dir = _profile.oss_reproducer_dir
+oss_reproducer_dir = Path(_profile.oss_reproducer_dir)
 OSS_OUT     = Path(_profile.OSS_OUT_DIR)
-OSS_WORK    = Path(_profile.OSS_WORK_DIR)
-OSS_TMP     = Path(_profile.TMP)
-
+OSS_WORK    = Path(_profile.OSS_WORK_DIR)           
+OSS_TMP     = Path(_profile.TMP)                    # TMP 
+OSS_IMG     = Path(_profile.OSS_SAVED_IMG)          # Saved Images
+OSS_LOCK    = Path(_profile.OSS_LOCK_DIR)            # Simple Locks
+UserName   = _profile.UserName
 RM_IMAGES = True
 CLEAN_TMP = _profile.CLEAN_TMP 
 FORCE_CLEAN = False
 TIME_ZONE =  _profile.TIME_ZONE
-DATADIR = Path(oss_reproducer_dir) / _profile.DATA_FOLD
+DATADIR = oss_reproducer_dir / _profile.DATA_FOLD
 MetaDataFile = DATADIR / "metadata.jsonl"
 session = requests.Session()
 
 def eventLog(s):
-    with open(Path(oss_reproducer_dir)/"Log"/"_Event.log",'a') as f:
+    with open(oss_reproducer_dir/"Log"/"_Event.log",'a') as f:
         f.write(s+"\n")
 sys.path.insert(1,str(oss_fuzz_dir/"infra"))
 def dir_check(path):
@@ -70,6 +71,10 @@ def panic(s):
     exit(1)
 
 # Init Dirs
+if not dir_check(OSS_LOCK):
+    panic("Failed to init OSS_IMG")
+if not dir_check(OSS_IMG):
+    panic("Failed to init OSS_IMG")
 if not dir_check(OSS_TMP) or not dir_check(OSS_OUT) or not dir_check(OSS_WORK) or not dir_check(OSS_DB):
     panic("Failed to init OSS_OUT/OSS_WORK/OSS_DB")
 if not OSS_DB_MAP.exists():
@@ -83,19 +88,25 @@ if not OSS_DB_MAP.exists():
 #==================================================================
 def getPname(localId):
     srcmap,issue = getIssueTuple(localId)
-    pname = issue['project']
+    try:
+        pname = issue['project']
+    except:
+        return "Failed"
     with open(srcmap[0]) as f:
         info1 = json.load(f)
         except_name = "/src/"+pname
         if except_name in info1:
             info1 = info1[except_name]   
         else:
-            first_item = list(info1.keys())[0]
+            # Chose the first one, it may be wrong
+            candidates = []
+            with open(srcmap[1]) as ff:
+                info2 = json.load(ff)
+            for x in info2.keys():
+                if x in list(info1.keys()):
+                    candidates.append(x)
+            first_item = candidates[0]
             info1 = info1[first_item]
-            # Chose the first one 
-            # If it doesn't work
-            # the caller would decide 
-            # if we should give up this case
             pname = first_item.split("/")[-1]
     return pname
 def find_issues_by_names(pro_names):
@@ -108,7 +119,7 @@ def find_issues_by_names(pro_names):
             line = json.loads(line)
             try:
                 pro = line["project"]
-                if(pro in pro_names):
+                if(pro_names in pro):
                     if line['localId'] not in FailPool.noreg:
                         res.append(line['localId'])
             except:
@@ -167,7 +178,7 @@ def getIssue(localId):
             return issue
     eventLog(f"[-] no such issue, {localId}")
     return False
-def tmpDir(path=OSS_TMP,pre="n132_",dont_mk=False):
+def tmpDir(path=OSS_TMP,pre="ARVO_",dont_mk=False):
     name = pre+b58encode(os.urandom(16)).decode()
     res = Path(path)
     res = res/name
@@ -239,12 +250,11 @@ def _hg_check_out(commit,path):
     return check_call(['hg',"checkout", commit], cwd=path)
 def _svn_check_out(commit,path):
     return check_call(['svn',"up",'-r', commit], cwd=path)
-def clone(url,commit=None,dest=None,name=None):
+def clone(url,commit=None,dest=None,name=None,main_repo=False):
     if(dest):
         dest = Path(dest)
     else:
         dest = tmpDir()
-    
     if not _git_clone(url,dest,name):
         eventLog(f"[!] - clone: Failed to clone {url}")
         return False
@@ -256,8 +266,12 @@ def clone(url,commit=None,dest=None,name=None):
         if _check_out(commit,dest / name):
             return dest
         else:
-            eventLog(f"[!] - clone: Failed to checkout {name}")
-            return False
+            if main_repo == True:
+                eventLog(f"[!] - clone: Failed to checkout {name}")
+                return False
+            else:
+                eventLog(f"[!] - clone: Failed to checkout {name} but it's not the main component")
+                return None
     return dest
 def hg_clone(url,commit=None,dest=None,rename=None):
     try:
@@ -314,20 +328,67 @@ def clean_dir(victim):
 def remove_oss_fuzz_img(localId):
     try:
         print(f"[+] Delete images, {localId}")
-        print("*"*0x20)
         imgName = f"gcr.io/oss-fuzz/{localId}"
-        cmd = "docker images -q".split()
-        imageHash = execute(cmd+[imgName])
-        imageHash = imageHash.decode().strip().replace("\n","")
-        cmd = f"docker image rm {imgName}".split(" ")
-        print(" ".join(cmd))
-        execute(cmd)
-        cmd = ("docker image rm "+imageHash).split(" ")
-        print(" ".join(cmd))
-        execute(cmd)
-        print("*"*0x20)
+        docker_rmi(imgName)
     except:
         panic("[!] Fail to remove Changed Images")
+def crashVerifyPrompt():
+    print(" "*0x20)
+    print("$"*0x20)
+    print(" "*0x20)
+def getFuzzTarget(issue):
+    build_out = OSS_OUT
+    # Find the fuzzer target
+    if "fuzz_target" in issue.keys():
+        fuzz_target = build_out / str(issue['localId']) / issue['fuzz_target']
+    elif "fuzzer" in issue.keys():
+        fuzz_target = build_out / str(issue['localId']) / issue['fuzzer']
+    else:
+        try:
+            fuzz_target = build_out / str(issue['localId']) / issue['issue']['summary'].split(":")[1]
+        except:
+            issue_record(issue['project'],issue['localId'],f"Doesn't specify a fuzzer")
+            return None
+    return fuzz_target
+def crashVerify(issue,reproduce_case):
+    # Return True if NOT crash
+    # Return False if crash 
+    crashVerifyPrompt()
+    fuzz_target = getFuzzTarget(issue)
+    if fuzz_target == None:
+        return None
+    try: # We may not have the permission to check if that fuzz target exists.
+        if not fuzz_target.exists():
+            issue_record(issue['project'],issue['localId'],f"Fuzz target {str(fuzz_target)} doesn't exist")
+            return None
+    except:
+        pass
+    res = ifCrash(str(fuzz_target),str(reproduce_case),issue)
+    crashVerifyPrompt()
+    return res
+def ifCrash(fuzz_target,case,issue):
+    name = fuzz_target.split("/")[-1]
+    # poc  = case.split("/")[-1]
+    out  = OSS_OUT / str(issue['localId']) 
+    # shutil.copyfile(case, out/poc)
+    res = _ifCrash(['-e','ASAN_OPTIONS=detect_leaks=0',\
+                    "-v",f"{case}:/tmp/poc",\
+                    '-v',f"{out}:/out",f"gcr.io/oss-fuzz/{issue['localId']}",\
+                    '/out/'+name,'/tmp/poc'])
+    return res
+
+def _ifCrash(args):
+    cmd = ['docker','run','--rm','--privileged']
+    cmd.extend(args)
+    print(" ".join(cmd))
+    returnCode = execute_ret(cmd)
+    print(f"[+] The return value is {returnCode}")
+    if returnCode == 0:
+        return True
+    else:
+        return False
+        
+
 def crash_verfiy(issue,reproduce_case,bt=False,local=True):
     print(" "*0x20)
     print("$"*0x20)
@@ -491,7 +552,11 @@ def rebaseDockerfile(dockerfile_path,commit_date):
     if(res == None):
         eventLog(f"[-] rebaseDockerfile: Failed to get the base-image: {dockerfile_path}")
         return False
-    image_hash = _list_with_time(commit_date)
+    repo = res[0][5:]
+    if "@sha256" in repo:
+        repo = repo.split("@sha256")[0]
+    
+    image_hash = _list_with_time(commit_date,repo)
     if not image_hash :
         # Use the latest image
         eventLog(f"[-] rebaseDockerfile: Failed to find a valid base-builder, use the latest version...")
@@ -499,7 +564,8 @@ def rebaseDockerfile(dockerfile_path,commit_date):
         with open(dockerfile_path,'w') as f:
             f.write(data)
         return True
-    image_name = "gcr.io/oss-fuzz-base/base-builder"
+    # image_name = "gcr.io/oss-fuzz-base/base-builder"
+    image_name = repo
     data = re.sub(r"FROM .*",f"FROM {image_name}@sha256:"+image_hash+"\nRUN apt-get update -y\n",data)
     with open(dockerfile_path,'w') as f:
         f.write(data)
@@ -522,6 +588,8 @@ def fixDockerfile(dockerfile_path,project=None):
     elif project == 'imagemagick':
         assert(dft.replace("ADD http://lcamtuf","ADD https://lcamtuf")==True)
         assert(dft.replace(r'RUN git .*freetype2.*',"")==True)
+        assert(dft.replace(r'RUN svn .*heic_corpus.*',"RUN mkdir /src/heic_corpus")==True)
+        
     elif project == "libxml2":
         assert(dft.replace(r"RUN git clone .*libxml2.*","")==True)
     elif project =="dav1d":
@@ -544,17 +612,19 @@ def fixDockerfile(dockerfile_path,project=None):
     print("[+] Dockerfile: Fixed")
     return True
 def extraScritps(pname,oss_dir,source_dir):
+    # print(pname,oss_dir,source_dir)
+    if pname == 'imagemagick':
+        target = source_dir/"src"/pname/"Magick++"/"fuzz"/"build.sh"
+        if target.exists():
+            with open(target) as f:
+                lines = f.readlines()
+            for x in range(3):
+                if "zip" in lines[-x]:
+                    del(lines[-x])
+                # lines = lines[:-x] # remove zip ... SRC/heic_corpus
+            with open(target,'w') as f:
+                f.write("\n".join(lines))
     # This function is redundant after fix the timestap issue
-    # if pname == "gdal":
-    #     target1 = source_dir/"src"/"gdal"/"gdal"/"fuzzers"/"build.sh"
-    #     target2 = source_dir/"src"/"gdal"/"fuzzers"/"build.sh"
-    #     if target1.exists():
-    #         shutil.copyfile(target1,oss_dir/"build.sh")
-    #     elif target2.exists():
-    #         shutil.copyfile(target2,oss_dir/"build.sh")
-    #     else:
-    #         return False
-    
     return True
 def stamp2date(out):
     tz = pytz.timezone(TIME_ZONE)
@@ -577,12 +647,12 @@ def hg_date(commit,path):
     #todo
     return None
 def issue_record(name,localId,des,log_addr = "_CrashLOGs"):
-    filename = Path(oss_reproducer_dir) / log_addr
+    filename = oss_reproducer_dir / log_addr
     with open(filename,'a+') as f:
         f.write(f"| {name} | {localId} | {des} |\n")
     return 
 def result_record(project,localId,result):
-    filename = Path(oss_reproducer_dir) / "Results.json"
+    filename = oss_reproducer_dir / "Results.json"
     payload = {}
     payload['localId'] = localId
     payload['project'] = project
@@ -616,6 +686,20 @@ def fixBuildScript(file,pname):
         '''
         script = "sed -i 's/alexhultman/madler/g' fuzzing/Makefile"
         assert(dft.insertLineat(0,script)==True)
+    if pname == "ghostscript":
+        old = r"mv \$SRC\/freetype freetype"
+        new = "cp -r $SRC/freetype freetype"
+        assert(dft.replace(old,new)==True)
+    elif pname== 'openh264':
+        with open(file) as f:
+            lines = f.readlines()
+        new_lines = []
+        for line in lines:
+            if "corpus" not in line:
+                new_lines.append(line)
+        with open(file,'w') as f:
+            for line in new_lines:
+                f.write(line+"\n")
     return True
 
 def additional_script(project,source_path=None):

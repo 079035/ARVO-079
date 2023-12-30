@@ -1,0 +1,31 @@
+From 96c750622f3edb281c261d05f36a1c2f37e5e100 Mon Sep 17 00:00:00 2001
+From: Volodymyr Shymanskyy <vshymanskyi@gmail.com>
+Date: Mon, 26 Apr 2021 14:32:39 +0300
+Subject: [PATCH] Use clang for "build-as-cpp" tests
+
+---
+ .github/workflows/tests.yml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/.github/workflows/tests.yml b/.github/workflows/tests.yml
+index 5b88d05d..ad9fbb88 100644
+--- a/.github/workflows/tests.yml
++++ b/.github/workflows/tests.yml
+@@ -528,7 +528,7 @@ jobs:
+       run: |
+         mkdir build
+         cd build
+-        g++ -xc++ -Dd_m3HasWASI \
++        clang -xc++ -Dd_m3HasWASI \
+             -I../source ../source/*.c ../platforms/app/main.c \
+             -O3 -g0 -lm \
+             -o wasm3
+@@ -546,7 +546,7 @@ jobs:
+       run: |
+         mkdir build
+         cd build
+-        g++ -xc++ -Dd_m3HasWASI -DDEBUG \
++        clang -xc++ -Dd_m3HasWASI -DDEBUG \
+             -Dd_m3EnableOpTracing=1     \
+             -Dd_m3EnableStrace=1        \
+             -Dd_m3LogParse=1            \

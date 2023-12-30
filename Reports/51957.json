@@ -1,0 +1,202 @@
+{
+    "fix": "https://github.com/protocolbuffers/upb/commit/bc569098dc2d2448d76a6fa105f188311137545f",
+    "verify": "0",
+    "localId": 51957,
+    "project": "upb",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "msan",
+    "crash_type": "Use-of-uninitialized-value",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1664418546,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=4911141927387136\n\nProject: upb\nFuzzing Engine: libFuzzer\nFuzz Target: file_descriptor_parsenew_fuzzer\nJob Type: libfuzzer_msan_upb\nPlatform Id: linux\n\nCrash Type: Use-of-uninitialized-value\nCrash Address: \nCrash State:\n  upb_MiniTable_BuildExtension\n  _upb_FieldDef_Resolve\n  _upb_MessageDef_Resolve\n  \nSanitizer: memory (MSAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_upb&range=202209270610:202209280612\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=4911141927387136\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1664477457,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-12-28"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1665703129,
+                "amendments": [
+                    {
+                        "fieldName": "Cc",
+                        "newOrDeltaValue": "jgrimes@google.com kfm@google.com acozzette@google.com sbenza@google.com jgm@google.com mkruskal@google.com protobuf-oss-fuzz@google.com jorg@google.com theodorerose@google.com sandyzhang@google.com mcyoung@google.com jieluo@google.com gberg@google.com salo@google.com shaod@google.com deannagarcia@google.com pzd@google.com"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1665741763,
+                "content": "This crash occurs very frequently on linux platform and is likely preventing the fuzzer file_descriptor_parsenew_fuzzer from making much progress. Fixing this will allow more bugs to be found.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Fuzz-Blocker"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1667603901,
+                "amendments": [
+                    {
+                        "fieldName": "Cc",
+                        "newOrDeltaValue": "copyb...@system.gserviceaccount.com copyb...@system.gserviceaccount.com"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "710138277",
+                    "displayName": "metzman@google.com"
+                },
+                "timestamp": 1668180526,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "protobuf-ossfuzz-bugz-1260285"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 6,
+                "commenter": {
+                    "userId": "496696565",
+                    "displayName": "copyb...@system.gserviceaccount.com"
+                },
+                "timestamp": 1668180603,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-protobuf-ossfuzz-bugz-1260285 rb-258802398"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 7,
+                "commenter": {
+                    "userId": "496696565",
+                    "displayName": "copyb...@system.gserviceaccount.com"
+                },
+                "timestamp": 1668180605,
+                "content": "Copybara migrated this issue to http://issuetracker.google.com/258802398. Copybara will now only sync status across these issues."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 8,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1671737862,
+                "content": "This bug is approaching its deadline for being fixed, and will be automatically derestricted within 7 days. If a fix is planned within 2 weeks after the deadline has passed, a grace extension can be granted.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Deadline-Approaching"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 9,
+                "commenter": {
+                    "userId": "2628403391",
+                    "displayName": "salo@google.com"
+                },
+                "timestamp": 1671740077,
+                "content": "This was fixed in HEAD, dunno why it's still failing here."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 10,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1672256405,
+                "content": "This bug has exceeded our disclosure deadline. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-deadline-approaching -restrict-view-commit Deadline-Exceeded"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51957,
+                "sequenceNum": 11,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1675790672,
+                "content": "ClusterFuzz testcase 4911141927387136 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_msan_upb&range=202302060602:202302070604\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "bc569098dc2d2448d76a6fa105f188311137545f",
+    "repo_addr": "https://github.com/protocolbuffers/upb.git"
+}

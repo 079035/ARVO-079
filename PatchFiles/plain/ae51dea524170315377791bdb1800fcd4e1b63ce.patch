@@ -1,0 +1,21 @@
+From ae51dea524170315377791bdb1800fcd4e1b63ce Mon Sep 17 00:00:00 2001
+From: Angus Gibson <angus@agibson.me>
+Date: Tue, 23 Feb 2021 12:35:01 +1100
+Subject: [PATCH] LibGUI: Remove redundant cursor update
+
+---
+ Userland/Libraries/LibGUI/EditingEngine.cpp | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/Userland/Libraries/LibGUI/EditingEngine.cpp b/Userland/Libraries/LibGUI/EditingEngine.cpp
+index 45c75b4f12a6fe..7907346af7fb74 100644
+--- a/Userland/Libraries/LibGUI/EditingEngine.cpp
++++ b/Userland/Libraries/LibGUI/EditingEngine.cpp
+@@ -302,7 +302,6 @@ void EditingEngine::move_one_down(const KeyEvent& event)
+         }
+         TextPosition new_cursor;
+         if (m_editor->is_wrapping_enabled()) {
+-            new_cursor = m_editor->text_position_at_content_position(m_editor->cursor_content_rect().location().translated(0, m_editor->line_height()));
+             auto position_below = m_editor->cursor_content_rect().location().translated(0, m_editor->line_height());
+             new_cursor = m_editor->text_position_at_content_position(position_below);
+         } else {

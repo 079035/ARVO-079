@@ -1,8 +1,13 @@
-Vulnerability:
-This patch addresses a vulnerability related to a potential buffer overflow. The code lacks proper boundary checks when processing packets with a TZSP encapsulation. Without the fix, if the captured packet is too short for TZSP encapsulation, the function will continue processing the packet without verifying the existence of certain fields, leading to a buffer overflow vulnerability.
+1. Vulnerability:
+The vulnerability in the original code is a potential buffer overflow. This can occur when processing TZSP (TaZmen Sniffer Protocol) packets. The code does not properly check if the packet is long enough to contain the TZSP header, which can lead to reading beyond the allocated memory if a maliciously crafted packet is processed.
 
-Summary of the fix:
-The fix adds a check to ensure that the captured packet is long enough to process TZSP encapsulation. If the packet is too short, the function will return without processing the packet further, avoiding the potential buffer overflow vulnerability.
+2. Short Summary of the Fix:
+The fix adds a bound check for TZSP packets to ensure that the packet is long enough to contain the TZSP header. This prevents the code from reading beyond the allocated memory.
 
-Detailed description of the fix:
-The fix adds a check at line 152 to verify if the captured packet is long enough for TZSP encapsulation. If the packet is shorter than the expected length (ip_offset + ip_len + sizeof(struct ndpi_udphdr) + 4), the function returns without processing the packet further. This check ensures that the function does not access memory outside the bounds of the packet, preventing a potential buffer overflow.
+3. Detailed Description of the Fix:
+The fix is implemented by adding a new condition in the code that checks if the packet is long enough to contain the TZSP header. This is done by comparing the captured length of the packet (`header->caplen`) with the sum of the offset of the IP header (`ip_offset`), the length of the IP header (`ip_len`), the length of the UDP header (`sizeof(struct ndpi_udphdr)`), and the length of the TZSP header (`4`). If the captured length of the packet is less than this sum, the function returns `nproto`, indicating that the packet is too short for TZSP. This prevents the code from reading beyond the allocated memory, thus fixing the buffer overflow vulnerability. The relevant code addition is as follows:
+
+```c
+if (header->caplen < ip_offset + ip_len + sizeof(struct ndpi_udphdr) + 4)
+  return(nproto); /* Too short for TZSP*/
+```

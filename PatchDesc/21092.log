@@ -1,8 +1,12 @@
-Vulnerability:
-The vulnerability in this code is an out-of-bounds read. In the `SegmentMaps` struct, the `map` function is used to map a given `value` to a corresponding coordinate value. However, there is an issue when the `value` is bigger than all the coordinates in the `arrayZ` array. 
+1. Vulnerability:
+The vulnerability in this code is an out-of-bound read error. This occurs when the input is larger than all the coordinates in the table. The variable 'i' could become equal to the array's length, which should not happen as the increment is done at the end of the loop. This could potentially lead to reading memory that is not part of the array, causing undefined behavior or crashes.
 
-Summary of the Fix:
-The fix for this vulnerability is to modify the loop in the `map` function to ensure that `i` does not become equal to the array's length.
+2. Short Summary of the Fix:
+The fix for this vulnerability is to ensure that 'i' does not become equal to the array's length. This is achieved by decrementing the count of the loop by 1, which prevents 'i' from reaching the array's length.
 
-Detailed Description of the Fix:
-The vulnerability is fixed by changing the loop condition from `i < count` to `i < count && value > arrayZ[i].fromCoord`. This change ensures that the loop stops before `i` becomes equal to the array's length and prevents an out-of-bounds read. With this fix, the loop will only iterate until it finds the appropriate index where `value` is less than or equal to `arrayZ[i].fromCoord`.
+3. Detailed Description of the Fix:
+In the original code, the variable 'count' was set to the length of the array 'len'. This allowed the loop to increment 'i' up to the length of the array, which could lead to an out-of-bound read if the input is larger than all the coordinates in the table. 
+
+The fix changes the assignment of 'count' to 'len - 1'. This ensures that 'i' will never reach the length of the array, preventing the out-of-bound read. The loop will now correctly stop at the last valid index of the array, ensuring that all reads are within the bounds of the array. 
+
+Additionally, a new test case was added to the fuzzing tests to ensure this issue does not reoccur in the future. This test case likely contains an input that is larger than all the coordinates in the table, which would have triggered the out-of-bound read in the original code.

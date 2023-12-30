@@ -1,0 +1,21 @@
+From d94a5714faf9df12af0bc8670980a84591d99336 Mon Sep 17 00:00:00 2001
+From: Cristy <mikayla-grace@urban-warrior.org>
+Date: Sun, 24 Mar 2019 15:54:40 -0400
+Subject: [PATCH] https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=13896
+
+---
+ coders/sixel.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/coders/sixel.c b/coders/sixel.c
+index d41515dfa63..46cde2dad7a 100644
+--- a/coders/sixel.c
++++ b/coders/sixel.c
+@@ -1055,6 +1055,7 @@ static Image *ReadSIXELImage(const ImageInfo *image_info,ExceptionInfo *exceptio
+   /*
+     Decode SIXEL
+   */
++  sixel_pixels=(unsigned char *) NULL;
+   if (sixel_decode(image,(unsigned char *) sixel_buffer,&sixel_pixels,&image->columns,&image->rows,&sixel_palette,&image->colors,exception) == MagickFalse)
+     {
+       sixel_buffer=(char *) RelinquishMagickMemory(sixel_buffer);

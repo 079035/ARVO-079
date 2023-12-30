@@ -1,5 +1,5 @@
 {
-    "fix": "https://chromium.googlesource.com/webm/libwebp/+/277d30749f15d3fd99649c9347867ddc2fe4f32e",
+    "fix": "https://chromium.googlesource.com/webm/libwebp/+/277d30749f15d3fd99649c9347867ddc2fe4f32e%5E%21/",
     "verify": "0",
     "localId": 35583,
     "project": "libwebp",

@@ -1,0 +1,941 @@
+From 920a25803c6872b2b11b776b4fdefd5043ab40f1 Mon Sep 17 00:00:00 2001
+From: Ingo Berg <github_contact@beltoforion.de>
+Date: Mon, 8 Jun 2020 22:03:32 +0200
+Subject: [PATCH] fixed bugs found by oss-fuzz
+
+---
+ Changes.txt                     |  4 +-
+ include/muParserBase.h          |  2 +-
+ include/muParserDef.h           | 93 ++++++++++++++++-----------------
+ include/muParserStack.h         |  2 +-
+ include/muParserTemplateMagic.h | 10 ++++
+ include/muParserToken.h         |  2 +-
+ include/muParserTokenReader.h   | 41 +++++++--------
+ samples/example1/example1.cpp   |  2 +-
+ src/muParser.cpp                | 14 ++---
+ src/muParserBase.cpp            | 51 +++++++-----------
+ src/muParserBytecode.cpp        | 16 +++---
+ src/muParserDLL.cpp             | 20 +++----
+ src/muParserInt.cpp             |  6 +--
+ src/muParserTest.cpp            | 59 +++++----------------
+ src/muParserTokenReader.cpp     | 91 ++++++++++++++++----------------
+ 15 files changed, 183 insertions(+), 230 deletions(-)
+
+diff --git a/Changes.txt b/Changes.txt
+index 6a8e082..5cf4e46 100644
+--- a/Changes.txt
++++ b/Changes.txt
+@@ -14,16 +14,18 @@
+ History:
+ --------
+ 
+-Rev 2.2.7: xx.xx.2020
++Rev 2.2.7: 08.06.2020
+ ---------------------
+   Changes:
+    * using OpenMP is now the default settings for cmake based builds
+    * introduced a maximum length for expressions (5000 Character)
+    * introduced a maximum length for identifiers (100 Characters)
++   * removed the MUP_MATH_EXCEPTION macro and related functionality. (No more C++ exceptions for divide by zero or sqrt of a negative number)
+ 
+   Bugfixes:
+    * Fixed an issue where the bulk mode could hang on GCC/CLANG builds due to OpenMP chunksize dropping below 1.
+    * Added additional runtime checks for release builds to prevent segmentation faults for invalid expressions
++   * Prevented access violation for malformed expressions with if then else and function taking multiple arguments "sum(0?1,2,3,4:5)"
+ 
+ Rev 2.2.5: 27.04.2015
+ ---------------------
+diff --git a/include/muParserBase.h b/include/muParserBase.h
+index fcfdef2..4c1fb2f 100644
+--- a/include/muParserBase.h
++++ b/include/muParserBase.h
+@@ -114,7 +114,7 @@ namespace mu
+ 		int GetNumResults() const;
+ 
+ 		void SetExpr(const string_type& a_sExpr);
+-		void SetVarFactory(facfun_type a_pFactory, void* pUserData = NULL);
++		void SetVarFactory(facfun_type a_pFactory, void* pUserData = nullptr);
+ 
+ 		void SetDecSep(char_type cDecSep);
+ 		void SetThousandsSep(char_type cThousandsSep = 0);
+diff --git a/include/muParserDef.h b/include/muParserDef.h
+index 08ca28a..3ea718e 100644
+--- a/include/muParserDef.h
++++ b/include/muParserDef.h
+@@ -42,8 +42,6 @@
+ #define MUP_VERSION _T("2.2.7 (Dev)")
+ #define MUP_VERSION_DATE _T("20200602")
+ 
+-#define MUP_CHARS _T("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+-
+ /** \brief Define the base datatype for values.
+ 
+   This datatype must be a built in value type. You can not use custom classes.
+@@ -55,7 +53,7 @@
+ 
+   OpenMP is used only in the bulk mode it may increase the performance a bit.
+ 
+-  !!! DO NOT ACTIVATE THIS MACRO HERE IS YOU USE CMAKE FOR BUILDING !!!
++  !!! DO NOT ACTIVATE THIS MACRO HERE IF YOU USE CMAKE FOR BUILDING !!!
+ 
+   use the cmake option instead!
+ */
+@@ -157,46 +155,46 @@ namespace mu
+ 		// The following are codes for built in binary operators
+ 		// apart from built in operators the user has the opportunity to
+ 		// add user defined operators.
+-		cmLE = 0,   ///< Operator item:  less or equal
+-		cmGE = 1,   ///< Operator item:  greater or equal
+-		cmNEQ = 2,   ///< Operator item:  not equal
+-		cmEQ = 3,   ///< Operator item:  equals
+-		cmLT = 4,   ///< Operator item:  less than
+-		cmGT = 5,   ///< Operator item:  greater than
+-		cmADD = 6,   ///< Operator item:  add
+-		cmSUB = 7,   ///< Operator item:  subtract
+-		cmMUL = 8,   ///< Operator item:  multiply
+-		cmDIV = 9,   ///< Operator item:  division
+-		cmPOW = 10,  ///< Operator item:  y to the power of ...
++		cmLE = 0,			///< Operator item:  less or equal
++		cmGE = 1,			///< Operator item:  greater or equal
++		cmNEQ = 2,			///< Operator item:  not equal
++		cmEQ = 3,			///< Operator item:  equals
++		cmLT = 4,			///< Operator item:  less than
++		cmGT = 5,			///< Operator item:  greater than
++		cmADD = 6,			///< Operator item:  add
++		cmSUB = 7,			///< Operator item:  subtract
++		cmMUL = 8,			///< Operator item:  multiply
++		cmDIV = 9,			///< Operator item:  division
++		cmPOW = 10,			///< Operator item:  y to the power of ...
+ 		cmLAND = 11,
+ 		cmLOR = 12,
+-		cmASSIGN = 13,  ///< Operator item:  Assignment operator
+-		cmBO = 14,  ///< Operator item:  opening bracket
+-		cmBC = 15,  ///< Operator item:  closing bracket
+-		cmIF = 16,  ///< For use in the ternary if-then-else operator
+-		cmELSE = 17,  ///< For use in the ternary if-then-else operator
+-		cmENDIF = 18,  ///< For use in the ternary if-then-else operator
+-		cmARG_SEP = 19,  ///< function argument separator
+-		cmVAR = 20,  ///< variable item
+-		cmVAL = 21,  ///< value item
++		cmASSIGN = 13,		///< Operator item:  Assignment operator
++		cmBO = 14,			///< Operator item:  opening bracket
++		cmBC = 15,			///< Operator item:  closing bracket
++		cmIF = 16,			///< For use in the ternary if-then-else operator
++		cmELSE = 17,		///< For use in the ternary if-then-else operator
++		cmENDIF = 18,		///< For use in the ternary if-then-else operator
++		cmARG_SEP = 19,		///< function argument separator
++		cmVAR = 20,			///< variable item
++		cmVAL = 21,			///< value item
+ 
+ 		// For optimization purposes
+-		cmVARPOW2,
+-		cmVARPOW3,
+-		cmVARPOW4,
+-		cmVARMUL,
+-		cmPOW2,
++		cmVARPOW2 = 22,
++		cmVARPOW3 = 23,
++		cmVARPOW4 = 24,
++		cmVARMUL = 25,
++		cmPOW2 = 26,
+ 
+ 		// operators and functions
+-		cmFUNC,                ///< Code for a generic function item
+-		cmFUNC_STR,            ///< Code for a function with a string parameter
+-		cmFUNC_BULK,           ///< Special callbacks for Bulk mode with an additional parameter for the bulk index 
+-		cmSTRING,              ///< Code for a string token
+-		cmOPRT_BIN,            ///< user defined binary operator
+-		cmOPRT_POSTFIX,        ///< code for postfix operators
+-		cmOPRT_INFIX,          ///< code for infix operators
+-		cmEND,                 ///< end of formula
+-		cmUNKNOWN              ///< uninitialized item
++		cmFUNC = 27,		///< Code for a generic function item
++		cmFUNC_STR,			///< Code for a function with a string parameter
++		cmFUNC_BULK,		///< Special callbacks for Bulk mode with an additional parameter for the bulk index 
++		cmSTRING,			///< Code for a string token
++		cmOPRT_BIN,			///< user defined binary operator
++		cmOPRT_POSTFIX,		///< code for postfix operators
++		cmOPRT_INFIX,		///< code for infix operators
++		cmEND,				///< end of formula
++		cmUNKNOWN			///< uninitialized item
+ 	};
+ 
+ 	//------------------------------------------------------------------------------
+@@ -232,19 +230,20 @@ namespace mu
+ 		// binary operators
+ 		prLOR = 1,
+ 		prLAND = 2,
+-		prLOGIC = 3,  ///< logic operators
+-		prCMP = 4,  ///< comparsion operators
+-		prADD_SUB = 5,  ///< addition
+-		prMUL_DIV = 6,  ///< multiplication/division
+-		prPOW = 7,  ///< power operator priority (highest)
++		prLOGIC = 3,	///< logic operators
++		prCMP = 4,		///< comparsion operators
++		prADD_SUB = 5,	///< addition
++		prMUL_DIV = 6,	///< multiplication/division
++		prPOW = 7,		///< power operator priority (highest)
+ 
+ 		// infix operators
+-		prINFIX = 6, ///< Signs have a higher priority than ADD_SUB, but lower than power operator
+-		prPOSTFIX = 6  ///< Postfix operator priority (currently unused)
++		prINFIX = 6,	///< Signs have a higher priority than ADD_SUB, but lower than power operator
++		prPOSTFIX = 6	///< Postfix operator priority (currently unused)
+ 	};
+ 
+ 	//------------------------------------------------------------------------------
+-	// basic types
++	// Basic Types
++	//------------------------------------------------------------------------------
+ 
+ 	/** \brief The numeric datatype used by the parser.
+ 
+@@ -265,9 +264,7 @@ namespace mu
+ 	typedef string_type::value_type char_type;
+ 
+ 	/** \brief Typedef for easily using stringstream that respect the parser stringtype. */
+-	typedef std::basic_stringstream<char_type,
+-		std::char_traits<char_type>,
+-		std::allocator<char_type> > stringstream_type;
++	typedef std::basic_stringstream<char_type, std::char_traits<char_type>, std::allocator<char_type> > stringstream_type;
+ 
+ 	// Data container types
+ 
+diff --git a/include/muParserStack.h b/include/muParserStack.h
+index 3c54bc1..e248b16 100644
+--- a/include/muParserStack.h
++++ b/include/muParserStack.h
+@@ -50,7 +50,7 @@ namespace mu
+ 		slightly changed in order to get an error code if the stack is empty.
+ 		The stack is used within the Parser both as a value stack and as an operator stack.
+ 
+-		\author (C) 2004-2011 Ingo Berg
++		\author (C) 2004-2020 Ingo Berg
+ 	*/
+ 	template <typename TValueType>
+ 	class ParserStack
+diff --git a/include/muParserTemplateMagic.h b/include/muParserTemplateMagic.h
+index d94b634..30f550d 100644
+--- a/include/muParserTemplateMagic.h
++++ b/include/muParserTemplateMagic.h
+@@ -135,6 +135,16 @@ namespace mu
+ 		static T Rint(T v) { return floor(v + (T)0.5); }
+ 		static T Sign(T v) { return (T)((v < 0) ? -1 : (v > 0) ? 1 : 0); }
+ 		static T Pow(T v1, T v2) { return std::pow(v1, v2); }
++
++#if defined (__GNUG__)
++		// Bei zu genauer definition von pi kann die Berechnung von
++		// sin(pi*a) mit a=1 10 x langsamer sein! 
++		static constexpr T CONST_PI = (T)3.141592653589;
++#else
++		static constexpr T CONST_PI = (T)3.141592653589793238462643;
++#endif
++
++		static constexpr T CONST_E = (T)2.718281828459045235360287;
+ 	};
+ }
+ 
+diff --git a/include/muParserToken.h b/include/muParserToken.h
+index 9476daa..78e42f0 100644
+--- a/include/muParserToken.h
++++ b/include/muParserToken.h
+@@ -314,7 +314,7 @@ namespace mu
+ 		//------------------------------------------------------------------------------
+ 		EOprtAssociativity GetAssociativity() const
+ 		{
+-			if (m_pCallback.get() == NULL || m_pCallback->GetCode() != cmOPRT_BIN)
++			if (m_pCallback.get() == nullptr || m_pCallback->GetCode() != cmOPRT_BIN)
+ 				throw ParserError(ecINTERNAL_ERROR);
+ 
+ 			return m_pCallback->GetAssociativity();
+diff --git a/include/muParserTokenReader.h b/include/muParserTokenReader.h
+index 0303db9..68c2a3e 100644
+--- a/include/muParserTokenReader.h
++++ b/include/muParserTokenReader.h
+@@ -83,28 +83,28 @@ namespace mu
+ 
+ 		/** \brief Syntax codes.
+ 
+-			  The syntax codes control the syntax check done during the first time parsing of
++			The syntax codes control the syntax check done during the first time parsing of
+ 			the expression string. They are flags that indicate which tokens are allowed next
+ 			if certain tokens are identified.
+ 		*/
+ 		enum ESynCodes
+ 		{
+-			noBO = 1 << 0,  ///< to avoid i.e. "cos(7)(" 
+-			noBC = 1 << 1,  ///< to avoid i.e. "sin)" or "()"
+-			noVAL = 1 << 2,  ///< to avoid i.e. "tan 2" or "sin(8)3.14"
+-			noVAR = 1 << 3,  ///< to avoid i.e. "sin a" or "sin(8)a"
+-			noARG_SEP = 1 << 4,  ///< to avoid i.e. ",," or "+," ...
+-			noFUN = 1 << 5,  ///< to avoid i.e. "sqrt cos" or "(1)sin"	
+-			noOPT = 1 << 6,  ///< to avoid i.e. "(+)"
+-			noPOSTOP = 1 << 7,  ///< to avoid i.e. "(5!!)" "sin!"
+-			noINFIXOP = 1 << 8,  ///< to avoid i.e. "++4" "!!4"
+-			noEND = 1 << 9,  ///< to avoid unexpected end of formula
+-			noSTR = 1 << 10, ///< to block numeric arguments on string functions
+-			noASSIGN = 1 << 11, ///< to block assignment to constant i.e. "4=7"
++			noBO = 1 << 0,			///< to avoid i.e. "cos(7)(" 
++			noBC = 1 << 1,			///< to avoid i.e. "sin)" or "()"
++			noVAL = 1 << 2,			///< to avoid i.e. "tan 2" or "sin(8)3.14"
++			noVAR = 1 << 3,			///< to avoid i.e. "sin a" or "sin(8)a"
++			noARG_SEP = 1 << 4,		///< to avoid i.e. ",," or "+," ...
++			noFUN = 1 << 5,			///< to avoid i.e. "sqrt cos" or "(1)sin"	
++			noOPT = 1 << 6,			///< to avoid i.e. "(+)"
++			noPOSTOP = 1 << 7,		///< to avoid i.e. "(5!!)" "sin!"
++			noINFIXOP = 1 << 8,		///< to avoid i.e. "++4" "!!4"
++			noEND = 1 << 9,			///< to avoid unexpected end of formula
++			noSTR = 1 << 10,		///< to block numeric arguments on string functions
++			noASSIGN = 1 << 11,		///< to block assignment to constant i.e. "4=7"
+ 			noIF = 1 << 12,
+ 			noELSE = 1 << 13,
+ 			sfSTART_OF_LINE = noOPT | noBC | noPOSTOP | noASSIGN | noIF | noELSE | noARG_SEP,
+-			noANY = ~0       ///< All of he above flags set
++			noANY = ~0				///< All of he above flags set
+ 		};
+ 
+ 		ParserTokenReader(const ParserTokenReader& a_Reader);
+@@ -112,9 +112,7 @@ namespace mu
+ 		void Assign(const ParserTokenReader& a_Reader);
+ 
+ 		void SetParent(ParserBase* a_pParent);
+-		int ExtractToken(const char_type* a_szCharSet,
+-			string_type& a_strTok,
+-			int a_iPos) const;
++		int ExtractToken(const char_type* a_szCharSet, string_type& a_strTok, int a_iPos) const;
+ 		int ExtractOperatorToken(string_type& a_sTok, int a_iPos) const;
+ 
+ 		bool IsBuiltIn(token_type& a_Tok);
+@@ -129,9 +127,7 @@ namespace mu
+ 		bool IsStrVarTok(token_type& a_Tok);
+ 		bool IsUndefVarTok(token_type& a_Tok);
+ 		bool IsString(token_type& a_Tok);
+-		void Error(EErrorCodes a_iErrc,
+-			int a_iPos = -1,
+-			const string_type& a_sTok = string_type()) const;
++		void Error(EErrorCodes a_iErrc, int a_iPos = -1, const string_type& a_sTok = string_type()) const;
+ 
+ 		token_type& SaveBeforeReturn(const token_type& tok);
+ 
+@@ -147,13 +143,16 @@ namespace mu
+ 		const funmap_type* m_pOprtDef;
+ 		const valmap_type* m_pConstDef;
+ 		const strmap_type* m_pStrVarDef;
++
+ 		varmap_type* m_pVarDef;  ///< The only non const pointer to parser internals
+ 		facfun_type m_pFactory;
+ 		void* m_pFactoryData;
+ 		std::list<identfun_type> m_vIdentFun; ///< Value token identification function
+ 		varmap_type m_UsedVar;
+ 		value_type m_fZero;      ///< Dummy value of zero, referenced by undefined variables
+-		int m_iBrackets;
++		
++		std::stack<int> m_bracketStack;
++
+ 		token_type m_lastTok;
+ 		char_type m_cArgSep;     ///< The character used for separating function arguments
+ 	};
+diff --git a/samples/example1/example1.cpp b/samples/example1/example1.cpp
+index d00336e..f8e34b9 100644
+--- a/samples/example1/example1.cpp
++++ b/samples/example1/example1.cpp
+@@ -432,7 +432,7 @@ static int CheckKeywords(const mu::char_type* a_szLine, mu::Parser& a_Parser)
+ 	}
+ 	else if (sLine == _T("dbg"))
+ 	{
+-		std::string dbg = "1 ? (2:3)";
++		std::string dbg = "sum(0?1,0,0:3)";
+ 		a_Parser.SetExpr(dbg);
+ 		mu::console() << dbg;
+ 		double v =  a_Parser.Eval();
+diff --git a/src/muParser.cpp b/src/muParser.cpp
+index 1ea495c..c1778bc 100644
+--- a/src/muParser.cpp
++++ b/src/muParser.cpp
+@@ -33,12 +33,6 @@
+ #include <algorithm>
+ #include <numeric>
+ 
+-/** \brief Pi (what else?). */
+-#define PARSER_CONST_PI  3.141592653589793238462643
+-
+-/** \brief The Eulerian number. */
+-#define PARSER_CONST_E   2.718281828459045235360287
+-
+ using namespace std;
+ 
+ /** \file
+@@ -282,8 +276,8 @@ namespace mu
+ 	*/
+ 	void Parser::InitConst()
+ 	{
+-		DefineConst(_T("_pi"), (value_type)PARSER_CONST_PI);
+-		DefineConst(_T("_e"), (value_type)PARSER_CONST_E);
++		DefineConst(_T("_pi"), MathImpl<value_type>::CONST_PI);
++		DefineConst(_T("_e"), MathImpl<value_type>::CONST_E);
+ 	}
+ 
+ 	//---------------------------------------------------------------------------
+@@ -335,9 +329,7 @@ namespace mu
+ 
+ 	  http://sourceforge.net/forum/forum.php?thread_id=1994611&forum_id=462843
+ 	*/
+-	value_type Parser::Diff(value_type* a_Var,
+-		value_type  a_fPos,
+-		value_type  a_fEpsilon) const
++	value_type Parser::Diff(value_type* a_Var, value_type  a_fPos, value_type  a_fEpsilon) const
+ 	{
+ 		value_type fRes(0),
+ 			fBuf(*a_Var),
+diff --git a/src/muParserBase.cpp b/src/muParserBase.cpp
+index 0908d47..f9678af 100644
+--- a/src/muParserBase.cpp
++++ b/src/muParserBase.cpp
+@@ -77,7 +77,7 @@ namespace mu
+ 	//------------------------------------------------------------------------------
+ 	/** \brief Constructor.
+ 		\param a_szFormula the formula to interpret.
+-		\throw ParserException if a_szFormula is null.
++		\throw ParserException if a_szFormula is nullptr.
+ 	*/
+ 	ParserBase::ParserBase()
+ 		:m_pParseFormula(&ParserBase::ParseString)
+@@ -410,18 +410,11 @@ namespace mu
+ 		if (m_pTokenReader->GetArgSep() == std::use_facet<numpunct<char_type> >(s_locale).decimal_point())
+ 			Error(ecLOCALE);
+ 
+-		// Check maximum allowed expression length. This is just a safety measure to prevent attacks on the engine.
+-		// (oss-fuzz.com will throw very long expressions at muparser) 
++		// Check maximum allowed expression length. An arbitrary value small enough so i can debug expressions sent to me
+ 		if (a_sExpr.length() >= ParserSetup::MaxLenExpression)
+ 			Error(ecExpressionTooLong, 0, a_sExpr);
+ 
+-		// <ibg> 20060222: Bugfix for Borland-Kylix:
+-		// adding a space to the expression will keep Borlands KYLIX from going wild
+-		// when calling tellg on a stringstream created from the expression after 
+-		// reading a value at the end of an expression. (mu::Parser::IsVal function)
+-		// (tellg returns -1 otherwise causing the parser to ignore the value)
+-		string_type sBuf(a_sExpr + _T(" "));
+-		m_pTokenReader->SetFormula(sBuf);
++		m_pTokenReader->SetFormula(a_sExpr + _T(" "));
+ 		ReInit();
+ 	}
+ 
+@@ -585,7 +578,7 @@ namespace mu
+ 		\param [in] a_sName the variable name
+ 		\param [in] a_pVar A pointer to the variable value.
+ 		\post Will reset the Parser to string parsing mode.
+-		\throw ParserException in case the name contains invalid signs or a_pVar is NULL.
++		\throw ParserException in case the name contains invalid signs or a_pVar is nullptr.
+ 	*/
+ 	void ParserBase::DefineVar(const string_type& a_sName, value_type* a_pVar)
+ 	{
+@@ -792,9 +785,7 @@ namespace mu
+ 		\post The function token is removed from the stack
+ 		\throw exception_type if Argument count does not match function requirements.
+ 	*/
+-	void ParserBase::ApplyFunc(ParserStack<token_type>& a_stOpt,
+-		ParserStack<token_type>& a_stVal,
+-		int a_iArgCount) const
++	void ParserBase::ApplyFunc(ParserStack<token_type>& a_stOpt, ParserStack<token_type>& a_stVal, int a_iArgCount) const
+ 	{
+ 		assert(m_pTokenReader.get());
+ 
+@@ -834,6 +825,9 @@ namespace mu
+ 		std::vector<token_type> stArg;
+ 		for (int i = 0; i < iArgNumerical; ++i)
+ 		{
++			if (a_stVal.empty())
++				Error(ecINTERNAL_ERROR, m_pTokenReader->GetPos(), funTok.GetAsString());
++
+ 			stArg.push_back(a_stVal.pop());
+ 			if (stArg.back().GetType() == tpSTR && funTok.GetType() != tpSTR)
+ 				Error(ecVAL_EXPECTED, m_pTokenReader->GetPos(), funTok.GetAsString());
+@@ -842,6 +836,9 @@ namespace mu
+ 		switch (funTok.GetCode())
+ 		{
+ 		case  cmFUNC_STR:
++			if (a_stVal.empty())
++				Error(ecINTERNAL_ERROR, m_pTokenReader->GetPos(), funTok.GetAsString());
++
+ 			stArg.push_back(a_stVal.pop());
+ 
+ 			if (stArg.back().GetType() == tpSTR && funTok.GetType() != tpSTR)
+@@ -1061,11 +1058,7 @@ namespace mu
+ 			case  cmENDIF:
+ 				continue;
+ 
+-				//case  cmARG_SEP:
+-				//      MUP_FAIL(INVALID_CODE_IN_BYTECODE);
+-				//      continue;
+-
+-				// value and variable tokens
++			// value and variable tokens
+ 			case  cmVAR:    Stack[++sidx] = *(pTok->Val.ptr + nOffset);  continue;
+ 			case  cmVAL:    Stack[++sidx] = pTok->Val.data2;  continue;
+ 
+@@ -1108,6 +1101,9 @@ namespace mu
+ 						Error(ecINTERNAL_ERROR, 1);
+ 
+ 					sidx -= -iArgCount - 1;
++					if (sidx < 0)
++						Error(ecINTERNAL_ERROR, 2);
++
+ 					Stack[sidx] = (*(multfun_type)pTok->Fun.ptr)(&Stack[sidx], -iArgCount);
+ 					continue;
+ 				}
+@@ -1302,7 +1298,8 @@ namespace mu
+ 			case cmOPRT_BIN:
+ 
+ 				// A binary operator (user defined or built in) has been found. 
+-				while (stOpt.size() &&
++				while (
++					stOpt.size() &&
+ 					stOpt.top().GetCode() != cmBO &&
+ 					stOpt.top().GetCode() != cmELSE &&
+ 					stOpt.top().GetCode() != cmIF)
+@@ -1710,26 +1707,16 @@ namespace mu
+ 	//---------------------------------------------------------------------------
+ 	void ParserBase::Eval(value_type* results, int nBulkSize)
+ 	{
+-		/* <ibg 2014-09-24/> Commented because it is making a unit test impossible
+-
+-			// Parallelization does not make sense for fewer than 10000 computations
+-			// due to thread creation overhead. If the bulk size is below 2000
+-			// computation is refused.
+-			if (nBulkSize<2000)
+-			{
+-			  throw ParserError(ecUNREASONABLE_NUMBER_OF_COMPUTATIONS);
+-			}
+-		*/
+ 		CreateRPN();
+ 
+ 		int i = 0;
+ 
+ #ifdef MUP_USE_OPENMP
+ 		//#define DEBUG_OMP_STUFF
+-#ifdef DEBUG_OMP_STUFF
++		#ifdef DEBUG_OMP_STUFF
+ 		int* pThread = new int[nBulkSize];
+ 		int* pIdx = new int[nBulkSize];
+-#endif
++		#endif
+ 
+ 		int nMaxThreads = std::min(omp_get_max_threads(), s_MaxNumOpenMPThreads);
+ 		int nThreadID = 0, ct = 0;
+diff --git a/src/muParserBytecode.cpp b/src/muParserBytecode.cpp
+index d6d5df9..a887c0d 100644
+--- a/src/muParserBytecode.cpp
++++ b/src/muParserBytecode.cpp
+@@ -29,7 +29,6 @@
+ #include "muParserBytecode.h"
+ 
+ #include <algorithm>
+-#include <cassert>
+ #include <string>
+ #include <stack>
+ #include <vector>
+@@ -138,7 +137,7 @@ namespace mu
+ 		// If optimization does not apply
+ 		SToken tok;
+ 		tok.Cmd = cmVAL;
+-		tok.Val.ptr = NULL;
++		tok.Val.ptr = nullptr;
+ 		tok.Val.data = 0;
+ 		tok.Val.data2 = a_fVal;
+ 		m_vRPN.push_back(tok);
+@@ -241,8 +240,8 @@ namespace mu
+ 						(m_vRPN[sz - 1].Cmd == cmVARMUL && m_vRPN[sz - 2].Cmd == cmVAR && m_vRPN[sz - 2].Val.ptr == m_vRPN[sz - 1].Val.ptr) ||
+ 						(m_vRPN[sz - 1].Cmd == cmVARMUL && m_vRPN[sz - 2].Cmd == cmVARMUL && m_vRPN[sz - 2].Val.ptr == m_vRPN[sz - 1].Val.ptr))
+ 					{
+-						assert((m_vRPN[sz - 2].Val.ptr == NULL && m_vRPN[sz - 1].Val.ptr != NULL) ||
+-							(m_vRPN[sz - 2].Val.ptr != NULL && m_vRPN[sz - 1].Val.ptr == NULL) ||
++						MUP_ASSERT((m_vRPN[sz - 2].Val.ptr == nullptr && m_vRPN[sz - 1].Val.ptr != nullptr) ||
++							(m_vRPN[sz - 2].Val.ptr != nullptr && m_vRPN[sz - 1].Val.ptr == nullptr) ||
+ 							(m_vRPN[sz - 2].Val.ptr == m_vRPN[sz - 1].Val.ptr));
+ 
+ 						m_vRPN[sz - 2].Cmd = cmVARMUL;
+@@ -265,7 +264,8 @@ namespace mu
+ 						m_vRPN.pop_back();
+ 						bOptimized = true;
+ 					}
+-					else if ((m_vRPN[sz - 1].Cmd == cmVAL && m_vRPN[sz - 2].Cmd == cmVARMUL) ||
++					else if (
++						(m_vRPN[sz - 1].Cmd == cmVAL && m_vRPN[sz - 2].Cmd == cmVARMUL) ||
+ 						(m_vRPN[sz - 1].Cmd == cmVARMUL && m_vRPN[sz - 2].Cmd == cmVAL))
+ 					{
+ 						// Optimization: 2*(3*b+1) or (3*b+1)*2 -> 6*b+2
+@@ -284,7 +284,8 @@ namespace mu
+ 						m_vRPN.pop_back();
+ 						bOptimized = true;
+ 					}
+-					else if (m_vRPN[sz - 1].Cmd == cmVAR && m_vRPN[sz - 2].Cmd == cmVAR &&
++					else if (
++						m_vRPN[sz - 1].Cmd == cmVAR && m_vRPN[sz - 2].Cmd == cmVAR &&
+ 						m_vRPN[sz - 1].Val.ptr == m_vRPN[sz - 2].Val.ptr)
+ 					{
+ 						// Optimization: a*a -> a^2
+@@ -304,8 +305,9 @@ namespace mu
+ 						bOptimized = true;
+ 					}
+ 					break;
++
++				// no optimization for other opcodes
+ 				default:
+-					// no optimization for other opcodes
+ 					break;
+ 				} // switch a_Oprt
+ 			}
+diff --git a/src/muParserDLL.cpp b/src/muParserDLL.cpp
+index 9b26e5d..74584b4 100644
+--- a/src/muParserDLL.cpp
++++ b/src/muParserDLL.cpp
+@@ -77,10 +77,11 @@ class ParserTag
+ {
+ public:
+ 	ParserTag(int nType)
+-		:pParser((nType == muBASETYPE_FLOAT) ? (mu::ParserBase*)new mu::Parser() :
+-			(nType == muBASETYPE_INT) ? (mu::ParserBase*)new mu::ParserInt() : NULL)
++		:pParser((nType == muBASETYPE_FLOAT) 
++			? (mu::ParserBase*)new mu::Parser() 
++			: (nType == muBASETYPE_INT) ? (mu::ParserBase*)new mu::ParserInt() : nullptr)
+ 		, exc()
+-		, errHandler(NULL)
++		, errHandler(nullptr)
+ 		, bError(false)
+ 		, m_nParserType(nType)
+ 	{}
+@@ -173,7 +174,7 @@ API_EXPORT(muParserHandle_t) mupCreate(int nBaseType)
+ 	{
+ 	case  muBASETYPE_FLOAT:   return (void*)(new ParserTag(muBASETYPE_FLOAT));
+ 	case  muBASETYPE_INT:     return (void*)(new ParserTag(muBASETYPE_INT));
+-	default:                  return NULL;
++	default:                  return nullptr;
+ 	}
+ }
+ 
+@@ -223,13 +224,12 @@ API_EXPORT(muFloat_t) mupEval(muParserHandle_t a_hParser)
+ API_EXPORT(muFloat_t*) mupEvalMulti(muParserHandle_t a_hParser, int* nNum)
+ {
+ 	MU_TRY
+-		assert(nNum != NULL);
+-
+-	muParser_t* const p(AsParser(a_hParser));
+-	return p->Eval(*nNum);
++		assert(nNum != nullptr);
++		muParser_t* const p(AsParser(a_hParser));
++		return p->Eval(*nNum);
+ 	MU_CATCH
+ 
+-		return 0;
++	return 0;
+ }
+ 
+ //---------------------------------------------------------------------------
+@@ -237,7 +237,7 @@ API_EXPORT(void) mupEvalBulk(muParserHandle_t a_hParser, muFloat_t* a_res, int n
+ {
+ 	MU_TRY
+ 		muParser_t* p(AsParser(a_hParser));
+-	p->Eval(a_res, nSize);
++		p->Eval(a_res, nSize);
+ 	MU_CATCH
+ }
+ 
+diff --git a/src/muParserInt.cpp b/src/muParserInt.cpp
+index 2c4e0fa..ba7292a 100644
+--- a/src/muParserInt.cpp
++++ b/src/muParserInt.cpp
+@@ -40,11 +40,7 @@ namespace mu
+ {
+ 	value_type ParserInt::Abs(value_type v) { return (value_type)Round(fabs((double)v)); }
+ 	value_type ParserInt::Sign(value_type v) { return (Round(v) < 0) ? -1 : (Round(v) > 0) ? 1 : 0; }
+-	value_type ParserInt::Ite(value_type v1,
+-		value_type v2,
+-		value_type v3) {
+-		return (Round(v1) == 1) ? Round(v2) : Round(v3);
+-	}
++	value_type ParserInt::Ite(value_type v1, value_type v2,	value_type v3) { return (Round(v1) == 1) ? Round(v2) : Round(v3); }
+ 	value_type ParserInt::Add(value_type v1, value_type v2) { return Round(v1) + Round(v2); }
+ 	value_type ParserInt::Sub(value_type v1, value_type v2) { return Round(v1) - Round(v2); }
+ 	value_type ParserInt::Mul(value_type v1, value_type v2) { return Round(v1) * Round(v2); }
+diff --git a/src/muParserTest.cpp b/src/muParserTest.cpp
+index 9ca39a5..4c63da2 100644
+--- a/src/muParserTest.cpp
++++ b/src/muParserTest.cpp
+@@ -30,9 +30,6 @@
+ #include <iostream>
+ #include <limits>
+ 
+-#define PARSER_CONST_PI  3.141592653589793238462643
+-#define PARSER_CONST_E   2.718281828459045235360287
+-
+ using namespace std;
+ 
+ /** \file
+@@ -62,7 +59,6 @@ namespace mu
+ 			AddTest(&ParserTester::TestException);
+ 			AddTest(&ParserTester::TestStrArg);
+ 			AddTest(&ParserTester::TestBulkMode);
+-			AddTest(&ParserTester::TestOssFuzzTestCases);
+ 
+ 			ParserTester::c_iCount = 0;
+ 		}
+@@ -160,44 +156,6 @@ namespace mu
+ 			return iStat;
+ 		}
+ 
+-		//---------------------------------------------------------------------------------------------
+-		int ParserTester::TestOssFuzzTestCases()
+-		{
+-			int iStat = 0;
+-			mu::console() << _T("testing cases reported from oss-fuzz.com");
+-
+-/*
+-			// https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22947
+-			// Divide-by-zero; https://oss-fuzz.com/testcase-detail/5092079045967872
+-			iStat += EqnTest(_T("atanh(1)"), std::numeric_limits<double>::infinity(), true);
+-			
+-			// https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22928#c3
+-			iStat += EqnTest(_T("4/0+"), 3.33, true);
+-
+-			// https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22938
+-			iStat += EqnTest(_T("sum(0 ? 1, 0, 0 : 3)"), 3.33, true);
+-			
+-			// Timeout: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22931
+-			// Not testable, prevented by adding restrictions on the length of variables and expressions
+-
+-			// UNKNOWN READ: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22922#c1
+-			iStat += EqnTest(_T("1?2:0?(7:1)"), 3.33, true);
+-
+-			// Heap-buffer-overflow READ 8: https://oss-fuzz.com/testcase-detail/5670338645196800
+-			iStat += EqnTest(_T("sum(2>3?2,4,2:4)"), 3.33, true);
+-
+-			// Divide by zero: https://oss-fuzz.com/testcase-detail/5750723253108736
+-			iStat += EqnTest(_T("2/+0"), 3.33, true);
+-			
+-*/
+-			if (iStat == 0)
+-				mu::console() << _T("passed") << endl;
+-			else
+-				mu::console() << _T("\n  failed with ") << iStat << _T(" errors") << endl;
+-
+-			return iStat;
+-		}
+-
+ 		//---------------------------------------------------------------------------------------------
+ 		int ParserTester::TestBulkMode()
+ 		{
+@@ -756,7 +714,7 @@ namespace mu
+ 			iStat += EqnTest(_T("-(-1)"), 1, true);
+ 			iStat += EqnTest(_T("-(-1)*2"), 2, true);
+ 			iStat += EqnTest(_T("-(-2)*sqrt(4)"), 4, true);
+-			iStat += EqnTest(_T("-_pi"), -PARSER_CONST_PI, true);
++			iStat += EqnTest(_T("-_pi"), -MathImpl<double>::CONST_PI, true);
+ 			iStat += EqnTest(_T("-a"), -1, true);
+ 			iStat += EqnTest(_T("-(a)"), -1, true);
+ 			iStat += EqnTest(_T("-(-a)"), 1, true);
+@@ -961,7 +919,16 @@ namespace mu
+ 			iStat += ThrowTest(_T("1 : 2"), ecMISPLACED_COLON);
+ 			iStat += ThrowTest(_T("(1) ? 1 : 2 : 3"), ecMISPLACED_COLON);
+ 			iStat += ThrowTest(_T("(true) ? 1 : 2 : 3"), ecUNASSIGNABLE_TOKEN);
+-			iStat += ThrowTest(_T("1 ? 2 : 0 ? (7:1)"), ecMISPLACED_COLON);
++
++			// from oss-fzz.com: UNKNOWN READ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22922#c1
++			iStat += ThrowTest(_T("1?2:0?(7:1)"), ecMISPLACED_COLON);
++
++			// from oss-fuzz.com: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22938
++			iStat += ThrowTest(_T("sum(0?1,0,0:3)"), ecMISPLACED_COLON);
++			iStat += ThrowTest(_T("sum(0?(1,0,0):3)"), ecMISPLACED_COLON);
++			iStat += ThrowTest(_T("sum(2>3?2,4,2:4)"), ecMISPLACED_COLON);
++			iStat += ThrowTest(_T("sum(2>3?2,4,sin(2):4)"), ecMISPLACED_COLON);
++			iStat += ThrowTest(_T("sum(2>3?sin(2),4,2:4)"), ecMISPLACED_COLON);
+ 
+ 			iStat += EqnTest(_T("1 ? 128 : 255"), 128, true);
+ 			iStat += EqnTest(_T("1<2 ? 128 : 255"), 128, true);
+@@ -1304,8 +1271,8 @@ namespace mu
+ 
+ 				p1.reset(new mu::Parser());
+ 				// Add constants
+-				p1->DefineConst(_T("pi"), (value_type)PARSER_CONST_PI);
+-				p1->DefineConst(_T("e"), (value_type)PARSER_CONST_E);
++				p1->DefineConst(_T("pi"), MathImpl<value_type>::CONST_PI);
++				p1->DefineConst(_T("e"), MathImpl<value_type>::CONST_E);
+ 				p1->DefineConst(_T("const"), 1);
+ 				p1->DefineConst(_T("const1"), 2);
+ 				p1->DefineConst(_T("const2"), 3);
+diff --git a/src/muParserTokenReader.cpp b/src/muParserTokenReader.cpp
+index ed6d55b..f4f2d50 100644
+--- a/src/muParserTokenReader.cpp
++++ b/src/muParserTokenReader.cpp
+@@ -98,7 +98,7 @@ namespace mu
+ 		m_vIdentFun = a_Reader.m_vIdentFun;
+ 		m_pFactory = a_Reader.m_pFactory;
+ 		m_pFactoryData = a_Reader.m_pFactoryData;
+-		m_iBrackets = a_Reader.m_iBrackets;
++		m_bracketStack = a_Reader.m_bracketStack;
+ 		m_cArgSep = a_Reader.m_cArgSep;
+ 		m_fZero = a_Reader.m_fZero;
+ 		m_lastTok = a_Reader.m_lastTok;
+@@ -119,19 +119,19 @@ namespace mu
+ 		, m_iPos(0)
+ 		, m_iSynFlags(0)
+ 		, m_bIgnoreUndefVar(false)
+-		, m_pFunDef(NULL)
+-		, m_pPostOprtDef(NULL)
+-		, m_pInfixOprtDef(NULL)
+-		, m_pOprtDef(NULL)
+-		, m_pConstDef(NULL)
+-		, m_pStrVarDef(NULL)
+-		, m_pVarDef(NULL)
+-		, m_pFactory(NULL)
+-		, m_pFactoryData(NULL)
++		, m_pFunDef(nullptr)
++		, m_pPostOprtDef(nullptr)
++		, m_pInfixOprtDef(nullptr)
++		, m_pOprtDef(nullptr)
++		, m_pConstDef(nullptr)
++		, m_pStrVarDef(nullptr)
++		, m_pVarDef(nullptr)
++		, m_pFactory(nullptr)
++		, m_pFactoryData(nullptr)
+ 		, m_vIdentFun()
+ 		, m_UsedVar()
+ 		, m_fZero(0)
+-		, m_iBrackets(0)
++		, m_bracketStack()
+ 		, m_lastTok()
+ 		, m_cArgSep(',')
+ 	{
+@@ -249,7 +249,7 @@ namespace mu
+ 	{
+ 		m_iPos = 0;
+ 		m_iSynFlags = sfSTART_OF_LINE;
+-		m_iBrackets = 0;
++		m_bracketStack = std::stack<int>();
+ 		m_UsedVar.clear();
+ 		m_lastTok = token_type();
+ 	}
+@@ -268,48 +268,48 @@ namespace mu
+ 			++m_iPos;
+ 
+ 		// Check for end of formula
+-		if (IsEOF(tok))        
+-			return SaveBeforeReturn(tok); 
+-		
++		if (IsEOF(tok))
++			return SaveBeforeReturn(tok);
++
+ 		// Check for user defined binary operator
+-		if (IsOprt(tok))       
+-			return SaveBeforeReturn(tok); 
+-		
++		if (IsOprt(tok))
++			return SaveBeforeReturn(tok);
++
+ 		// Check for function token
+-		if (IsFunTok(tok))     
+-			return SaveBeforeReturn(tok); 
+-		
++		if (IsFunTok(tok))
++			return SaveBeforeReturn(tok);
++
+ 		// Check built in operators / tokens
+-		if (IsBuiltIn(tok))    
+-			return SaveBeforeReturn(tok); 
++		if (IsBuiltIn(tok))
++			return SaveBeforeReturn(tok);
+ 
+ 		// Check for function argument separators
+-		if (IsArgSep(tok))     
+-			return SaveBeforeReturn(tok); 
++		if (IsArgSep(tok))
++			return SaveBeforeReturn(tok);
+ 
+ 		// Check for values / constant tokens
+-		if (IsValTok(tok))     
+-			return SaveBeforeReturn(tok); 
++		if (IsValTok(tok))
++			return SaveBeforeReturn(tok);
+ 
+ 		// Check for variable tokens
+-		if (IsVarTok(tok))     
+-			return SaveBeforeReturn(tok); 
++		if (IsVarTok(tok))
++			return SaveBeforeReturn(tok);
+ 
+ 		// Check for string variables
+-		if (IsStrVarTok(tok))  
+-			return SaveBeforeReturn(tok); 
+-		
++		if (IsStrVarTok(tok))
++			return SaveBeforeReturn(tok);
++
+ 		// Check for String tokens
+-		if (IsString(tok))     
+-			return SaveBeforeReturn(tok); 
++		if (IsString(tok))
++			return SaveBeforeReturn(tok);
+ 
+ 		// Check for unary operators
+-		if (IsInfixOpTok(tok)) 
+-			return SaveBeforeReturn(tok); 
+-		
++		if (IsInfixOpTok(tok))
++			return SaveBeforeReturn(tok);
++
+ 		// Check for unary operators
+-		if (IsPostOpTok(tok))  
+-			return SaveBeforeReturn(tok); 
++		if (IsPostOpTok(tok))
++			return SaveBeforeReturn(tok);
+ 
+ 		// Check String for undefined variable token. Done only if a 
+ 		// flag is set indicating to ignore undefined variables.
+@@ -380,8 +380,7 @@ namespace mu
+ 	  in operator tokens. To avoid this this function checks specifically
+ 	  for operator tokens.
+ 	*/
+-	int ParserTokenReader::ExtractOperatorToken(string_type& a_sTok,
+-		int a_iPos) const
++	int ParserTokenReader::ExtractOperatorToken(string_type& a_sTok, int a_iPos) const
+ 	{
+ 		// Changed as per Issue 6: https://code.google.com/p/muparser/issues/detail?id=6
+ 		int iEnd = (int)m_strFormula.find_first_not_of(m_pParser->ValidOprtChars(), a_iPos);
+@@ -398,7 +397,7 @@ namespace mu
+ 		{
+ 			// There is still the chance of having to deal with an operator consisting exclusively
+ 			// of alphabetic characters.
+-			return ExtractToken(MUP_CHARS, a_sTok, a_iPos);
++			return ExtractToken("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", a_sTok, a_iPos);
+ 		}
+ 	}
+ 
+@@ -466,7 +465,7 @@ namespace mu
+ 					else
+ 						m_iSynFlags = noBC | noOPT | noEND | noARG_SEP | noPOSTOP | noASSIGN | noIF | noELSE;
+ 
+-					++m_iBrackets;
++					m_bracketStack.push(cmBO);
+ 					break;
+ 
+ 				case cmBC:
+@@ -475,7 +474,9 @@ namespace mu
+ 
+ 					m_iSynFlags = noBO | noVAR | noVAL | noFUN | noINFIXOP | noSTR | noASSIGN;
+ 
+-					if (--m_iBrackets < 0)
++					if (!m_bracketStack.empty())
++						m_bracketStack.pop();
++					else
+ 						Error(ecUNEXPECTED_PARENS, m_iPos, pOprtDef[i]);
+ 					break;
+ 
+@@ -548,7 +549,7 @@ namespace mu
+ 			if (m_iSynFlags & noEND)
+ 				Error(ecUNEXPECTED_EOF, m_iPos);
+ 
+-			if (m_iBrackets > 0)
++			if (!m_bracketStack.empty())
+ 				Error(ecMISSING_PARENS, m_iPos, _T(")"));
+ 
+ 			m_iSynFlags = 0;

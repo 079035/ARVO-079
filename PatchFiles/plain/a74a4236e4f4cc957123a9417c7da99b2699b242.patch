@@ -1,0 +1,118 @@
+commit a74a4236e4f4cc957123a9417c7da99b2699b242
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Sun Feb 27 21:17:52 2022 +0000
+
+    ofz#44991 keep paragraph's that failed to load until import is complete
+    
+    to avoid dangling references to them
+    
+    Change-Id: Ic8710f63a8cf6a6a665348c7c84bf0b43f0e2c83
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/130612
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/hwpfilter/source/drawing.h b/hwpfilter/source/drawing.h
+index c7526a4c591e..54d98bbf5262 100644
+--- a/hwpfilter/source/drawing.h
++++ b/hwpfilter/source/drawing.h
+@@ -315,7 +315,7 @@ static bool LoadCommonHeader(HWPDrawingObject * hdo, unsigned short * link_info)
+     return hmem->skipBlock(size - common_size ) != 0;
+ }
+ 
+-static std::unique_ptr<HWPDrawingObject> LoadDrawingObject(void)
++static std::unique_ptr<HWPDrawingObject> LoadDrawingObject(HWPFile& hwpf)
+ {
+     HWPDrawingObject *prev = nullptr;
+     std::unique_ptr<HWPDrawingObject> hdo, head;
+@@ -354,7 +354,7 @@ static std::unique_ptr<HWPDrawingObject> LoadDrawingObject(void)
+         }
+         if (link_info & HDOFILE_HAS_CHILD)
+         {
+-            hdo->child = LoadDrawingObject();
++            hdo->child = LoadDrawingObject(hwpf);
+             if (hdo->child == nullptr)
+             {
+                 goto error;
+@@ -383,6 +383,11 @@ error:
+     {
+         hdo->type = HWPDO_RECT;
+     }
++    if (hdo->property.pPara)
++    {
++        hwpf.move_to_failed(std::unique_ptr<HWPPara>(hdo->property.pPara));
++        hdo->property.pPara = nullptr;
++    }
+     HWPDOFunc(hdo.get(), OBJFUNC_FREE, nullptr, 0);
+     hdo.reset();
+ 
+@@ -396,7 +401,7 @@ error:
+ }
+ 
+ 
+-static bool LoadDrawingObjectBlock(Picture * pic)
++static bool LoadDrawingObjectBlock(Picture * pic, HWPFile& hwpf)
+ {
+     int size;
+     if (!hmem->read4b(size))
+@@ -422,7 +427,7 @@ static bool LoadDrawingObjectBlock(Picture * pic)
+         !hmem->skipBlock(size - HDOFILE_HEADER_SIZE))
+         return false;
+ 
+-    pic->picinfo.picdraw.hdo = LoadDrawingObject().release();
++    pic->picinfo.picdraw.hdo = LoadDrawingObject(hwpf).release();
+     if (pic->picinfo.picdraw.hdo == nullptr)
+         return false;
+     return true;
+diff --git a/hwpfilter/source/hwpfile.cxx b/hwpfilter/source/hwpfile.cxx
+index f9d74e896d0d..58d6c4849d91 100644
+--- a/hwpfilter/source/hwpfile.cxx
++++ b/hwpfilter/source/hwpfile.cxx
+@@ -238,7 +238,7 @@ void HWPFile::ReadParaList(std::vector < HWPPara* > &aplist)
+         aplist.push_back(spNode.release());
+         spNode.reset( new HWPPara );
+     }
+-    pfailedlist.push_back(std::move(spNode));
++    move_to_failed(std::move(spNode));
+ }
+ 
+ void HWPFile::ReadParaList(std::vector< std::unique_ptr<HWPPara> > &aplist, unsigned char flag)
+@@ -272,7 +272,12 @@ void HWPFile::ReadParaList(std::vector< std::unique_ptr<HWPPara> > &aplist, unsi
+         aplist.push_back(std::move(spNode));
+         spNode.reset( new HWPPara );
+     }
+-    pfailedlist.push_back(std::move(spNode));
++    move_to_failed(std::move(spNode));
++}
++
++void HWPFile::move_to_failed(std::unique_ptr<HWPPara> xPara)
++{
++    pfailedlist.push_back(std::move(xPara));
+ }
+ 
+ void HWPFile::TagsRead()
+diff --git a/hwpfilter/source/hwpfile.h b/hwpfilter/source/hwpfile.h
+index 5c9aab9828b1..72d22a5aeb95 100644
+--- a/hwpfilter/source/hwpfile.h
++++ b/hwpfilter/source/hwpfile.h
+@@ -252,6 +252,8 @@ class DLLEXPORT HWPFile
+         }
+         void pop_hpara_type() { element_import_stack.pop_back(); }
+ 
++        void move_to_failed(std::unique_ptr<HWPPara> rPara);
++
+     private:
+         int compareCharShape(CharShape const *shape);
+         int compareParaShape(ParaShape const *shape);
+diff --git a/hwpfilter/source/hwpread.cxx b/hwpfilter/source/hwpread.cxx
+index 9cffef46d17e..3c06515e563b 100644
+--- a/hwpfilter/source/hwpread.cxx
++++ b/hwpfilter/source/hwpread.cxx
+@@ -492,7 +492,7 @@ bool Picture::Read(HWPFile & hwpf)
+         if (pictype == PICTYPE_DRAW)
+         {
+             auto xGuard(std::make_unique<ChangeMemGuard>(follow.data(), follow_block_size));
+-            LoadDrawingObjectBlock(this);
++            LoadDrawingObjectBlock(this, hwpf);
+             style.cell = picinfo.picdraw.hdo;
+             xGuard.reset();
+         }

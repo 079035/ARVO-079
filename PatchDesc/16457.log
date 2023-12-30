@@ -1,3 +1,12 @@
-Vulnerability: Out-of-bounds read
-Summary of fix: This patch fixes an out-of-bounds read vulnerability in the `libFLAC/bitreader.c` file.
-Detailed description of fix: In the original code, there was a risk of performing an out-of-bounds read due to a wrap-around issue. The fix added a check to prevent the wrap-around and out-of-bounds read from occurring. If the condition `br->consumed_words > br->crc16_offset` is true, the code proceeds to perform the necessary calculations. Otherwise, it skips the calculation and does not read beyond the bounds of the buffer, thereby fixing the out-of-bounds read vulnerability.
+1. Vulnerability:
+The vulnerability in the original code was an Out-of-Bounds (OOB) read. This occurs when the program reads data from outside the boundaries of allocated memory. In this case, the program could potentially read beyond the end of the 'buffer' array, which could lead to undefined behavior or crashes.
+
+2. Short Summary of the Fix:
+The fix involves adding a condition to prevent the OOB read due to wrap-around. The code now checks if 'consumed_words' is greater than 'crc16_offset' before performing the read operation.
+
+3. Detailed Description of the Fix:
+The fix is implemented by adding an if condition before the code that reads from the 'buffer' array. This condition checks if 'consumed_words' is greater than 'crc16_offset'. If this condition is true, the program proceeds to read from the 'buffer' array. This prevents the program from reading beyond the end of the 'buffer' array, thus preventing the OOB read.
+
+In the original code, the read operation was performed without this check, which could lead to an OOB read if 'consumed_words' was not greater than 'crc16_offset'. The fix ensures that this condition is met before the read operation is performed, thus preventing the OOB read.
+
+The fix also involves re-indenting the code within the if condition to maintain proper code formatting and readability.

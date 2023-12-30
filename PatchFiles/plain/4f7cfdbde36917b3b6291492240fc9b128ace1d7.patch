@@ -1,0 +1,46 @@
+From 4f7cfdbde36917b3b6291492240fc9b128ace1d7 Mon Sep 17 00:00:00 2001
+From: Nathan Moinvaziri <nathan@nathanm.com>
+Date: Sat, 23 Jan 2021 19:25:37 -0800
+Subject: [PATCH] Prevent ASAN 64-bit memory allocation in fuzzers.
+ https://oss-fuzz.com/testcase-detail/5005175230169088
+
+---
+ tests/fuzz/fuzz_compress_chunk.c   | 6 ++++++
+ tests/fuzz/fuzz_decompress_frame.c | 7 ++++++-
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/tests/fuzz/fuzz_compress_chunk.c b/tests/fuzz/fuzz_compress_chunk.c
+index 298acf5e3..049393d81 100644
+--- a/tests/fuzz/fuzz_compress_chunk.c
++++ b/tests/fuzz/fuzz_compress_chunk.c
+@@ -46,6 +46,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+ 
+   blosc_cbuffer_sizes(output, &nbytes, &cbytes, &blocksize);
+ 
++  /* Don't allow address sanitizer to allocate more than INT32_MAX */
++  if (cbytes >= INT32_MAX) {
++    free(output);
++    return 0;
++  }
++
+   input = malloc(cbytes);
+   if (input != NULL) {
+     blosc_decompress(output, input, cbytes);
+diff --git a/tests/fuzz/fuzz_decompress_frame.c b/tests/fuzz/fuzz_decompress_frame.c
+index 7179b1e6c..d0af1ee49 100644
+--- a/tests/fuzz/fuzz_decompress_frame.c
++++ b/tests/fuzz/fuzz_decompress_frame.c
+@@ -25,7 +25,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+     blosc_destroy();
+     return 0;
+   }
+-
++  /* Don't allow address sanitizer to allocate more than INT32_MAX */
++  if (schunk->nbytes >= INT32_MAX) {
++    blosc2_schunk_free(schunk);
++    blosc_destroy();
++    return 0;
++  }
+   /* Decompress data */
+   uint8_t *uncompressed_data = (uint8_t *)malloc((size_t)schunk->nbytes+1);
+   if (uncompressed_data != NULL) {

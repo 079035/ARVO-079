@@ -1,0 +1,148 @@
+commit e52b4b1466476aa50f007a9d4bab4bc1d804e2d1
+Author: Petr Menšík <pemensik@redhat.com>
+Date:   Sat Sep 11 17:56:01 2021 +0100
+
+    Fix bunch of warnings in auth.c
+    
+    Error: CLANG_WARNING: [#def7]
+    dnsmasq-2.86test7/src/auth.c:420:5: warning[deadcode.DeadStores]: Value stored to 'found' is never read
+     #  418|          if (!found && is_name_synthetic(flag, name, &addr) )
+     #  419|         {
+     #  420|->         found = 1;
+     #  421|           nxdomain = 0;
+     #  422|
+    
+    Error: CLANG_WARNING: [#def8]
+    dnsmasq-2.86test7/src/auth.c:436:8: warning[deadcode.DeadStores]: Value stored to 'found' is never read
+     #  434|            {
+     #  435|              auth = soa = 1; /* inhibits auth section */
+     #  436|->            found = 1;
+     #  437|              log_query(F_RRNAME | F_AUTH, zone->domain, NULL, "<SOA>");
+     #  438|            }
+    
+    Error: CLANG_WARNING: [#def9]
+    dnsmasq-2.86test7/src/auth.c:472:8: warning[deadcode.DeadStores]: Value stored to 'found' is never read
+     #  470|              ns = 1; /* ensure we include NS records! */
+     #  471|              axfr = 1;
+     #  472|->            found = 1;
+     #  473|              axfroffset = nameoffset;
+     #  474|              log_query(F_RRNAME | F_AUTH, zone->domain, NULL, "<AXFR>");
+    
+    Error: CLANG_WARNING: [#def10]
+    dnsmasq-2.86test7/src/auth.c:480:8: warning[deadcode.DeadStores]: Value stored to 'found' is never read
+     #  478|              auth = 1;
+     #  479|              ns = 1; /* inhibits auth section */
+     #  480|->            found = 1;
+     #  481|              log_query(F_RRNAME | F_AUTH, zone->domain, NULL, "<NS>");
+     #  482|            }
+    
+    Error: CLANG_WARNING: [#def11]
+    dnsmasq-2.86test7/src/auth.c:501:4: warning[deadcode.DeadStores]: Value stored to 'found' is never read
+     #  499|                        log_query(crecp->flags, name, &crecp->addr, record_source(crecp->uid));
+     #  500|                        *cut  = 0; /* remove domain part */
+     #  501|->                      found = 1;
+     #  502|                        if (add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+     #  503|                                                daemon->auth_ttl, NULL, qtype, C_IN,
+    
+    Error: CLANG_WARNING: [#def12]
+    dnsmasq-2.86test7/src/auth.c:522:8: warning[deadcode.DeadStores]: Value stored to 'found' is never read
+     #  520|                   {
+     #  521|                     log_query(crecp->flags, name, &crecp->addr, record_source(crecp->uid));
+     #  522|->                   found = 1;
+     #  523|                     if (add_resource_record(header, limit, &trunc, nameoffset, &ansp,
+     #  524|                                             daemon->auth_ttl, NULL, qtype, C_IN,
+    
+    Error: CLANG_WARNING: [#def13]
+    dnsmasq-2.86test7/src/auth.c:617:8: warning[deadcode.DeadStores]: Value stored to 'p' is never read
+     #  615|                p += sprintf(p, "%u.", a & 0xff);
+     #  616|              a = a >> 8;
+     #  617|->            p += sprintf(p, "%u.in-addr.arpa", a & 0xff);
+     #  618|
+     #  619|            }
+    
+    Error: CPPCHECK_WARNING (CWE-758): [#def14]
+    dnsmasq-2.86test7/src/auth.c:627: warning[objectIndex]: The address of local variable 'addr6' might be accessed at non-zero index.
+     #  625|              for (i = subnet->prefixlen-1; i >= 0; i -= 4)
+     #  626|                {
+     #  627|->                int dig = ((unsigned char *)&subnet->addr.addr6)[i>>3];
+     #  628|                  p += sprintf(p, "%.1x.", (i>>2) & 1 ? dig & 15 : dig >> 4);
+     #  629|                }
+    
+    Error: CLANG_WARNING: [#def15]
+    dnsmasq-2.86test7/src/auth.c:630:8: warning[deadcode.DeadStores]: Value stored to 'p' is never read
+     #  628|                  p += sprintf(p, "%.1x.", (i>>2) & 1 ? dig & 15 : dig >> 4);
+     #  629|                }
+     #  630|->            p += sprintf(p, "ip6.arpa");
+     #  631|
+     #  632|            }
+
+diff --git a/src/auth.c b/src/auth.c
+index 7be1613..aa2403b 100644
+--- a/src/auth.c
++++ b/src/auth.c
+@@ -417,7 +417,6 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
+ 
+        if (!found && is_name_synthetic(flag, name, &addr) )
+ 	 {
+-	   found = 1;
+ 	   nxdomain = 0;
+ 	   
+ 	   log_query(F_FORWARD | F_CONFIG | flag, name, &addr, NULL, 0);
+@@ -433,7 +432,6 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
+ 	  if (qtype == T_SOA)
+ 	    {
+ 	      auth = soa = 1; /* inhibits auth section */
+-	      found = 1;
+ 	      log_query(F_RRNAME | F_AUTH, zone->domain, NULL, "<SOA>", 0);
+ 	    }
+       	  else if (qtype == T_AXFR)
+@@ -469,7 +467,6 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
+ 	      soa = 1; /* inhibits auth section */
+ 	      ns = 1; /* ensure we include NS records! */
+ 	      axfr = 1;
+-	      found = 1;
+ 	      axfroffset = nameoffset;
+ 	      log_query(F_RRNAME | F_AUTH, zone->domain, NULL, "<AXFR>", 0);
+ 	    }
+@@ -477,7 +474,6 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
+ 	    {
+ 	      auth = 1;
+ 	      ns = 1; /* inhibits auth section */
+-	      found = 1;
+ 	      log_query(F_RRNAME | F_AUTH, zone->domain, NULL, "<NS>", 0);
+ 	    }
+ 	}
+@@ -498,7 +494,6 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
+ 			*cut = '.'; /* restore domain part */
+ 			log_query(crecp->flags, name, &crecp->addr, record_source(crecp->uid), 0);
+ 			*cut  = 0; /* remove domain part */
+-			found = 1;
+ 			if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
+ 						daemon->auth_ttl, NULL, qtype, C_IN, 
+ 						qtype == T_A ? "4" : "6", &crecp->addr))
+@@ -519,7 +514,6 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
+ 		 if ((crecp->flags & flag) && (local_query || filter_zone(zone, flag, &(crecp->addr))))
+ 		   {
+ 		     log_query(crecp->flags, name, &crecp->addr, record_source(crecp->uid), 0);
+-		     found = 1;
+ 		     if (add_resource_record(header, limit, &trunc, nameoffset, &ansp, 
+ 					     daemon->auth_ttl, NULL, qtype, C_IN, 
+ 					     qtype == T_A ? "4" : "6", &crecp->addr))
+@@ -614,7 +608,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
+ 	      if (subnet->prefixlen >= 16 )
+ 		p += sprintf(p, "%u.", a & 0xff);
+ 	      a = a >> 8;
+-	      p += sprintf(p, "%u.in-addr.arpa", a & 0xff);
++	      sprintf(p, "%u.in-addr.arpa", a & 0xff);
+ 	      
+ 	    }
+ 	  else
+@@ -627,7 +621,7 @@ size_t answer_auth(struct dns_header *header, char *limit, size_t qlen, time_t n
+ 		  int dig = ((unsigned char *)&subnet->addr.addr6)[i>>3];
+ 		  p += sprintf(p, "%.1x.", (i>>2) & 1 ? dig & 15 : dig >> 4);
+ 		}
+-	      p += sprintf(p, "ip6.arpa");
++	      sprintf(p, "ip6.arpa");
+ 	      
+ 	    }
+ 	}

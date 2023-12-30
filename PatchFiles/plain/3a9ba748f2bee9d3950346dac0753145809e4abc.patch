@@ -1,0 +1,19 @@
+commit 3a9ba748f2bee9d3950346dac0753145809e4abc
+Author: pancake <pancake@nopcode.org>
+Date:   Sun May 1 02:56:45 2022 +0200
+
+    Fix #20023 - Missing refcounting  initialization
+
+diff --git a/libr/include/r_arch.h b/libr/include/r_arch.h
+index e820d86a6e..fab7c5161d 100644
+--- a/libr/include/r_arch.h
++++ b/libr/include/r_arch.h
+@@ -52,7 +52,7 @@ static inline RArchConfig *r_arch_config_new(void) {
+ 	ac->syntax = R_ASM_SYNTAX_INTEL;
+ 	ac->free = (void (*)(void*))my_ac_free;
+ 	ac->big_endian = false;
+-	return ac;
++	return r_ref (ac);
+ }
+ 
+ #endif

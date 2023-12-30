@@ -1,0 +1,103 @@
+{
+    "fix": "https://github.com/apple/swift-nio/commit/3cfd8ac5d9c1f54fa7337331f3bab45c364cb85c",
+    "verify": "0",
+    "localId": 51434,
+    "project": "swift-nio",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Invalid-free",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51434,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1663324873,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=4913328836706304\n\nProject: swift-nio\nFuzzing Engine: libFuzzer\nFuzz Target: swift-nio-http1-fuzz-release\nJob Type: libfuzzer_asan_swift-nio\nPlatform Id: linux\n\nCrash Type: Invalid-free\nCrash Address: 0x5627a5a78460\nCrash State:\n  function signature specialization <Arg\n  NIOHTTP1.HTTPDecoder.didFinishHead\n  protocol witness for NIOHTTP1.\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_swift-nio&range=202209130604:202209140601\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=4913328836706304\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51434,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1925932398",
+                    "displayName": "luk...@apple.com"
+                },
+                "timestamp": 1663325504,
+                "content": "Good news, this isn't actually a bad free. ASAN hit this after seeing a fatalError. The real issue is:\n\n \tRunning: /mnt/scratch0/clusterfuzz/bot/inputs/fuzzer-testcases/crash-9aef448418fb76cda06e0f4264f970503d44e575\n\tNIOHTTP1/HTTPDecoder.swift:915: Fatal error: Unexpected http_method llhttp_method(rawValue: 45)\n\t=================================================================\n\t==8069==ERROR: AddressSanitizer: attempting free on address which was not malloc()-ed: 0x5627a5a78460 in thread T0\n\tSCARINESS: 40 (bad-free)\n\t    #0 0x5627a0f17b6d in free /home/build-user/llvm-project/compiler-rt/lib/asan/asan_malloc_linux.cpp:123:3\n\t    #1 0x5627a16d62a9 in _swift_stdlib_reportFatalErrorInFile\n\t    #2 0x5627a13cb740 in Swift._assertionFailure(_: Swift.StaticString, _: Swift.String, file: Swift.StaticString, line: Swift.UInt, flags: Swift.UInt32) -> Swift.Never\n\t    #3 0x5627a11ba1a6 in function signature specialization <Arg[1] = Dead> of static NIOHTTP1.HTTPMethod.from(httpParserMethod: __C.llhttp_method) -> NIOHTTP1.HTTPMethod swift-nio/Sources/NIOHTTP1/HTTPDecoder.swift:915:13\n\t    #4 0x5627a11afda6 in static NIOHTTP1.HTTPMethod.from(httpParserMethod: __C.llhttp_method) -> NIOHTTP1.HTTPMethod swift-nio/swift-nio-fuzz/<compiler-generated>:0\n\t    #5 0x5627a11afda6 in NIOHTTP1.HTTPDecoder.didFinishHead(versionMajor: Swift.Int, versionMinor: Swift.Int, isUpgrade: Swift.Bool, method: __C.llhttp_method, statusCode: Swift.Int, keepAliveState: NIOHTTP1.KeepAliveState) -> Swift.Bool swift-nio/Sources/NIOHTTP1/HTTPDecoder.swift:625:62"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51434,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1925932398",
+                    "displayName": "luk...@apple.com"
+                },
+                "timestamp": 1663341562,
+                "content": "Also good news, we never shipped this. Fixing on main directly."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51434,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1663354620,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-12-15"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51434,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1663430849,
+                "content": "ClusterFuzz testcase 4913328836706304 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_swift-nio&range=202209160612:202209170607\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 51434,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1663440596,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "3cfd8ac5d9c1f54fa7337331f3bab45c364cb85c",
+    "repo_addr": "https://github.com/apple/swift-nio.git"
+}

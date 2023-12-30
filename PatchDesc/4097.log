@@ -1,12 +1,10 @@
-Vulnerability:
-Heap use after free.
+1. Vulnerability:
+The vulnerability in the code is a "heap use after free" issue. This occurs when the program continues to use a pointer after it has been freed. This can lead to program crashes, incorrect computations, or even allow malicious attacks.
 
-Summary of the fix:
-The fix ensures that any remaining publish responses are sent if the last subscription is removed.
+2. Short Summary of the Fix:
+The fix addresses the "heap use after free" issue by immediately sending the `UA_Subscription_answerPublishRequestsNoSubscription` before the session is deleted, instead of scheduling it as a delayed callback.
 
-Detailed description of the fix:
-In the original code, if the last subscription was removed and the condition `if(LIST_FIRST(&session->serverSubscriptions))` returned false, the code would call `UA_Server_delayedCallback` to send any remaining publish responses in a delayed callback. However, this introduces a potential vulnerability of heap use after free, where memory that has been freed is still being accessed.
+3. Detailed Description of the Fix:
+In the original code, `UA_Subscription_answerPublishRequestsNoSubscription` was scheduled as a delayed callback using `UA_Server_delayedCallback`. This means that the function would be called at a later time, after the current function (`Service_DeleteSubscriptions`) has finished executing. However, within this time, the `session` object could be deleted, leading to a "heap use after free" issue when the callback function tries to access it.
 
-The fix modifies the code to call `UA_Subscription_answerPublishRequestsNoSubscription` directly, instead of using the delayed callback. This ensures that any remaining publish responses are sent before the session is deleted, without the risk of heap use after free.
-
-The fix makes the code safer and eliminates the possibility of heap use after free vulnerability.
+The fix changes this by calling `UA_Subscription_answerPublishRequestsNoSubscription` directly, instead of scheduling it as a delayed callback. This ensures that the function is called while the `session` object is still valid, preventing the "heap use after free" issue.

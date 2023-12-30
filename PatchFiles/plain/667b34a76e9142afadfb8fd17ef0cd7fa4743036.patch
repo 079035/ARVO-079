@@ -1,0 +1,159 @@
+From 667b34a76e9142afadfb8fd17ef0cd7fa4743036 Mon Sep 17 00:00:00 2001
+From: Roman Lebedev <lebedev.ri@gmail.com>
+Date: Sun, 17 Sep 2017 17:23:12 +0300
+Subject: [PATCH] CiffParser/CiffIFD: use NORangesSet<Buffer> to avoid
+ overlapping IFD's
+
+---
+ src/librawspeed/parsers/CiffParser.cpp |  6 ++++-
+ src/librawspeed/tiff/CiffIFD.cpp       | 31 +++++++++++++++++++++-----
+ src/librawspeed/tiff/CiffIFD.h         | 19 ++++++++--------
+ 3 files changed, 40 insertions(+), 16 deletions(-)
+
+diff --git a/src/librawspeed/parsers/CiffParser.cpp b/src/librawspeed/parsers/CiffParser.cpp
+index 915978dcb..0a95dceed 100644
+--- a/src/librawspeed/parsers/CiffParser.cpp
++++ b/src/librawspeed/parsers/CiffParser.cpp
+@@ -22,6 +22,7 @@
+ 
+ #include "parsers/CiffParser.h"
+ #include "common/Common.h"               // for make_unique, trimSpaces
++#include "common/NORangesSet.h"          // for NORangesSet
+ #include "decoders/CrwDecoder.h"         // for CrwDecoder
+ #include "decoders/RawDecoder.h"         // for RawDecoder
+ #include "io/ByteStream.h"               // for ByteStream
+@@ -48,8 +49,11 @@ void CiffParser::parseData() {
+   if (magic != 0x4949)
+     ThrowCPE("Not a CIFF file (ID)");
+ 
++  NORangesSet<Buffer> ifds;
++
++  // Offset to the beginning of the CIFF
+   ByteStream subStream(bs.getSubStream(bs.getByte()));
+-  mRootIFD = std::make_unique<CiffIFD>(nullptr, &subStream);
++  mRootIFD = std::make_unique<CiffIFD>(nullptr, &ifds, &subStream);
+ }
+ 
+ std::unique_ptr<RawDecoder> CiffParser::getDecoder(const CameraMetaData* meta) {
+diff --git a/src/librawspeed/tiff/CiffIFD.cpp b/src/librawspeed/tiff/CiffIFD.cpp
+index 94b63ee01..0cc22ccae 100644
+--- a/src/librawspeed/tiff/CiffIFD.cpp
++++ b/src/librawspeed/tiff/CiffIFD.cpp
+@@ -22,11 +22,13 @@
+ 
+ #include "tiff/CiffIFD.h"
+ #include "common/Common.h"               // for uint32, ushort16
++#include "common/NORangesSet.h"          // for NORangesSet
+ #include "common/RawspeedException.h"    // for RawspeedException
+ #include "io/ByteStream.h"               // for ByteStream
+ #include "io/IOException.h"              // for IOException
+ #include "parsers/CiffParserException.h" // for ThrowCPE, CiffParserException
+ #include "tiff/CiffEntry.h"              // for CiffEntry, CiffDataType::CI...
++#include <cassert>                       // for assert
+ #include <map>                           // for map, _Rb_tree_iterator
+ #include <memory>                        // for unique_ptr
+ #include <string>                        // for allocator, operator==, string
+@@ -39,7 +41,10 @@ using std::unique_ptr;
+ 
+ namespace rawspeed {
+ 
+-void CiffIFD::parseIFDEntry(ByteStream* bs) {
++void CiffIFD::parseIFDEntry(NORangesSet<Buffer>* ifds, ByteStream* bs) {
++  assert(ifds);
++  assert(bs);
++
+   unique_ptr<CiffEntry> t;
+ 
+   auto origPos = bs->getPosition();
+@@ -57,7 +62,7 @@ void CiffIFD::parseIFDEntry(ByteStream* bs) {
+     switch (t->type) {
+     case CIFF_SUB1:
+     case CIFF_SUB2: {
+-      add(std::make_unique<CiffIFD>(this, &t->data));
++      add(std::make_unique<CiffIFD>(this, ifds, &t->data));
+       break;
+     }
+ 
+@@ -70,20 +75,34 @@ void CiffIFD::parseIFDEntry(ByteStream* bs) {
+   }
+ }
+ 
+-CiffIFD::CiffIFD(const CiffIFD* parent_, ByteStream* mFile) : parent(parent_) {
++CiffIFD::CiffIFD(const CiffIFD* parent_, NORangesSet<Buffer>* ifds,
++                 ByteStream* mFile)
++    : parent(parent_) {
++  assert(ifds);
++  assert(mFile);
++
+   checkOverflow();
+ 
+   if (mFile->getSize() < 4)
+     ThrowCPE("File is probably corrupted.");
+ 
++  // last 4 bytes is the offset to the beginning of the [first?] IFD
+   mFile->setPosition(mFile->getSize() - 4);
+-  uint32 valuedata_size = mFile->getU32();
++  uint32 offset = mFile->getU32();
++  mFile->setPosition(offset);
+ 
+-  mFile->setPosition(valuedata_size);
++  // count of the Directory entries in this IFD
+   ushort16 dircount = mFile->getU16();
+ 
++  // 2 bytes for entry count
++  // each entry is 10 bytes
++  const auto IFDFullSize = 2 + 10 * dircount;
++  const Buffer IFDBuf(mFile->getSubView(offset, IFDFullSize));
++  if (!ifds->emplace(IFDBuf).second)
++    ThrowCPE("Two IFD's overlap. Raw corrupt!");
++
+   for (uint32 i = 0; i < dircount; i++)
+-    parseIFDEntry(mFile);
++    parseIFDEntry(ifds, mFile);
+ }
+ 
+ void CiffIFD::checkOverflow() const {
+diff --git a/src/librawspeed/tiff/CiffIFD.h b/src/librawspeed/tiff/CiffIFD.h
+index 4b8df3f62..7bfd6ee81 100644
+--- a/src/librawspeed/tiff/CiffIFD.h
++++ b/src/librawspeed/tiff/CiffIFD.h
+@@ -21,13 +21,14 @@
+ 
+ #pragma once
+ 
+-#include "common/Common.h"  // for uint32
+-#include "tiff/CiffEntry.h" // IWYU pragma: keep
+-#include "tiff/CiffTag.h"   // for CiffTag
+-#include <map>              // for map
+-#include <memory>           // for unique_ptr
+-#include <string>           // for string
+-#include <vector>           // for vector
++#include "common/Common.h"      // for uint32
++#include "common/NORangesSet.h" // for NORangesSet
++#include "tiff/CiffEntry.h"     // IWYU pragma: keep
++#include "tiff/CiffTag.h"       // for CiffTag
++#include <map>                  // for map
++#include <memory>               // for unique_ptr
++#include <string>               // for string
++#include <vector>               // for vector
+ 
+ namespace rawspeed {
+ 
+@@ -44,7 +45,7 @@ class CiffIFD final {
+   void add(std::unique_ptr<CiffIFD> subIFD);
+   void add(std::unique_ptr<CiffEntry> entry);
+ 
+-  void parseIFDEntry(ByteStream* bs);
++  void parseIFDEntry(NORangesSet<Buffer>* ifds, ByteStream* bs);
+ 
+   template <typename Lambda>
+   std::vector<const CiffIFD*> __attribute__((pure))
+@@ -55,7 +56,7 @@ class CiffIFD final {
+   getEntryRecursiveIf(CiffTag tag, const Lambda& f) const;
+ 
+ public:
+-  CiffIFD(const CiffIFD* parent, ByteStream* mFile);
++  CiffIFD(const CiffIFD* parent, NORangesSet<Buffer>* ifds, ByteStream* mFile);
+ 
+   std::vector<const CiffIFD*> __attribute__((pure))
+   getIFDsWithTag(CiffTag tag) const;

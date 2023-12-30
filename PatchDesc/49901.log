@@ -1,3 +1,10 @@
-Vulnerability: Heap-buffer overflow
-Summary of the fix: The fix addresses a heap-buffer overflow issue caused by insufficient size validation of the payload in the `dissect_softether_type` function.
-Detailed description of the fix: The fix includes adding a size validation check to ensure that the payload length is sufficient for the specified size. In the original code, the payload length is compared to `siz + 3` to determine if it is greater than or equal to the required size. However, this comparison does not take into account the possibility of overflow when calculating the total size (`(u_int64_t)siz + 3`). To fix this issue, the fix updates the comparison to cast the payload length to `u_int64_t` and compares it to `(u_int64_t)siz + 3` to prevent overflow. This ensures that the payload length is accurately validated to avoid a heap-buffer overflow.
+1. Vulnerability:
+The vulnerability in the code is a heap-buffer overflow. This occurs when the size of the data (siz) that is being read from the payload is not properly checked against the total length of the payload (payload_len). If the size of the data plus an offset of 3 is greater than the payload length, it can lead to reading beyond the allocated memory, causing a heap-buffer overflow.
+
+2. Short Summary of the Fix:
+The fix involves changing the condition that checks if the size of the data (siz) plus an offset of 3 is less than or equal to the payload length (payload_len). The fix ensures that the comparison is done between values of the same data type (u_int64_t), preventing the possibility of an overflow.
+
+3. Detailed Description of the Fix:
+In the original code, the condition `if(siz == 0 || payload_len < siz + 3)` checks if the size of the data (siz) plus an offset of 3 is less than the payload length (payload_len). If this condition is true, the function returns 0, indicating an error. However, this condition can lead to a heap-buffer overflow if the size of the data plus 3 is greater than the payload length.
+
+The fix changes this condition to `if(siz == 0 || (u_int64_t)payload_len < (u_int64_t)siz + 3)`. This ensures that the comparison is done between values of the same data type (u_int64_t). By casting both the payload length and the size of the data to u_int64_t, the possibility of an overflow is eliminated. This is because u_int64_t can hold much larger values than the original data types of payload_len and siz, which are u_int16_t and u_int32_t respectively. Therefore, even if siz + 3 is very large, it will not overflow a u_int64_t. This prevents the possibility of reading beyond the allocated memory, fixing the heap-buffer overflow vulnerability.

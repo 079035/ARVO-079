@@ -1,0 +1,74 @@
+From 5dbe8aef1c5ae1b0c53fbd74035181557b51fb24 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Caol=C3=A1n=20McNamara?= <caolanm@redhat.com>
+Date: Thu, 15 Sep 2022 17:02:43 +0100
+Subject: [PATCH] ofz#51391 Timeout
+
+---
+ src/hunspell/affixmgr.cxx |  9 +++++++++
+ src/hunspell/replist.cxx  | 15 +++++++++++++++
+ src/hunspell/replist.hxx  |  2 ++
+ 3 files changed, 26 insertions(+)
+
+diff --git a/src/hunspell/affixmgr.cxx b/src/hunspell/affixmgr.cxx
+index 84cbbd785..d692e3018 100644
+--- a/src/hunspell/affixmgr.cxx
++++ b/src/hunspell/affixmgr.cxx
+@@ -191,6 +191,14 @@ AffixMgr::AffixMgr(const char* affpath,
+     parsedbreaktable = true;
+   }
+ 
++#if defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
++  // not entirely sure this is invalid, so only for fuzzing for now
++  if (iconvtable && !iconvtable->check_against_breaktable(breaktable)) {
++      delete iconvtable;
++      iconvtable = nullptr;
++  }
++#endif
++
+   if (cpdmin == -1)
+     cpdmin = MINCPDLEN;
+ }
+@@ -3870,6 +3878,7 @@ bool AffixMgr::parse_convtable(const std::string& line,
+                        af->getlinenum());
+       return false;
+     }
++
+     (*rl)->add(pattern, pattern2);
+   }
+   return true;
+diff --git a/src/hunspell/replist.cxx b/src/hunspell/replist.cxx
+index 3aa2c3610..dcce8d8f0 100644
+--- a/src/hunspell/replist.cxx
++++ b/src/hunspell/replist.cxx
+@@ -192,3 +192,18 @@ bool RepList::conv(const std::string& in_word, std::string& dest) {
+   return change;
+ }
+ 
++bool RepList::check_against_breaktable(const std::vector<std::string>& breaktable) const {
++  for (size_t i = 0, pos = dat.size(); i < pos; ++i) {
++    for (int j = 0; j < 4; ++j) {
++      if (dat[i]->outstrings[j].size() > dat[i]->pattern.size()) {
++          for (size_t k = 0; k < breaktable.size(); ++k) {
++              if (dat[i]->outstrings[j].find(breaktable[k]) != std::string::npos) {
++                return false;
++              }
++          }
++      }
++    }
++  }
++
++  return true;
++}
+diff --git a/src/hunspell/replist.hxx b/src/hunspell/replist.hxx
+index ea0524a4f..e82940e70 100644
+--- a/src/hunspell/replist.hxx
++++ b/src/hunspell/replist.hxx
+@@ -88,6 +88,8 @@ class RepList {
+   explicit RepList(int n);
+   ~RepList();
+ 
++  bool check_against_breaktable(const std::vector<std::string>& breaktable) const;
++
+   int add(const std::string& pat1, const std::string& pat2);
+   int find(const char* word);
+   std::string replace(const size_t wordlen, int n, bool atstart);

@@ -1,0 +1,25 @@
+commit 81235a45035dca34c8cc0f713be21b6c12259d15
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Tue Nov 22 20:21:24 2022 +0000
+
+    ofz#53648 Abrt
+    
+    Change-Id: I070b7a8ea599f1faddb009c68aeb4b8536cc52e1
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/143130
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/sw/source/core/txtnode/OnlineAccessibilityCheck.cxx b/sw/source/core/txtnode/OnlineAccessibilityCheck.cxx
+index 063c2d586e12..5b190fb96362 100644
+--- a/sw/source/core/txtnode/OnlineAccessibilityCheck.cxx
++++ b/sw/source/core/txtnode/OnlineAccessibilityCheck.cxx
+@@ -285,6 +285,9 @@ void OnlineAccessibilityCheck::clearAccessibilityIssuesFromAllNodes()
+ 
+ void OnlineAccessibilityCheck::resetAndQueue(SwNode* pNode)
+ {
++    if (utl::ConfigManager::IsFuzzing())
++        return;
++
+     bool bOnlineCheckStatus
+         = officecfg::Office::Common::Accessibility::OnlineAccessibilityCheck::get();
+     if (!bOnlineCheckStatus)

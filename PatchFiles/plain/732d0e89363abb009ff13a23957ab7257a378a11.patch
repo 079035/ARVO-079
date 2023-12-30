@@ -1,0 +1,117 @@
+commit 732d0e89363abb009ff13a23957ab7257a378a11
+Author: Mike Kaganski <mike.kaganski@collabora.com>
+Date:   Thu Jul 6 14:04:12 2023 +0300
+
+    Related: tdf#141969 Make sure to use SwAttrSet for paragraph autostyles
+    
+    See https://gerrit.libreoffice.org/c/core/+/153947/8#message-45a748bf68235bf143bec07cda2d704abb2b140f
+    
+    > This started to cause e.g.  CppunitTest_sw_rtfexport3  to fail with
+    >   /sw/inc/node.hxx:493:53: runtime error: downcast of address 0x606000617540 which does not point to an object of type 'const SwAttrSet'
+    >   0x606000617540: note: object is of type 'SfxItemSet'
+    >    00 00 00 00  30 15 0f a9 a6 7f 00 00  50 6a 4a 01 40 60 00 00  c8 98 0f 00 30 61 00 00  80 30 6c 00
+    >                 ^~~~~~~~~~~~~~~~~~~~~~~
+    >                 vptr for 'SfxItemSet'
+    >       #0 0x7fa671d1b765 in SwContentNode::GetpSwAttrSet() const /sw/inc/node.hxx:493:53
+    >       #1 0x7fa671d7159e in SwContentNode::GetSwAttrSet() const /sw/inc/node.hxx:729:25
+    >       #2 0x7fa673be6c4a in SwDoc::TextToTable(std::__debug::vector<std::__debug::vector<SwNodeRange, std::allocator<SwNodeRange> >, std::allocator<std::__debug::vector<SwNodeRange, std::allocator<SwNodeRange> > > > const&) /sw/source/core/docnode/ndtbl.cxx:1236:51
+    >       #3 0x7fa6775f46a5 in SwXText::convertToTable(com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::uno::Reference<com::sun::star::text::XTextRange> > > > const&, com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> > > const&, com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> > const&, com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> const&) /sw/source/core/unocore/unotext.cxx:2279:51
+    >       #4 0x7fa6775fba56 in non-virtual thunk to SwXText::convertToTable(com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::uno::Reference<com::sun::star::text::XTextRange> > > > const&, com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> > > const&, com::sun::star::uno::Sequence<com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> > const&, com::sun::star::uno::Sequence<com::sun::star::beans::PropertyValue> const&) /sw/source/core/unocore/unotext.cxx
+    >       #5 0x7fa61c596a81 in writerfilter::dmapper::DomainMapperTableHandler::endTable(unsigned int, bool) /writerfilter/source/dmapper/DomainMapperTableHandler.cxx:1481:35
+    >       #6 0x7fa61cf2fdee in writerfilter::dmapper::TableManager::resolveCurrentTable() /writerfilter/source/dmapper/TableManager.cxx:409:33
+    >       #7 0x7fa61cf30bb1 in writerfilter::dmapper::TableManager::endLevel() /writerfilter/source/dmapper/TableManager.cxx:427:9
+    >       #8 0x7fa61c642f37 in writerfilter::dmapper::DomainMapperTableManager::endLevel() /writerfilter/source/dmapper/DomainMapperTableManager.cxx:496:19
+    >       #9 0x7fa61cf2cae1 in writerfilter::dmapper::TableManager::endParagraphGroup() /writerfilter/source/dmapper/TableManager.cxx:338:9
+    > (<https://ci.libreoffice.org//job/lo_ubsan/2836/>)
+    
+    Regression after commit b036e563e699595fa7625888f11ab0c76f1abd66
+    (tdf#141969: use paragraph autostyle to mimic Word's table style,
+    2023-07-04).
+    
+    Change-Id: Idc905cdea35bd0c5f3cfbd562d63894f44e64446
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/154106
+    Tested-by: Mike Kaganski <mike.kaganski@collabora.com>
+    Reviewed-by: Mike Kaganski <mike.kaganski@collabora.com>
+
+diff --git a/sw/inc/autostyle_helper.hxx b/sw/inc/autostyle_helper.hxx
+index 9336085db02e..956bf01a8a62 100644
+--- a/sw/inc/autostyle_helper.hxx
++++ b/sw/inc/autostyle_helper.hxx
+@@ -26,6 +26,6 @@ class SwDoc;
+ std::shared_ptr<SfxItemSet>
+ PropValuesToAutoStyleItemSet(SwDoc& rDoc, IStyleAccess::SwAutoStyleFamily eFamily,
+                              const css::uno::Sequence<css::beans::PropertyValue>& Values,
+-                             SfxItemSet& rSet);
++                             SwAttrSet& rSet);
+ 
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab cinoptions=b1,g0,N-s cinkeys+=0=break: */
+diff --git a/sw/source/core/doc/swstylemanager.cxx b/sw/source/core/doc/swstylemanager.cxx
+index 38f79d679af3..7f73555fc8ff 100644
+--- a/sw/source/core/doc/swstylemanager.cxx
++++ b/sw/source/core/doc/swstylemanager.cxx
+@@ -20,6 +20,7 @@
+ #include "swstylemanager.hxx"
+ #include <svl/stylepool.hxx>
+ #include <istyleaccess.hxx>
++#include <swatrset.hxx>
+ #include <unordered_map>
+ #include <osl/diagnose.h>
+ 
+@@ -97,6 +98,7 @@ std::shared_ptr<SfxItemSet> SwStyleManager::getAutomaticStyle( const SfxItemSet&
+                                                                    IStyleAccess::SwAutoStyleFamily eFamily,
+                                                                    const OUString* pParentName )
+ {
++    assert(eFamily != IStyleAccess::AUTO_STYLE_PARA || dynamic_cast<const SwAttrSet*>(&rSet));
+     StylePool& rAutoPool
+         = eFamily == IStyleAccess::AUTO_STYLE_CHAR ? m_aAutoCharPool : m_aAutoParaPool;
+     return rAutoPool.insertItemSet( rSet, pParentName );
+@@ -105,6 +107,7 @@ std::shared_ptr<SfxItemSet> SwStyleManager::getAutomaticStyle( const SfxItemSet&
+ std::shared_ptr<SfxItemSet> SwStyleManager::cacheAutomaticStyle( const SfxItemSet& rSet,
+                                                                    IStyleAccess::SwAutoStyleFamily eFamily )
+ {
++    assert(eFamily != IStyleAccess::AUTO_STYLE_PARA || dynamic_cast<const SwAttrSet*>(&rSet));
+     StylePool& rAutoPool
+         = eFamily == IStyleAccess::AUTO_STYLE_CHAR ? m_aAutoCharPool : m_aAutoParaPool;
+     std::shared_ptr<SfxItemSet> pStyle = rAutoPool.insertItemSet( rSet );
+@@ -134,6 +137,7 @@ std::shared_ptr<SfxItemSet> SwStyleManager::getByName( const OUString& rName,
+         rCache.addCompletePool( rAutoPool );
+         pStyle = rCache.getByName( rName );
+     }
++    assert(!pStyle || eFamily != IStyleAccess::AUTO_STYLE_PARA || dynamic_cast<SwAttrSet*>(pStyle.get()));
+     return pStyle;
+ }
+ 
+@@ -147,6 +151,7 @@ void SwStyleManager::getAllStyles( std::vector<std::shared_ptr<SfxItemSet>> &rSt
+     std::shared_ptr<SfxItemSet> pStyle = pIter->getNext();
+     while( pStyle )
+     {
++        assert(eFamily != IStyleAccess::AUTO_STYLE_PARA || dynamic_cast<SwAttrSet*>(pStyle.get()));
+         rStyles.push_back( pStyle );
+ 
+         pStyle = pIter->getNext();
+diff --git a/sw/source/core/unocore/unoobj.cxx b/sw/source/core/unocore/unoobj.cxx
+index 1d511890c84b..14cceaee3f38 100644
+--- a/sw/source/core/unocore/unoobj.cxx
++++ b/sw/source/core/unocore/unoobj.cxx
+@@ -2302,7 +2302,7 @@ SwXTextCursor::setPropertyValue(
+ 
+         if (!aRanges.empty())
+         {
+-            SfxItemSet aAutoStyleItemSet(rUnoCursor.GetDoc().GetAttrPool(), std::move(aRanges));
++            SwAttrSet aAutoStyleItemSet(rUnoCursor.GetDoc().GetAttrPool(), std::move(aRanges));
+             // we need to get up-to-date item set: this makes sure that the complex properties,
+             // that are only partially defined by passed definition, do not lose the rest of
+             // their already present data (which will become part of the autostyle, too).
+diff --git a/sw/source/core/unocore/unostyle.cxx b/sw/source/core/unocore/unostyle.cxx
+index a30ead3ea7a4..e480d6fc1d07 100644
+--- a/sw/source/core/unocore/unostyle.cxx
++++ b/sw/source/core/unocore/unostyle.cxx
+@@ -3520,7 +3520,7 @@ void SwXAutoStyleFamily::Notify(const SfxHint& rHint)
+ 
+ std::shared_ptr<SfxItemSet>
+ PropValuesToAutoStyleItemSet(SwDoc& rDoc, IStyleAccess::SwAutoStyleFamily eFamily,
+-                             const uno::Sequence<beans::PropertyValue>& Values, SfxItemSet& aSet)
++                             const uno::Sequence<beans::PropertyValue>& Values, SwAttrSet& aSet)
+ {
+     const SfxItemPropertySet* pPropSet = nullptr;
+     switch( eFamily )

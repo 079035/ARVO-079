@@ -1,0 +1,167 @@
+commit 823fe1cb509e80f36744ff948d506ec9eeffb752
+Author: Mike Kaganski <mike.kaganski@collabora.com>
+Date:   Fri Mar 4 18:57:46 2022 +0300
+
+    Avoid some sprintf used with colors
+    
+    Also addresses possible buffer overflow because of possible
+    color channel values greater than 255 (found by a fuzzer;
+    likely by some unexpected value of shade exceeding 100; see
+    https://gerrit.libreoffice.org/c/core/+/130956/3/hwpfilter/source/hcode.cxx#1292)
+    
+    Change-Id: I168685c3b51cbc8c9f664282bc9378b3c6669ba0
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/131003
+    Tested-by: Jenkins
+    Reviewed-by: Mike Kaganski <mike.kaganski@collabora.com>
+
+diff --git a/hwpfilter/source/hcode.cxx b/hwpfilter/source/hcode.cxx
+index 3e9b08086f23..7a00271641b1 100644
+--- a/hwpfilter/source/hcode.cxx
++++ b/hwpfilter/source/hcode.cxx
+@@ -1288,13 +1288,21 @@ OUString hcolor2str(uchar color, uchar shade, bool bIsChar)
+             blue = 0xff;
+             break;
+     }
++    return rgb2str(red, green, blue);
++}
++
+ 
++OUString rgb2str(unsigned char red, unsigned char green, unsigned char blue)
++{
+     char buf[8];
+     int n = std::max(sprintf(buf, "#%02x%02x%02x", red, green, blue), 0);
+     return OUString::createFromAscii(std::string_view(buf, n));
+ }
+ 
+ 
++OUString rgb2str(int32_t rgb) { return rgb2str(rgb & 0xff, (rgb >> 8) & 0xff, (rgb >> 16) & 0xff); }
++
++
+ ::std::string urltounix(const char *src)
+ {
+     ::std::string ret;
+diff --git a/hwpfilter/source/hcode.h b/hwpfilter/source/hcode.h
+index 0f8362e0128a..da7ff7345913 100644
+--- a/hwpfilter/source/hcode.h
++++ b/hwpfilter/source/hcode.h
+@@ -65,6 +65,8 @@ DLLEXPORT ::std::string urltowin(const char *src);
+  * color인덱스 값과 음영값을 조합하여 스타오피스의 color로 변환
+  */
+ DLLEXPORT OUString hcolor2str(uchar color, uchar shade, bool bIsChar = false);
++DLLEXPORT OUString rgb2str(unsigned char red, unsigned char green, unsigned char blue);
++DLLEXPORT OUString rgb2str(int32_t rgb);
+ 
+ DLLEXPORT OUString base64_encode_string( const uchar *buf, unsigned int len );
+ DLLEXPORT double calcAngle(int x1, int y1, int x2, int y2);
+diff --git a/hwpfilter/source/hwpreader.cxx b/hwpfilter/source/hwpreader.cxx
+index f971eeae8c58..0f77c8df9746 100644
+--- a/hwpfilter/source/hwpreader.cxx
++++ b/hwpfilter/source/hwpreader.cxx
+@@ -585,32 +585,19 @@ void HwpReader::makeDrawMiscStyle( HWPDrawingObject *hdo )
+                 {
+                     if( prop->center_y == 100 )
+                     {
+-                        sprintf( buf, "#%02x%02x%02x", prop->tocolor & 0xff,
+-                            (prop->tocolor >> 8) & 0xff, (prop->tocolor >>16) & 0xff );
+-                        mxList->addAttribute( "draw:start-color", sXML_CDATA, OUString::createFromAscii( buf ));
+-                        sprintf( buf, "#%02x%02x%02x", prop->fromcolor & 0xff,
+-                            (prop->fromcolor >> 8) & 0xff, (prop->fromcolor >>16) & 0xff );
+-                        mxList->addAttribute( "draw:end-color", sXML_CDATA, OUString::createFromAscii( buf ));
++                        mxList->addAttribute( "draw:start-color", sXML_CDATA, rgb2str( prop->tocolor ));
++                        mxList->addAttribute( "draw:end-color", sXML_CDATA, rgb2str( prop->fromcolor ));
+                     }
+                     else
+                     {
+-                        sprintf( buf, "#%02x%02x%02x", prop->fromcolor & 0xff,
+-                            (prop->fromcolor >> 8) & 0xff, (prop->fromcolor >>16) & 0xff );
+-                        mxList->addAttribute( "draw:start-color", sXML_CDATA, OUString::createFromAscii( buf ));
+-                        sprintf( buf, "#%02x%02x%02x", prop->tocolor & 0xff,
+-                            (prop->tocolor >> 8) & 0xff, (prop->tocolor >>16) & 0xff );
+-                        mxList->addAttribute( "draw:end-color", sXML_CDATA, OUString::createFromAscii( buf ));
++                        mxList->addAttribute( "draw:start-color", sXML_CDATA, rgb2str( prop->fromcolor ));
++                        mxList->addAttribute( "draw:end-color", sXML_CDATA, rgb2str( prop->tocolor ));
+                     }
+                 }
+                 else
+                 {
+-                    sprintf( buf, "#%02x%02x%02x", prop->tocolor & 0xff,
+-                        (prop->tocolor >> 8) & 0xff, (prop->tocolor >>16) & 0xff );
+-                    mxList->addAttribute( "draw:start-color", sXML_CDATA,OUString::createFromAscii( buf ));
+-
+-                    sprintf( buf, "#%02x%02x%02x", prop->fromcolor & 0xff,
+-                        (prop->fromcolor >> 8) & 0xff, (prop->fromcolor >>16) & 0xff );
+-                    mxList->addAttribute( "draw:end-color", sXML_CDATA,OUString::createFromAscii( buf ));
++                    mxList->addAttribute( "draw:start-color", sXML_CDATA,rgb2str( prop->tocolor ));
++                    mxList->addAttribute( "draw:end-color", sXML_CDATA,rgb2str( prop->fromcolor ));
+                 }
+                 if( prop->angle > 0 && ( prop->gstyle == 1 || prop->gstyle == 4))
+                 {
+@@ -630,11 +617,7 @@ void HwpReader::makeDrawMiscStyle( HWPDrawingObject *hdo )
+                     mxList->addAttribute( "draw:style", sXML_CDATA, "single" );
+                 else
+                     mxList->addAttribute( "draw:style", sXML_CDATA, "double" );
+-                sprintf( buf, "#%02x%02x%02x",
+-                    sal_uInt16(prop->pattern_color & 0xff),
+-                    sal_uInt16((prop->pattern_color >> 8) & 0xff),
+-                    sal_uInt16((prop->pattern_color >>16) & 0xff) );
+-                mxList->addAttribute( "draw:color", sXML_CDATA, OUString::createFromAscii( buf ));
++                mxList->addAttribute( "draw:color", sXML_CDATA, rgb2str( static_cast<int32_t>(prop->pattern_color) ));
+                 mxList->addAttribute( "draw:distance", sXML_CDATA, "0.12cm");
+                 switch( type )
+                 {
+@@ -1670,9 +1653,10 @@ void HwpReader::makePageStyle()
+          {
+              if( hwpinfo.back_info.color[0] > 0 || hwpinfo.back_info.color[1] > 0
+                      || hwpinfo.back_info.color[2] > 0 ){
+-                 sprintf(buf,"#%02x%02x%02x",hwpinfo.back_info.color[0],
+-                         hwpinfo.back_info.color[1],hwpinfo.back_info.color[2] );
+-                 mxList->addAttribute("fo:background-color", sXML_CDATA, OUString::createFromAscii(buf));
++                 mxList->addAttribute("fo:background-color", sXML_CDATA,
++                                      rgb2str(hwpinfo.back_info.color[0],
++                                              hwpinfo.back_info.color[1],
++                                              hwpinfo.back_info.color[2]));
+              }
+          }
+ 
+@@ -2020,12 +2004,8 @@ void HwpReader::makeDrawStyle( HWPDrawingObject * hdo, FBoxStyle * fstyle)
+             }
+             mxList->addAttribute("svg:stroke-width", sXML_CDATA,
+                 OUString::number( WTMM(hdo->property.line_width)) + "mm");
+-            color = hdo->property.line_color;
+-            sprintf( buf, "#%02x%02x%02x",
+-                    sal_uInt16(color & 0xff),
+-                    sal_uInt16((color >> 8) & 0xff),
+-                    sal_uInt16((color >>16) & 0xff) );
+-            mxList->addAttribute("svg:stroke-color", sXML_CDATA, OUString::createFromAscii( buf) );
++            mxList->addAttribute("svg:stroke-color", sXML_CDATA,
++                                 rgb2str(static_cast<int32_t>(hdo->property.line_color)));
+         }
+ 
+         if( hdo->type == HWPDO_LINE || hdo->type == HWPDO_ARC ||
+@@ -2126,22 +2106,16 @@ void HwpReader::makeDrawStyle( HWPDrawingObject * hdo, FBoxStyle * fstyle)
+                 mxList->addAttribute("draw:fill-hatch-name", sXML_CDATA, "Hatch" + OUString::number(hdo->index));
+                 if( color < 0xffffff )
+                 {
+-                    sprintf( buf, "#%02x%02x%02x",
+-                        sal_uInt16(color & 0xff),
+-                        sal_uInt16((color >> 8) & 0xff),
+-                        sal_uInt16((color >>16) & 0xff) );
+-                    mxList->addAttribute("draw:fill-color", sXML_CDATA, OUString::createFromAscii( buf) );
++                    mxList->addAttribute("draw:fill-color", sXML_CDATA,
++                                         rgb2str(static_cast<int32_t>(color)));
+                     mxList->addAttribute("draw:fill-hatch-solid", sXML_CDATA, "true");
+                 }
+             }
+             else if( color <= 0xffffff )
+             {
+                 mxList->addAttribute("draw:fill", sXML_CDATA, "solid");
+-                sprintf( buf, "#%02x%02x%02x",
+-                    sal_uInt16(color & 0xff),
+-                    sal_uInt16((color >> 8) & 0xff),
+-                    sal_uInt16((color >>16) & 0xff) );
+-                mxList->addAttribute("draw:fill-color", sXML_CDATA, OUString::createFromAscii( buf) );
++                mxList->addAttribute("draw:fill-color", sXML_CDATA,
++                                     rgb2str(static_cast<int32_t>(color)));
+             }
+             else
+                 mxList->addAttribute("draw:fill", sXML_CDATA, "none");

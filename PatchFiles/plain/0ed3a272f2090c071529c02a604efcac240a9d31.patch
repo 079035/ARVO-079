@@ -1,0 +1,311 @@
+From 0ed3a272f2090c071529c02a604efcac240a9d31 Mon Sep 17 00:00:00 2001
+From: Aaron Boxer <boxerab@protonmail.com>
+Date: Sun, 18 Sep 2022 08:49:01 -0400
+Subject: [PATCH] stream interface cleanup
+
+fixes
+https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=51488&sort=-opened&can=1&q=proj%3Agrok
+---
+ src/lib/core/grok.cpp           | 59 ++++++++++++++++++---------------
+ src/lib/core/grok_private.h     | 43 ------------------------
+ src/lib/core/util/MemStream.cpp | 47 +++++++++++++++-----------
+ src/lib/core/util/MemStream.h   | 10 ++++++
+ 4 files changed, 70 insertions(+), 89 deletions(-)
+
+diff --git a/src/lib/core/grok.cpp b/src/lib/core/grok.cpp
+index 27cd4395c..dd297c5b5 100644
+--- a/src/lib/core/grok.cpp
++++ b/src/lib/core/grok.cpp
+@@ -66,6 +66,24 @@ GrkCodec::~GrkCodec()
+ 	grk_object_unref(stream_);
+ }
+ 
++/**
++ * Start compressing image
++ *
++ * @param codec         compression codec
++ *
++ */
++static bool grk_compress_start(grk_codec* codec);
++
++/** Create stream from a file identified with its filename with a specific buffer size
++ *
++ * @param fname           the name of the file to stream
++ * @param buffer_size     size of the chunk used to stream
++ * @param is_read_stream  whether the stream is a read stream (true) or not (false)
++ */
++static grk_stream* grk_stream_create_file_stream(const char* fname, size_t buffer_size,
++                                          bool is_read_stream);
++
++
+ static grk_stream* grk_stream_new(size_t buffer_size, bool is_input)
+ {
+ 	auto streamImpl = new BufferedStream(nullptr, buffer_size, is_input);
+@@ -143,25 +161,26 @@ GRK_API void GRK_CALLCONV grk_set_msg_handlers(grk_msg_callback info_callback, v
+ 	logger::logger_.error_data_ = error_user_data;
+ }
+ 
+-static size_t grk_read_from_file(void* buffer, size_t numBytes, FILE* p_file)
++static size_t grk_read_from_file(void* buffer, size_t numBytes, void* p_file)
+ {
+-	return fread(buffer, 1, numBytes, p_file);
++	return fread(buffer, 1, numBytes, (FILE*)p_file);
+ }
+ 
+-static uint64_t grk_get_data_length_from_file(FILE* p_file)
++static uint64_t grk_get_data_length_from_file(void* filePtr)
+ {
+-	GRK_FSEEK(p_file, 0, SEEK_END);
+-	int64_t file_length = (int64_t)GRK_FTELL(p_file);
+-	GRK_FSEEK(p_file, 0, SEEK_SET);
++    auto file = (FILE*)filePtr;
++	GRK_FSEEK(file, 0, SEEK_END);
++	int64_t file_length = (int64_t)GRK_FTELL(file);
++	GRK_FSEEK(file, 0, SEEK_SET);
+ 	return (uint64_t)file_length;
+ }
+-static size_t grk_write_to_file(void* buffer, size_t numBytes, FILE* p_file)
++static size_t grk_write_to_file(void* buffer, size_t numBytes, void* p_file)
+ {
+-	return fwrite(buffer, 1, numBytes, p_file);
++	return fwrite(buffer, 1, numBytes, (FILE*)p_file);
+ }
+-static bool grk_seek_in_file(int64_t numBytes, FILE* p_user_data)
++static bool grk_seek_in_file(int64_t numBytes, void* p_user_data)
+ {
+-	return GRK_FSEEK(p_user_data, numBytes, SEEK_SET) ? false : true;
++	return GRK_FSEEK((FILE*)p_user_data, numBytes, SEEK_SET) ? false : true;
+ }
+ 
+ #ifdef _WIN32
+@@ -250,7 +269,7 @@ bool GRK_CALLCONV grk_decompress_detect_format(const char* fileName, GRK_CODEC_F
+ 
+ static grk_codec* grk_decompress_create_from_buffer(uint8_t* buf, size_t len)
+ {
+-	auto stream = grk_stream_create_mem_stream(buf, len, false, true);
++	auto stream = create_mem_stream(buf, len, false, true);
+ 	if(!stream)
+ 	{
+ 		GRK_ERROR("Unable to create memory stream.");
+@@ -491,7 +510,7 @@ grk_codec* GRK_CALLCONV grk_compress_init(grk_stream_params* stream_params,
+ 	if(stream_params->buf)
+ 	{
+ 		// let stream clean up compress buffer
+-		stream = grk_stream_create_mem_stream(stream_params->buf, stream_params->len, true, false);
++		stream = create_mem_stream(stream_params->buf, stream_params->len, true, false);
+ 	}
+ 	else
+ 	{
+@@ -531,7 +550,7 @@ grk_codec* GRK_CALLCONV grk_compress_init(grk_stream_params* stream_params,
+ 
+ 	return codecWrapper;
+ }
+-bool grk_compress_start(grk_codec* codecWrapper)
++static bool grk_compress_start(grk_codec* codecWrapper)
+ {
+ 	if(codecWrapper)
+ 	{
+@@ -556,7 +575,7 @@ static void grkFree_file(void* p_user_data)
+ 		fclose((FILE*)p_user_data);
+ }
+ 
+-grk_stream* grk_stream_create_file_stream(const char* fname, size_t buffer_size,
++static grk_stream* grk_stream_create_file_stream(const char* fname, size_t buffer_size,
+ 										  bool is_read_stream)
+ {
+ 	bool stdin_stdout = !fname || !fname[0];
+@@ -610,18 +629,6 @@ grk_stream* grk_stream_create_file_stream(const char* fname, size_t buffer_size,
+ 	return stream;
+ }
+ 
+-size_t grk_stream_get_write_mem_stream_length(grk_stream* stream)
+-{
+-	if(!stream)
+-		return 0;
+-	return get_mem_stream_offset(stream);
+-}
+-grk_stream* grk_stream_create_mem_stream(uint8_t* buf, size_t len, bool ownsBuffer,
+-										 bool is_read_stream)
+-{
+-	return create_mem_stream(buf, len, ownsBuffer, is_read_stream);
+-}
+-
+ /**********************************************************************
+  Plugin interface implementation
+  ***********************************************************************/
+diff --git a/src/lib/core/grok_private.h b/src/lib/core/grok_private.h
+index 70efc6bda..f9a264825 100644
+--- a/src/lib/core/grok_private.h
++++ b/src/lib/core/grok_private.h
+@@ -82,47 +82,4 @@ void grk_stream_set_user_data(grk_stream* stream, void* data, grk_stream_free_us
+  */
+ void grk_stream_set_user_data_length(grk_stream* stream, uint64_t data_length);
+ 
+-/** Create stream from a file identified with its filename with a specific buffer size
+- *
+- * @param fname           the name of the file to stream
+- * @param buffer_size     size of the chunk used to stream
+- * @param is_read_stream  whether the stream is a read stream (true) or not (false)
+- */
+-grk_stream* grk_stream_create_file_stream(const char* fname, size_t buffer_size,
+-										  bool is_read_stream);
+-
+-/** Create stream from buffer
+- *
+- * @param buf           buffer
+- * @param buffer_len    length of buffer
+- * @param ownsBuffer    if true, library will delete[] buffer. Otherwise, it is the caller's
+- *                      responsibility to delete the buffer
+- * @param is_read_stream  whether the stream is a read stream (true) or not (false)
+- */
+-grk_stream* grk_stream_create_mem_stream(uint8_t* buf, size_t buffer_len, bool ownsBuffer,
+-										 bool is_read_stream);
+-
+-/**
+- * Get length of memory stream
+- *
+- * @param stream memory stream
+- */
+-size_t grk_stream_get_write_mem_stream_length(grk_stream* stream);
+ 
+-/**
+- * Creates a J2K/JP2 compression codec
+- *
+- * @param   format      output format : j2k or jp2
+- * @param   stream      JPEG 2000 stream
+- *
+- * @return              compression codec if successful, otherwise NULL
+- */
+-grk_codec* grk_compress_create(GRK_CODEC_FORMAT format, grk_stream* stream);
+-
+-/**
+- * Start compressing image
+- *
+- * @param codec         compression codec
+- *
+- */
+-bool grk_compress_start(grk_codec* codec);
+diff --git a/src/lib/core/util/MemStream.cpp b/src/lib/core/util/MemStream.cpp
+index 81b2390ce..abbaf59e5 100644
+--- a/src/lib/core/util/MemStream.cpp
++++ b/src/lib/core/util/MemStream.cpp
+@@ -35,63 +35,69 @@ static void free_mem(void* user_data)
+ 		delete data;
+ }
+ 
+-static size_t zero_copy_read_from_mem(uint8_t** buffer, size_t numBytes, MemStream* src)
++static size_t zero_copy_read_from_mem(uint8_t** buffer, size_t numBytes, void* src)
+ {
+ 	size_t nb_read = 0;
++	auto srcStream = (MemStream*)src;
+ 
+-	if(((size_t)src->off + numBytes) < src->len)
++	if(((size_t)srcStream->off + numBytes) < srcStream->len)
+ 		nb_read = numBytes;
+ 
+-	*buffer = src->buf + src->off;
+-	assert(src->off + nb_read <= src->len);
+-	src->off += nb_read;
++	*buffer = srcStream->buf + srcStream->off;
++	assert(srcStream->off + nb_read <= srcStream->len);
++	srcStream->off += nb_read;
+ 
+ 	return nb_read;
+ }
+ 
+-static size_t read_from_mem(uint8_t* dest, size_t numBytes, MemStream* src)
++static size_t read_from_mem(uint8_t* dest, size_t numBytes, void* src)
+ {
+ 	size_t nb_read;
+ 
+ 	if(!dest)
+ 		return 0;
+ 
+-	if(src->off + numBytes < src->len)
++	auto srcStream = (MemStream*)src;
++
++	if(srcStream->off + numBytes < srcStream->len)
+ 		nb_read = numBytes;
+ 	else
+-		nb_read = (size_t)(src->len - src->off);
++		nb_read = (size_t)(srcStream->len - srcStream->off);
+ 
+ 	if(nb_read)
+ 	{
+-		assert(src->off + nb_read <= src->len);
++		assert(srcStream->off + nb_read <= srcStream->len);
+ 		// (don't copy buffer into itself)
+-		if(dest != src->buf + src->off)
+-			memcpy(dest, src->buf + src->off, nb_read);
+-		src->off += nb_read;
++		if(dest != srcStream->buf + srcStream->off)
++			memcpy(dest, srcStream->buf + srcStream->off, nb_read);
++		srcStream->off += nb_read;
+ 	}
+ 
+ 	return nb_read;
+ }
+ 
+-static size_t write_to_mem(const uint8_t* src, size_t numBytes, MemStream* dest)
++static size_t write_to_mem(const uint8_t* src, size_t numBytes, void* dest)
+ {
+-	if(dest->off + numBytes >= dest->len)
++    auto destStream = (MemStream*)dest;
++    if(destStream->off + numBytes >= destStream->len)
+ 		return 0;
+ 
+ 	if(numBytes)
+ 	{
+-		memcpy(dest->buf + (size_t)dest->off, src, numBytes);
+-		dest->off += numBytes;
++		memcpy(destStream->buf + (size_t)destStream->off, src, numBytes);
++		destStream->off += numBytes;
+ 	}
+ 	return numBytes;
+ }
+ 
+-static bool seek_from_mem(uint64_t numBytes, MemStream* src)
++static bool seek_from_mem(uint64_t numBytes, void* src)
+ {
+-	if(numBytes < src->len)
+-		src->off = numBytes;
++    auto srcStream = (MemStream*)src;
++
++	if(numBytes < srcStream->len)
++		srcStream->off = numBytes;
+ 	else
+-		src->off = src->len;
++		srcStream->off = srcStream->len;
+ 
+ 	return true;
+ }
+@@ -139,6 +145,7 @@ size_t get_mem_stream_offset(grk_stream* stream)
+ 	return buf->off;
+ }
+ 
++
+ grk_stream* create_mem_stream(uint8_t* buf, size_t len, bool ownsBuffer, bool is_read_stream)
+ {
+ 	if(!buf || !len)
+diff --git a/src/lib/core/util/MemStream.h b/src/lib/core/util/MemStream.h
+index 73ec7a5ac..0411f68dd 100644
+--- a/src/lib/core/util/MemStream.h
++++ b/src/lib/core/util/MemStream.h
+@@ -42,7 +42,17 @@ struct MemStream
+ };
+ 
+ void set_up_mem_stream(grk_stream* stream, size_t len, bool is_read_stream);
++
++/** Create stream from buffer
++ *
++ * @param buf           buffer
++ * @param buffer_len    length of buffer
++ * @param ownsBuffer    if true, library will delete[] buffer. Otherwise, it is the caller's
++ *                      responsibility to delete the buffer
++ * @param is_read_stream  whether the stream is a read stream (true) or not (false)
++ */
+ grk_stream* create_mem_stream(uint8_t* buf, size_t len, bool ownsBuffer, bool is_read_stream);
++
+ size_t get_mem_stream_offset(grk_stream* stream);
+ 
+ } // namespace grk

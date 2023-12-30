@@ -1,0 +1,9 @@
+commit c1574ef37c2a4abdd516b70bfdaa589fedb0489f
+Merge: f384c62 89a1202
+Author: Jiyong Park <jiyong@google.com>
+Date:   Thu Apr 30 04:52:41 2020 +0000
+
+    mark libavc and libavcenc available to the platform am: 89a120262a
+    
+    Change-Id: Ib1478309d094743642c61e085b7cb6eb8d4ae75d
+

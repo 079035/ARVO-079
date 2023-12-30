@@ -1,0 +1,741 @@
+From 83e8a6b36acc67f2702cbbc7d4e334c7f7737719 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 16:08:46 +0200
+Subject: [PATCH 1/5] util: provide `git__memmem` function
+
+Unfortunately, neither the `memmem` nor the `strnstr` functions are part
+of any C standard but are merely extensions of C that are implemented by
+e.g. glibc. Thus, there is no standardized way to search for a string in
+a block of memory with a limited size, and using `strstr` is to be
+considered unsafe in case where the buffer has not been sanitized. In
+fact, there are some uses of `strstr` in exactly that unsafe way in our
+codebase.
+
+Provide a new function `git__memmem` that implements the `memmem`
+semantics. That is in a given haystack of `n` bytes, search for the
+occurrence of a byte sequence of `m` bytes and return a pointer to the
+first occurrence. The implementation chosen is the "Not So Naive"
+algorithm from [1]. It was chosen as the implementation is comparably
+simple while still being reasonably efficient in most cases.
+Preprocessing happens in constant time and space, searching has a time
+complexity of O(n*m) with a slightly sub-linear average case.
+
+[1]: http://www-igm.univ-mlv.fr/~lecroq/string/
+---
+ src/util.c          | 41 ++++++++++++++++++++++++++++++++++++++++
+ src/util.h          |  3 +++
+ tests/core/memmem.c | 46 +++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 90 insertions(+)
+ create mode 100644 tests/core/memmem.c
+
+diff --git a/src/util.c b/src/util.c
+index 79b362f7f4d..d06df26f9d2 100644
+--- a/src/util.c
++++ b/src/util.c
+@@ -355,6 +355,47 @@ size_t git__linenlen(const char *buffer, size_t buffer_len)
+ 	return nl ? (size_t)(nl - buffer) + 1 : buffer_len;
+ }
+ 
++/*
++ * Adapted Not So Naive algorithm from http://www-igm.univ-mlv.fr/~lecroq/string/
++ */
++const void * git__memmem(const void *haystack, size_t haystacklen,
++			 const void *needle, size_t needlelen)
++{
++	const char *h, *n;
++	size_t j, k, l;
++
++	if (needlelen > haystacklen || !haystacklen || !needlelen)
++		return NULL;
++
++	h = (const char *) haystack,
++	n = (const char *) needle;
++
++	if (needlelen == 1)
++		return memchr(haystack, *n, haystacklen);
++
++	if (n[0] == n[1]) {
++		k = 2;
++		l = 1;
++	} else {
++		k = 1;
++		l = 2;
++	}
++
++	j = 0;
++	while (j <= haystacklen - needlelen) {
++		if (n[1] != h[j + 1]) {
++			j += k;
++		} else {
++			if (memcmp(n + 2, h + j + 2, needlelen - 2) == 0 &&
++			    n[0] == h[j])
++				return h + j;
++			j += l;
++		}
++	}
++
++	return NULL;
++}
++
+ void git__hexdump(const char *buffer, size_t len)
+ {
+ 	static const size_t LINE_WIDTH = 16;
+diff --git a/src/util.h b/src/util.h
+index b6f5b751982..98472665949 100644
+--- a/src/util.h
++++ b/src/util.h
+@@ -113,6 +113,9 @@ GIT_INLINE(const void *) git__memrchr(const void *s, int c, size_t n)
+ 	return NULL;
+ }
+ 
++extern const void * git__memmem(const void *haystack, size_t haystacklen,
++				const void *needle, size_t needlelen);
++
+ typedef int (*git__tsort_cmp)(const void *a, const void *b);
+ 
+ extern void git__tsort(void **dst, size_t size, git__tsort_cmp cmp);
+diff --git a/tests/core/memmem.c b/tests/core/memmem.c
+new file mode 100644
+index 00000000000..fd9986d01b4
+--- /dev/null
++++ b/tests/core/memmem.c
+@@ -0,0 +1,46 @@
++#include "clar_libgit2.h"
++
++static void assert_found(const char *haystack, const char *needle, size_t expected_pos)
++{
++	cl_assert_equal_p(git__memmem(haystack, haystack ? strlen(haystack) : 0,
++				      needle, needle ? strlen(needle) : 0),
++			  haystack + expected_pos);
++}
++
++static void assert_absent(const char *haystack, const char *needle)
++{
++	cl_assert_equal_p(git__memmem(haystack, haystack ? strlen(haystack) : 0,
++				      needle, needle ? strlen(needle) : 0),
++			  NULL);
++}
++
++void test_core_memmem__found(void)
++{
++	assert_found("a", "a", 0);
++	assert_found("ab", "a", 0);
++	assert_found("ba", "a", 1);
++	assert_found("aa", "a", 0);
++	assert_found("aab", "aa", 0);
++	assert_found("baa", "aa", 1);
++	assert_found("dabc", "abc", 1);
++	assert_found("abababc", "abc", 4);
++}
++
++void test_core_memmem__absent(void)
++{
++	assert_absent("a", "b");
++	assert_absent("a", "aa");
++	assert_absent("ba", "ab");
++	assert_absent("ba", "ab");
++	assert_absent("abc", "abcd");
++	assert_absent("abcabcabc", "bcac");
++}
++
++void test_core_memmem__edgecases(void)
++{
++	assert_absent(NULL, NULL);
++	assert_absent("a", NULL);
++	assert_absent(NULL, "a");
++	assert_absent("", "a");
++	assert_absent("a", "");
++}
+
+From 4c738e563d0a52c7f06902a6bdac37fe3472b86b Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Fri, 19 Oct 2018 09:44:14 +0200
+Subject: [PATCH 2/5] tests: add tests that exercise tag parsing
+
+While the tests in object::tag::read exercises reading and parsing valid
+tags from the ODB, they barely try to verify that the parser fails in a
+sane way when parsing invalid tags. Create a new test suite
+object::tag::parse that directly exercise the parser by using
+`git_object__from_raw` and add various tests for valid and invalid tags.
+---
+ tests/object/tag/parse.c | 200 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 200 insertions(+)
+ create mode 100644 tests/object/tag/parse.c
+
+diff --git a/tests/object/tag/parse.c b/tests/object/tag/parse.c
+new file mode 100644
+index 00000000000..7e58ed12bb3
+--- /dev/null
++++ b/tests/object/tag/parse.c
+@@ -0,0 +1,200 @@
++#include "clar_libgit2.h"
++#include "object.h"
++#include "signature.h"
++#include "tag.h"
++
++static void assert_tag_parses(const char *data, size_t datalen,
++	const char *expected_oid,
++	const char *expected_name,
++	const char *expected_tagger,
++	const char *expected_message)
++{
++	git_tag *tag;
++
++	if (!datalen)
++		datalen = strlen(data);
++
++	cl_git_pass(git_object__from_raw((git_object **) &tag, data, datalen, GIT_OBJ_TAG));
++	cl_assert_equal_i(tag->type, GIT_OBJ_TAG);
++
++	if (expected_oid) {
++		git_oid oid;
++		cl_git_pass(git_oid_fromstr(&oid, expected_oid));
++		cl_assert_equal_oid(&oid, &tag->target);
++	}
++
++	if (expected_name)
++		cl_assert_equal_s(expected_name, tag->tag_name);
++	else
++		cl_assert_equal_s(tag->message, NULL);
++
++	if (expected_tagger) {
++		git_signature *tagger;
++		cl_git_pass(git_signature_from_buffer(&tagger, expected_tagger));
++		cl_assert_equal_s(tagger->name, tag->tagger->name);
++		cl_assert_equal_s(tagger->email, tag->tagger->email);
++		cl_assert_equal_i(tagger->when.time, tag->tagger->when.time);
++		cl_assert_equal_i(tagger->when.offset, tag->tagger->when.offset);
++		cl_assert_equal_i(tagger->when.sign, tag->tagger->when.sign);
++		git_signature_free(tagger);
++	} else {
++		cl_assert_equal_s(tag->tagger, NULL);
++	}
++
++	if (expected_message)
++		cl_assert_equal_s(expected_message, tag->message);
++	else
++		cl_assert_equal_s(tag->message, NULL);
++
++	git_object__free(&tag->object);
++}
++
++static void assert_tag_fails(const char *data, size_t datalen)
++{
++	git_object *object;
++	if (!datalen)
++		datalen = strlen(data);
++	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJ_TAG));
++}
++
++void test_object_tag_parse__valid_tag_parses(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type tag\n"
++		"tag tagname\n"
++		"tagger Taggy Mr. Taggart <taggy@taggart.com>\n"
++		"\n"
++		"Message";
++	assert_tag_parses(tag, 0,
++		"a8d447f68076d1520f69649bb52629941be7031f",
++		"tagname",
++		"Taggy Mr. Taggart <taggy@taggart.com>",
++		"Message");
++}
++
++void test_object_tag_parse__missing_tagger_parses(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type tag\n"
++		"tag tagname\n"
++		"\n"
++		"Message";
++	assert_tag_parses(tag, 0,
++		"a8d447f68076d1520f69649bb52629941be7031f",
++		"tagname",
++		NULL,
++		"Message");
++}
++
++void test_object_tag_parse__missing_message_parses(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type tag\n"
++		"tag tagname\n"
++		"tagger Taggy Mr. Taggart <taggy@taggart.com>\n";
++	assert_tag_parses(tag, 0,
++		"a8d447f68076d1520f69649bb52629941be7031f",
++		"tagname",
++		"Taggy Mr. Taggart <taggy@taggart.com>",
++		NULL);
++}
++
++void test_object_tag_parse__unknown_field_parses(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type tag\n"
++		"tag tagname\n"
++		"tagger Taggy Mr. Taggart <taggy@taggart.com>\n"
++		"foo bar\n"
++		"frubble frabble\n"
++		"\n"
++		"Message";
++	assert_tag_parses(tag, 0,
++		"a8d447f68076d1520f69649bb52629941be7031f",
++		"tagname",
++		"Taggy Mr. Taggart <taggy@taggart.com>",
++		"Message");
++}
++
++void test_object_tag_parse__missing_object_fails(void)
++{
++	const char *tag =
++		"type tag\n"
++		"tag tagname\n"
++		"tagger Taggy Mr. Taggart <taggy@taggart.com>\n"
++		"\n"
++		"Message";
++	assert_tag_fails(tag, 0);
++}
++
++void test_object_tag_parse__malformatted_object_fails(void)
++{
++	const char *tag =
++		"object a8d447f68076d15xxxxxxxxxxxxxxxx41be7031f\n"
++		"type tag\n"
++		"tag tagname\n"
++		"tagger Taggy Mr. Taggart <taggy@taggart.com>\n"
++		"\n"
++		"Message";
++	assert_tag_fails(tag, 0);
++}
++
++void test_object_tag_parse__missing_type_fails(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"tag tagname\n"
++		"tagger Taggy Mr. Taggart <taggy@taggart.com>\n"
++		"\n"
++		"Message";
++	assert_tag_fails(tag, 0);
++}
++
++void test_object_tag_parse__invalid_type_fails(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type garbage\n"
++		"tag tagname\n"
++		"tagger Taggy Mr. Taggart <taggy@taggart.com>\n"
++		"\n"
++		"Message";
++	assert_tag_fails(tag, 0);
++}
++
++void test_object_tag_parse__missing_tagname_fails(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type tag\n"
++		"tagger Taggy Mr. Taggart <taggy@taggart.com>\n"
++		"\n"
++		"Message";
++	assert_tag_fails(tag, 0);
++}
++
++void test_object_tag_parse__misformatted_tagger_fails(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type tag\n"
++		"tag Tag\n"
++		"tagger taggy@taggart.com>\n"
++		"\n"
++		"Message";
++	assert_tag_fails(tag, 0);
++}
++
++void test_object_tag_parse__missing_message_fails(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type tag\n"
++		"tag Tag\n"
++		"tagger taggy@taggart.com>\n";
++	assert_tag_fails(tag, 0);
++}
+
+From ee11d47e3d907b66eeff99e0ba1e1c71e05164b7 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Fri, 19 Oct 2018 09:47:50 +0200
+Subject: [PATCH 3/5] tag: fix out of bounds read when searching for tag
+ message
+
+When parsing tags, we skip all unknown fields that appear before the tag
+message. This skipping is done by using a plain `strstr(buffer, "\n\n")`
+to search for the two newlines that separate tag fields from tag
+message. As it is not possible to supply a buffer length to `strstr`,
+this call may skip over the buffer's end and thus result in an out of
+bounds read. As `strstr` may return a pointer that is out of bounds, the
+following computation of `buffer_end - buffer` will overflow and result
+in an allocation of an invalid length.
+
+Fix the issue by using `git__memmem` instead. Add a test that verifies
+parsing the tag fails not due to the allocation failure but due to the
+tag having no message.
+---
+ src/tag.c                | 10 +++++-----
+ tests/object/tag/parse.c | 18 ++++++++++++++++++
+ 2 files changed, 23 insertions(+), 5 deletions(-)
+
+diff --git a/src/tag.c b/src/tag.c
+index 663c7dabde2..c45335151b8 100644
+--- a/src/tag.c
++++ b/src/tag.c
+@@ -70,10 +70,9 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
+ 	static const char *tag_types[] = {
+ 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
+ 	};
+-
+-	unsigned int i;
+ 	size_t text_len, alloc_len;
+-	char *search;
++	const char *search;
++	unsigned int i;
+ 
+ 	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
+ 		return tag_error("object field invalid");
+@@ -138,8 +137,9 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
+ 	tag->message = NULL;
+ 	if (buffer < buffer_end) {
+ 		/* If we're not at the end of the header, search for it */
+-		if( *buffer != '\n' ) {
+-			search = strstr(buffer, "\n\n");
++		if(*buffer != '\n') {
++			search = git__memmem(buffer, buffer_end - buffer,
++					     "\n\n", 2);
+ 			if (search)
+ 				buffer = search + 1;
+ 			else
+diff --git a/tests/object/tag/parse.c b/tests/object/tag/parse.c
+index 7e58ed12bb3..f701f6b8946 100644
+--- a/tests/object/tag/parse.c
++++ b/tests/object/tag/parse.c
+@@ -198,3 +198,21 @@ void test_object_tag_parse__missing_message_fails(void)
+ 		"tagger taggy@taggart.com>\n";
+ 	assert_tag_fails(tag, 0);
+ }
++
++void test_object_tag_parse__no_oob_read_when_searching_message(void)
++{
++	const char *tag =
++		"object a8d447f68076d1520f69649bb52629941be7031f\n"
++		"type tag\n"
++		"tag \n"
++		"tagger <>\n"
++		" \n\n"
++		"Message";
++	/*
++	 * The OOB read previously resulted in an OOM error. We
++	 * thus want to make sure that the resulting error is the
++	 * expected one.
++	 */
++	assert_tag_fails(tag, strlen(tag) - strlen("\n\nMessage"));
++	cl_assert(strstr(giterr_last()->message, "tag contains no message"));
++}
+
+From c2e3d8ef699f310d353c2e378f12ea99ea4e0c67 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 25 Oct 2018 12:01:18 +0200
+Subject: [PATCH 4/5] tests: add tests that exercise commit parsing
+
+We currently do not have any test suites dedicated to parsing commits
+from their raw representations. Add one based on `git_object__from_raw`
+to be able to test special cases more easily.
+---
+ tests/object/commit/parse.c | 213 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 213 insertions(+)
+ create mode 100644 tests/object/commit/parse.c
+
+diff --git a/tests/object/commit/parse.c b/tests/object/commit/parse.c
+new file mode 100644
+index 00000000000..9ba8767cc69
+--- /dev/null
++++ b/tests/object/commit/parse.c
+@@ -0,0 +1,213 @@
++#include "clar_libgit2.h"
++#include "commit.h"
++#include "object.h"
++#include "signature.h"
++
++static void assert_commit_parses(const char *data, size_t datalen,
++	const char *expected_treeid,
++	const char *expected_author,
++	const char *expected_committer,
++	const char *expected_encoding,
++	const char *expected_message,
++	size_t expected_parents)
++{
++	git_commit *commit;
++	if (!datalen)
++		datalen = strlen(data);
++	cl_git_pass(git_object__from_raw((git_object **) &commit, data, datalen, GIT_OBJ_COMMIT));
++
++	if (expected_author) {
++		git_signature *author;
++		cl_git_pass(git_signature_from_buffer(&author, expected_author));
++		cl_assert(git_signature__equal(author, commit->author));
++		cl_assert_equal_s(author->name, commit->author->name);
++		cl_assert_equal_s(author->email, commit->author->email);
++		cl_assert_equal_i(author->when.time, commit->author->when.time);
++		cl_assert_equal_i(author->when.offset, commit->author->when.offset);
++		cl_assert_equal_i(author->when.sign, commit->author->when.sign);
++		git_signature_free(author);
++	}
++
++	if (expected_committer) {
++		git_signature *committer;
++		cl_git_pass(git_signature_from_buffer(&committer, expected_committer));
++		cl_assert_equal_s(committer->name, commit->committer->name);
++		cl_assert_equal_s(committer->email, commit->committer->email);
++		cl_assert_equal_i(committer->when.time, commit->committer->when.time);
++		cl_assert_equal_i(committer->when.offset, commit->committer->when.offset);
++		cl_assert_equal_i(committer->when.sign, commit->committer->when.sign);
++		git_signature_free(committer);
++	}
++
++	if (expected_encoding)
++		cl_assert_equal_s(commit->message_encoding, expected_encoding);
++	else
++		cl_assert_equal_p(commit->message_encoding, NULL);
++
++	if (expected_message)
++		cl_assert_equal_s(commit->raw_message, expected_message);
++	else
++		cl_assert_equal_p(commit->message_encoding, NULL);
++
++	if (expected_treeid) {
++		git_oid tree_oid;
++		cl_git_pass(git_oid_fromstr(&tree_oid, expected_treeid));
++		cl_assert_equal_oid(&tree_oid, &commit->tree_id);
++	}
++
++	cl_assert_equal_i(commit->parent_ids.size, expected_parents);
++
++	git_object__free(&commit->object);
++}
++
++static void assert_commit_fails(const char *data, size_t datalen)
++{
++	git_object *object;
++	if (!datalen)
++		datalen = strlen(data);
++	cl_git_fail(git_object__from_raw(&object, data, datalen, GIT_OBJ_COMMIT));
++}
++
++void test_object_commit_parse__parsing_commit_succeeds(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"author Author <author@example.com>\n"
++		"committer Committer <committer@example.com>\n"
++		"encoding Encoding\n"
++		"\n"
++		"Message";
++	assert_commit_parses(commit, 0,
++		"3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8",
++		"Author <author@example.com>",
++		"Committer <committer@example.com>",
++		"Encoding",
++		"Message", 0);
++}
++
++void test_object_commit_parse__parsing_commit_without_encoding_succeeds(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"author Author <author@example.com>\n"
++		"committer Committer <committer@example.com>\n"
++		"\n"
++		"Message";
++	assert_commit_parses(commit, 0,
++		"3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8",
++		"Author <author@example.com>",
++		"Committer <committer@example.com>",
++		NULL,
++		"Message", 0);
++}
++
++void test_object_commit_parse__parsing_commit_with_multiple_authors_succeeds(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"author Author1 <author@example.com>\n"
++		"author Author2 <author@example.com>\n"
++		"author Author3 <author@example.com>\n"
++		"author Author4 <author@example.com>\n"
++		"committer Committer <committer@example.com>\n"
++		"\n"
++		"Message";
++	assert_commit_parses(commit, 0,
++		"3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8",
++		"Author1 <author@example.com>",
++		"Committer <committer@example.com>",
++		NULL,
++		"Message", 0);
++}
++
++void test_object_commit_parse__parsing_commit_with_multiple_committers_succeeds(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"author Author <author@example.com>\n"
++		"committer Committer1 <committer@example.com>\n"
++		"committer Committer2 <committer@example.com>\n"
++		"committer Committer3 <committer@example.com>\n"
++		"committer Committer4 <committer@example.com>\n"
++		"\n"
++		"Message";
++	assert_commit_parses(commit, 0,
++		"3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8",
++		"Author <author@example.com>",
++		"Committer1 <committer@example.com>",
++		NULL,
++		"Message", 0);
++}
++
++void test_object_commit_parse__parsing_commit_without_message_succeeds(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"author Author <author@example.com>\n"
++		"committer Committer <committer@example.com>\n";
++	assert_commit_parses(commit, 0,
++		"3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8",
++		"Author <author@example.com>",
++		"Committer <committer@example.com>",
++		NULL,
++		"", 0);
++}
++
++void test_object_commit_parse__parsing_commit_with_unknown_fields_succeeds(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"author Author <author@example.com>\n"
++		"committer Committer <committer@example.com>\n"
++		"foo bar\n"
++		"more garbage\n"
++		"\n"
++		"Message";
++	assert_commit_parses(commit, 0,
++		"3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8",
++		"Author <author@example.com>",
++		"Committer <committer@example.com>",
++		NULL,
++		"Message", 0);
++}
++
++void test_object_commit_parse__parsing_commit_with_invalid_tree_fails(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1xxx5f3445895b71d9cb0f8\n"
++		"author Author <author@example.com>\n"
++		"committer Committer <committer@example.com>\n"
++		"\n"
++		"Message";
++	assert_commit_fails(commit, 0);
++}
++
++void test_object_commit_parse__parsing_commit_without_tree_fails(void)
++{
++	const char *commit =
++		"author Author <author@example.com>\n"
++		"committer Committer <committer@example.com>\n"
++		"\n"
++		"Message";
++	assert_commit_fails(commit, 0);
++}
++
++void test_object_commit_parse__parsing_commit_without_author_fails(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"committer Committer <committer@example.com>\n"
++		"\n"
++		"Message";
++	assert_commit_fails(commit, 0);
++}
++
++void test_object_commit_parse__parsing_commit_without_committer_fails(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"author Author <author@example.com>\n"
++		"\n"
++		"Message";
++	assert_commit_fails(commit, 0);
++}
+
+From 7655b2d89e8275853d9921dd903dcdad9b3d4a7b Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Fri, 19 Oct 2018 10:29:19 +0200
+Subject: [PATCH 5/5] commit: fix reading out of bounds when parsing encoding
+
+The commit message encoding is currently being parsed by the
+`git__prefixcmp` function. As this function does not accept a buffer
+length, it will happily skip over a buffer's end if it is not `NUL`
+terminated.
+
+Fix the issue by using `git__prefixncmp` instead. Add a test that
+verifies that we are unable to parse the encoding field if it's cut off
+by the supplied buffer length.
+---
+ src/commit.c                |  2 +-
+ tests/object/commit/parse.c | 19 +++++++++++++++++++
+ 2 files changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/src/commit.c b/src/commit.c
+index 97ac2a18921..bda5a8b424c 100644
+--- a/src/commit.c
++++ b/src/commit.c
+@@ -444,7 +444,7 @@ int git_commit__parse_raw(void *_commit, const char *data, size_t size)
+ 		while (eoln < buffer_end && *eoln != '\n')
+ 			++eoln;
+ 
+-		if (git__prefixcmp(buffer, "encoding ") == 0) {
++		if (git__prefixncmp(buffer, buffer_end - buffer, "encoding ") == 0) {
+ 			buffer += strlen("encoding ");
+ 
+ 			commit->message_encoding = git__strndup(buffer, eoln - buffer);
+diff --git a/tests/object/commit/parse.c b/tests/object/commit/parse.c
+index 9ba8767cc69..a99110f18b9 100644
+--- a/tests/object/commit/parse.c
++++ b/tests/object/commit/parse.c
+@@ -211,3 +211,22 @@ void test_object_commit_parse__parsing_commit_without_committer_fails(void)
+ 		"Message";
+ 	assert_commit_fails(commit, 0);
+ }
++
++void test_object_commit_parse__parsing_encoding_will_not_cause_oob_read(void)
++{
++	const char *commit =
++		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
++		"author <>\n"
++		"committer <>\n"
++		"encoding foo\n";
++	/*
++	 * As we ignore unknown fields, the cut-off encoding field will be
++	 * parsed just fine.
++	 */
++	assert_commit_parses(commit, strlen(commit) - strlen("ncoding foo\n"),
++		"3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8",
++		"<>",
++		"<>",
++		NULL,
++		"", 0);
++}

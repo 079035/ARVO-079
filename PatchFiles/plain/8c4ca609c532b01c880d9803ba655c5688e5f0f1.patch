@@ -1,0 +1,32 @@
+commit 8c4ca609c532b01c880d9803ba655c5688e5f0f1
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Fri May 27 14:14:06 2022 +0100
+
+    ofz#47673 skip oversized tiff images
+    
+    Change-Id: I78727819b7c440855f89240f396dad845a295d61
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/135041
+    Tested-by: Caolán McNamara <caolanm@redhat.com>
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/vcl/source/filter/itiff/itiff.cxx b/vcl/source/filter/itiff/itiff.cxx
+index 6eac698121f0..59021b8c4999 100644
+--- a/vcl/source/filter/itiff/itiff.cxx
++++ b/vcl/source/filter/itiff/itiff.cxx
+@@ -136,8 +136,14 @@ bool ImportTiffGraphicImport(SvStream& rTIFF, Graphic& rGraphic)
+             }
+         }
+ 
+-        size_t npixels = w * h;
+-        std::vector<uint32_t> raster(npixels);
++        uint32_t nPixelsRequired;
++        if (o3tl::checked_multiply(w, h, nPixelsRequired))
++        {
++            SAL_WARN("filter.tiff", "skipping oversized tiff image");
++            break;
++        }
++
++        std::vector<uint32_t> raster(nPixelsRequired);
+         if (TIFFReadRGBAImageOriented(tif, w, h, raster.data(), ORIENTATION_TOPLEFT, 1))
+         {
+             Bitmap bitmap(Size(w, h), vcl::PixelFormat::N24_BPP);

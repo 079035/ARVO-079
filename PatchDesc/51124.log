@@ -1,5 +1,12 @@
-Vulnerability: Negative array index with malformed .aff
+1. Vulnerability:
+The vulnerability in the code is related to a negative array index. This can occur when the code is dealing with malformed .aff files. Negative array indexing can lead to unexpected behavior, including accessing memory locations that are out of bounds, which can lead to crashes, incorrect program behavior, or potential security vulnerabilities.
 
-Summary of Fix: The fix addresses the issue of negative array index with malformed .aff files.
+2. Short Summary of the Fix:
+The fix involves adding a condition to check if the index 'j' is greater than 0 before entering the loop that can potentially lead to negative indexing. This prevents the code from accessing the array with a negative index.
 
-Detailed Description of Fix: In the given diff file, the fix can be seen in the `else` block of the `else` condition for the `suffix` case. The vulnerability is caused by accessing `cond[j]` without checking if `j` is greater than 0. The fix adds an additional condition `if (j > 0)` before accessing `cond[j]`. This ensures that the index is valid and prevents the negative array index vulnerability.
+3. Detailed Description of the Fix:
+In the original code, there is a loop that iterates backwards through the 'cond' string, decrementing the index 'j' with each iteration. If the character at the current index is not ']', it checks if the character at the current index of 'cond' is equal to the character at the current index of 'strip'. If they are not equal, it issues a warning and returns 0. If they are equal, it enters a loop where it continues to decrement 'j' until it either reaches 0 or finds the character '['. 
+
+The problem arises when 'j' reaches 0 and the character at index 0 is not '['. In this case, it issues an error message and returns 0, but not before it has already accessed the array with a negative index in the next iteration of the loop.
+
+The fix adds a condition to check if 'j' is greater than 0 before entering the loop that decrements 'j'. This ensures that 'j' will never be less than 0 when accessing the 'cond' array, preventing negative array indexing.

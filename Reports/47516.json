@@ -1,5 +1,5 @@
 {
-    "fix": "https://dawn.googlesource.com/dawn/+/2e681052b313ed547189d95d58d73081c028d604",
+    "fix": "https://dawn.googlesource.com/dawn/+/2e681052b313ed547189d95d58d73081c028d604%5E%21/",
     "verify": "0",
     "localId": 47516,
     "project": "dawn",

@@ -1,0 +1,49 @@
+From 180a20d5350b9578aeb862cc1a7b116eeeb3dece Mon Sep 17 00:00:00 2001
+From: JacobBarthelmeh <jacob@wolfssl.com>
+Date: Tue, 21 Mar 2023 20:19:08 -0700
+Subject: [PATCH] adjust sanity check for index into URI
+
+---
+ wolfcrypt/src/asn.c | 22 ++++++++++++++++++----
+ 1 file changed, 18 insertions(+), 4 deletions(-)
+
+diff --git a/wolfcrypt/src/asn.c b/wolfcrypt/src/asn.c
+index c7856c43cbb..b0437e1d7ca 100644
+--- a/wolfcrypt/src/asn.c
++++ b/wolfcrypt/src/asn.c
+@@ -16686,8 +16686,15 @@ static int DecodeGeneralName(const byte* input, word32* inOutIdx, byte tag,
+                 }
+             }
+ 
+-            /* test if scheme is missing or hier-part is empty */
+-            if (input[idx + i] != ':' || i == 0 || i == len) {
++            /* test hier-part is empty */
++            if (i == 0 || i == len) {
++                WOLFSSL_MSG("\tEmpty or malformed URI");
++                WOLFSSL_ERROR_VERBOSE(ASN_ALT_NAME_E);
++                return ASN_ALT_NAME_E;
++            }
++
++            /* test if scheme is missing  */
++            if (input[idx + i] != ':') {
+                 WOLFSSL_MSG("\tAlt Name must be absolute URI");
+                 WOLFSSL_ERROR_VERBOSE(ASN_ALT_NAME_E);
+                 return ASN_ALT_NAME_E;
+@@ -17145,8 +17152,15 @@ static int DecodeAltNames(const byte* input, int sz, DecodedCert* cert)
+                     }
+                 }
+ 
+-                /* test if scheme is missing or hier-part is empty */
+-                if (input[idx + i] != ':' || i == 0 || i == strLen) {
++                /* test hier-part is empty */
++                if (i == 0 || i == strLen) {
++                    WOLFSSL_MSG("\tEmpty or malformed URI");
++                    WOLFSSL_ERROR_VERBOSE(ASN_ALT_NAME_E);
++                    return ASN_ALT_NAME_E;
++                }
++
++                /* test if scheme is missing */
++                if (input[idx + i] != ':') {
+                     WOLFSSL_MSG("\tAlt Name must be absolute URI");
+                     WOLFSSL_ERROR_VERBOSE(ASN_ALT_NAME_E);
+                     return ASN_ALT_NAME_E;

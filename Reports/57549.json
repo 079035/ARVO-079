@@ -1,0 +1,93 @@
+{
+    "fix": "https://github.com/fwupd/fwupd/commit/5cd1c4eb10cbbbe8423fe6aeceac298b29524ff8",
+    "verify": "0",
+    "localId": 57549,
+    "project": "fwupd",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow READ 16",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 57549,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1680189279,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=6208449838186496\n\nProject: fwupd\nFuzzing Engine: libFuzzer\nFuzz Target: dfuse_fuzzer\nJob Type: libfuzzer_asan_fwupd\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow READ 16\nCrash Address: 0x602000000f8b\nCrash State:\n  g_byte_array_append\n  fu_struct_dfu_ftr_parse\n  fu_dfu_firmware_parse_footer\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_fwupd&range=202303280602:202303300625\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6208449838186496\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 57549,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "2011257067",
+                    "displayName": "hughs...@gmail.com"
+                },
+                "timestamp": 1680189502,
+                "content": "Fixed in https://github.com/fwupd/fwupd/pull/5663"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 57549,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1680207256,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2023-06-28"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 57549,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1680276956,
+                "content": "ClusterFuzz testcase 6208449838186496 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_fwupd&range=202303300625:202303310607\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 57549,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1680288742,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "5cd1c4eb10cbbbe8423fe6aeceac298b29524ff8",
+    "repo_addr": "https://github.com/fwupd/fwupd.git"
+}

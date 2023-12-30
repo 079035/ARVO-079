@@ -1,0 +1,22 @@
+commit 067d47b5efa3631ac58a62916136ad21cd9017df
+Author: Ken Sharp <ken.sharp@artifex.com>
+Date:   Wed Jan 5 16:25:18 2022 +0000
+
+    Remove debug flag
+    
+    The leak check should not be set except for debugging, and not with
+    Ghostscript. This got committed by accident along with a different fix.
+
+diff --git a/pdf/ghostpdf.h b/pdf/ghostpdf.h
+index 6e6c48e40..eab19b024 100644
+--- a/pdf/ghostpdf.h
++++ b/pdf/ghostpdf.h
+@@ -29,7 +29,7 @@
+ #endif
+ 
+ #ifndef PDFI_LEAK_CHECK
+-#define PDFI_LEAK_CHECK 1
++#define PDFI_LEAK_CHECK 0
+ #endif
+ 
+ /* A structure for setting/resetting the interpreter graphics state

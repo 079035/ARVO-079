@@ -1,0 +1,58 @@
+From 6f18d7e2f967a376b187d5447232c812bd128b72 Mon Sep 17 00:00:00 2001
+From: "Christoph M. Becker" <cmbecker69@gmx.de>
+Date: Mon, 27 Jul 2020 10:13:52 +0200
+Subject: [PATCH] Fix #77932: File extensions are case-sensitive
+
+The file extension to mime type mapping *must* not depend on the file
+extension's case for case-insensitive file systems, and *should* not
+for case-sensitive file systems.
+---
+ NEWS                      |  1 +
+ sapi/cli/php_cli_server.c | 13 +++++++++++--
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/NEWS b/NEWS
+index 92a173dfacb2d..0a6e60d4192ec 100644
+--- a/NEWS
++++ b/NEWS
+@@ -4,6 +4,7 @@ PHP                                                                        NEWS
+ 
+ - Core:
+   . Fixed bug #79884 (PHP_CONFIG_FILE_PATH is meaningless). (cmb)
++  . Fixed bug #77932 (File extensions are case-sensitive). (cmb)
+ 
+ ?? ??? ????, PHP 7.3.21
+ 
+diff --git a/sapi/cli/php_cli_server.c b/sapi/cli/php_cli_server.c
+index 38cc094954829..51e4fc133ea5b 100644
+--- a/sapi/cli/php_cli_server.c
++++ b/sapi/cli/php_cli_server.c
+@@ -365,7 +365,13 @@ static void append_essential_headers(smart_str* buffer, php_cli_server_client *c
+ 
+ static const char *get_mime_type(const php_cli_server *server, const char *ext, size_t ext_len) /* {{{ */
+ {
+-	return (const char*)zend_hash_str_find_ptr(&server->extension_mime_types, ext, ext_len);
++	char *ret;
++	ALLOCA_FLAG(use_heap)
++	char *ext_lower = do_alloca(ext_len + 1, use_heap);
++	zend_str_tolower_copy(ext_lower, ext, ext_len);
++	ret = zend_hash_str_find_ptr(&server->extension_mime_types, ext_lower, ext_len);
++	free_alloca(ext_lower, use_heap);
++	return (const char*)ret;
+ } /* }}} */
+ 
+ PHP_FUNCTION(apache_request_headers) /* {{{ */
+@@ -2140,9 +2146,12 @@ static int php_cli_server_dispatch_router(php_cli_server *server, php_cli_server
+ static int php_cli_server_dispatch(php_cli_server *server, php_cli_server_client *client) /* {{{ */
+ {
+ 	int is_static_file  = 0;
++	const char *ext = client->request.ext;
+ 
+ 	SG(server_context) = client;
+-	if (client->request.ext_len != 3 || memcmp(client->request.ext, "php", 3) || !client->request.path_translated) {
++	if (client->request.ext_len != 3
++	 || (ext[0] != 'p' && ext[0] != 'P') || (ext[1] != 'h' && ext[1] != 'H') || (ext[2] != 'p' && ext[2] != 'P')
++	 || !client->request.path_translated) {
+ 		is_static_file = 1;
+ 	}
+ 

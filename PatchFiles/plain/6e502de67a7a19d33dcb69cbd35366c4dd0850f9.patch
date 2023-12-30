@@ -1,0 +1,73 @@
+commit 6e502de67a7a19d33dcb69cbd35366c4dd0850f9
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Wed Dec 7 11:12:01 2022 +0000
+
+    ofz#54088 Use a DeleteListener rather than try to predict what gets deleted
+    
+    Change-Id: I5e49e0904422ed513f302f05583ef8140b58ef72
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/143770
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/sw/source/filter/html/htmlftn.cxx b/sw/source/filter/html/htmlftn.cxx
+index 03995c410916..773fe0b5e06a 100644
+--- a/sw/source/filter/html/htmlftn.cxx
++++ b/sw/source/filter/html/htmlftn.cxx
+@@ -228,9 +228,9 @@ SwNodeIndex *SwHTMLParser::GetFootEndNoteSection( const OUString& rName )
+         size_t nCount = m_pFootEndNoteImpl->aTextFootnotes.size();
+         for(size_t i = 0; i < nCount; ++i)
+         {
+-            if (m_pFootEndNoteImpl->aTextFootnotes[i].sName == aName)
++            if (m_pFootEndNoteImpl->aTextFootnotes[i].GetName() == aName)
+             {
+-                pStartNodeIdx = const_cast<SwNodeIndex*>(m_pFootEndNoteImpl->aTextFootnotes[i].pTextFootnote->GetStartNode());
++                pStartNodeIdx = const_cast<SwNodeIndex*>(m_pFootEndNoteImpl->aTextFootnotes[i].GetStartNode());
+                 m_pFootEndNoteImpl->aTextFootnotes.erase( m_pFootEndNoteImpl->aTextFootnotes.begin() + i );
+                 if (m_pFootEndNoteImpl->aTextFootnotes.empty())
+                 {
+diff --git a/sw/source/filter/html/swhtml.hxx b/sw/source/filter/html/swhtml.hxx
+index 8fa4d5bdfba7..67b4a76738fe 100644
+--- a/sw/source/filter/html/swhtml.hxx
++++ b/sw/source/filter/html/swhtml.hxx
+@@ -28,8 +28,11 @@
+ #include <editeng/svxenum.hxx>
+ #include <rtl/ref.hxx>
+ #include <rtl/ustrbuf.hxx>
++#include <deletelistener.hxx>
++#include <fmtftn.hxx>
+ #include <fltshell.hxx>
+ #include <swtypes.hxx>
++#include <txtftn.hxx>
+ #include <com/sun/star/drawing/XShape.hpp>
+ #include <com/sun/star/form/XFormComponent.hpp>
+ #include <com/sun/star/beans/XPropertySet.hpp>
+@@ -1025,14 +1028,28 @@ inline bool SwHTMLParser::HasStyleOptions( std::u16string_view rStyle,
+ 
+ class SwTextFootnote;
+ 
+-struct SwHTMLTextFootnote
++class SwHTMLTextFootnote
+ {
++private:
+     OUString sName;
+     SwTextFootnote* pTextFootnote;
++    std::unique_ptr<SvtDeleteListener> xDeleteListener;
++public:
+     SwHTMLTextFootnote(OUString rName, SwTextFootnote* pInTextFootnote)
+         : sName(std::move(rName))
+         , pTextFootnote(pInTextFootnote)
++        , xDeleteListener(new SvtDeleteListener(static_cast<SwFormatFootnote&>(pInTextFootnote->GetAttr()).GetNotifier()))
++    {
++    }
++    const OUString& GetName() const
++    {
++        return sName;
++    }
++    const SwNodeIndex* GetStartNode() const
+     {
++        if (xDeleteListener->WasDeleted())
++            return nullptr;
++        return pTextFootnote->GetStartNode();
+     }
+ };
+ 

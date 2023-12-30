@@ -1,0 +1,33 @@
+From 544bfdebea2a9e8be1c01fc7954cd49638fe2803 Mon Sep 17 00:00:00 2001
+From: Dan Fandrich <dan@coneharvesters.com>
+Date: Wed, 1 Nov 2017 14:36:15 +0100
+Subject: [PATCH] http2: Fixed OOM handling in upgrade request
+
+This caused the torture tests on test 1800 to fail.
+---
+ lib/http2.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/lib/http2.c b/lib/http2.c
+index 3a9e3be9a030a8..5518a70ab6341b 100644
+--- a/lib/http2.c
++++ b/lib/http2.c
+@@ -1183,14 +1183,17 @@ CURLcode Curl_http2_request_upgrade(Curl_send_buffer *req,
+                                          httpc->local_settings_num);
+   if(!binlen) {
+     failf(conn->data, "nghttp2 unexpectedly failed on pack_settings_payload");
++    Curl_add_buffer_free(req);
+     return CURLE_FAILED_INIT;
+   }
+   conn->proto.httpc.binlen = binlen;
+ 
+   result = Curl_base64url_encode(conn->data, (const char *)binsettings, binlen,
+                                  &base64, &blen);
+-  if(result)
++  if(result) {
++    Curl_add_buffer_free(req);
+     return result;
++  }
+ 
+   result = Curl_add_bufferf(req,
+                             "Connection: Upgrade, HTTP2-Settings\r\n"

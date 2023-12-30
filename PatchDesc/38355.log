@@ -1,19 +1,12 @@
-Vulnerability:
-The vulnerability patched in this diff file is related to a potential out-of-bounds memory access. Specifically, in the `sanitize` function of the `Lookup` struct, there is a check that verifies if the current lookup type is `TSubTable::Extension`. If this condition is true, it then checks if the number of subtables (`subtables`) is non-zero and if the sanitizer edit count (`c->get_edit_count()`) is zero. 
+1. Vulnerability:
+The vulnerability in the code lies in the `sanitize` function. The function does not check if there are any subtables before trying to access them. This could lead to a situation where the function tries to access a non-existent subtable, which could potentially lead to undefined behavior or a crash.
 
-However, there is a missing null check for the `subTable` variable before accessing its length. This means that if `subTable` is null, the condition `get_type() == TSubTable::Extension && subtables` could result in accessing memory beyond its bounds, leading to undefined behavior.
+2. Short Summary of the Fix:
+The fix adds a check to ensure that there are subtables before trying to access them. This is done by adding a condition `subtables` in the `if` statement in the `sanitize` function.
 
-Summary of the fix:
-The fix for this vulnerability is to include a null check for the `subTable` variable before accessing its length in the condition `get_type() == TSubTable::Extension && subtables`.
-
-Detailed description of the fix:
-To fix this vulnerability, the following code should be added before the existing condition:
-
+3. Detailed Description of the Fix:
+In the `sanitize` function, the code checks if the type of the subtable is `Extension` and if there are no edits. If these conditions are met, the code then checks all subtables of an Extension lookup to ensure they have the same type. However, the original code did not check if there are any subtables before trying to access them. The fix adds this check by including `subtables` in the `if` statement. This ensures that the code only tries to access the subtables if they exist, preventing potential undefined behavior or crashes. The modified line of code is:
+```cpp
+if (unlikely (get_type () == TSubTable::Extension && subtables && !c->get_edit_count ()))
 ```
-if (!subTable)
-    return_trace(false);
-```
-
-This code snippet checks if `subTable` is null and returns false if it is. This prevents the subsequent code from being executed and avoids the potential out-of-bounds memory access. This fix ensures that the null check is performed before accessing the length of `subTable` and avoids undefined behavior in the case where `subTable` is null.
-
-After applying this fix, the code will be protected from the vulnerability by properly handling the null case and preventing the out-of-bounds access.
+This line checks if the type is `Extension`, if there are subtables, and if there are no edits. If all these conditions are met, the code then proceeds to check the types of the subtables.

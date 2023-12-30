@@ -1,0 +1,20 @@
+From f39ce7d754692dfc7d87635b5a56c5f628da4ab6 Mon Sep 17 00:00:00 2001
+From: Ewout ter Hoeven <E.M.terHoeven@student.tudelft.nl>
+Date: Mon, 3 May 2021 16:17:08 +0200
+Subject: [PATCH] AppVeyor: Also publish build .dll files separately as
+ artifacts
+
+Currently the build .exe files are separately uploaded to AppVeyor as artifacts, but since libheif is build dynamically those are useless without the .dll library.
+---
+ appveyor.yml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/appveyor.yml b/appveyor.yml
+index 7b0367d016..446c7bd544 100644
+--- a/appveyor.yml
++++ b/appveyor.yml
+@@ -32,3 +32,4 @@ build:
+ artifacts:
+   - path: build
+   - path: build\**\Release\*.exe
++  - path: build\**\Release\*.dll

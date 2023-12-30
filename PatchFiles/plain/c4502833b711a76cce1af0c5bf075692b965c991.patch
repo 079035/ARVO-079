@@ -1,0 +1,46 @@
+From c4502833b711a76cce1af0c5bf075692b965c991 Mon Sep 17 00:00:00 2001
+From: Behdad Esfahbod <behdad@behdad.org>
+Date: Sat, 13 Oct 2018 11:48:49 -0400
+Subject: [PATCH] [kerx] Use sanitizer.get_num_glyphs() instead of
+ face->get_num_glyphs()
+
+---
+ src/hb-aat-layout-kerx-table.hh | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/hb-aat-layout-kerx-table.hh b/src/hb-aat-layout-kerx-table.hh
+index ef6d02db40a..d59d6374a4b 100644
+--- a/src/hb-aat-layout-kerx-table.hh
++++ b/src/hb-aat-layout-kerx-table.hh
+@@ -246,7 +246,7 @@ struct KerxSubTableFormat2
+       return false;
+ 
+     accelerator_t accel (*this,
+-			 c->face->get_num_glyphs ());
++			 c->sanitizer.get_num_glyphs ());
+     hb_kern_machine_t<accelerator_t> machine (accel);
+     machine.kern (c->font, c->buffer, c->plan->kern_mask);
+ 
+@@ -383,11 +383,11 @@ struct KerxSubTableFormat4
+ 	    unsigned int currAnchorPoint = *data++;
+ 	    const Anchor markAnchor = c->ankr_table.get_anchor (c->buffer->info[mark].codepoint,
+ 								markAnchorPoint,
+-								c->face->get_num_glyphs (),
++								c->sanitizer.get_num_glyphs (),
+ 								c->ankr_end);
+ 	    const Anchor currAnchor = c->ankr_table.get_anchor (c->buffer->cur ().codepoint,
+ 								currAnchorPoint,
+-								c->face->get_num_glyphs (),
++								c->sanitizer.get_num_glyphs (),
+ 								c->ankr_end);
+ 
+ 	    o.x_offset = c->font->em_scale_x (markAnchor.xCoordinate) - c->font->em_scale_x (currAnchor.xCoordinate);
+@@ -510,7 +510,7 @@ struct KerxSubTableFormat6
+       return false;
+ 
+     accelerator_t accel (*this,
+-			 c->face->get_num_glyphs ());
++			 c->sanitizer.get_num_glyphs ());
+     hb_kern_machine_t<accelerator_t> machine (accel);
+     machine.kern (c->font, c->buffer, c->plan->kern_mask);
+ 

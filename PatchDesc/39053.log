@@ -1,7 +1,10 @@
-Vulnerability: Null-dereference WRITE in MqttProps_Free
+1. Vulnerability:
+The vulnerability in the code was a potential null pointer dereference. This could occur when the function `MqttIsPubRespPacket()` was called with a null pointer as an argument. This could lead to a crash or undefined behavior in the program.
 
-Summary of fix: The fix addresses a null-dereference write vulnerability in the function `MqttProps_Free` in the `mqtt_client.c` file of the WolfMQTT library.
+2. Short Summary of the Fix:
+The fix involved modifying the condition that checks if the packet type is a publish response packet. The condition was changed to ensure that `MqttIsPubRespPacket()` is only called if the packet type is not null.
 
-Detailed description of fix: In the fix, the code in the `MqttClient_WaitType` function has been modified to properly handle the comparison of `wait_type` and `packet_type` in the `if` condition. The vulnerability was caused by the incorrect nesting of parentheses, resulting in a logical error. Previously, the condition `MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)` would always evaluate to true, which could lead to a null pointer dereference if the conditions `wait_packet_id == 0` and `wait_packet_id == packet_id` were also met.
+3. Detailed Description of the Fix:
+In the original code, the condition was checking if `MqttIsPubRespPacket(packet_type)` is equal to `MqttIsPubRespPacket(wait_type)`. This could lead to a null pointer dereference if either `packet_type` or `wait_type` was null. 
 
-The fix reorganizes the condition to correctly compare `MqttIsPubRespPacket(packet_type) && MqttIsPubRespPacket(wait_type)` with the other conditions, ensuring that the null-dereference write vulnerability is addressed.
+The fix modified this condition to check if both `packet_type` and `wait_type` are publish response packets separately. The new condition is `(MqttIsPubRespPacket(packet_type) && MqttIsPubRespPacket(wait_type))`. This ensures that `MqttIsPubRespPacket()` is only called if the packet type is not null, preventing a potential null pointer dereference.

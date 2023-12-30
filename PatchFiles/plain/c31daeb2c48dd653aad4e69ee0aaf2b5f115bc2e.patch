@@ -1,0 +1,233 @@
+From c31daeb2c48dd653aad4e69ee0aaf2b5f115bc2e Mon Sep 17 00:00:00 2001
+From: Evan Miller <emmiller@gmail.com>
+Date: Thu, 7 Jan 2021 19:59:45 -0500
+Subject: [PATCH] Improved bounds and return value checking (oss-fuzz/29329)
+
+---
+ src/libmdb/backend.c |  8 +++++---
+ src/libmdb/catalog.c |  6 +++++-
+ src/libmdb/data.c    |  7 ++++++-
+ src/libmdb/index.c   | 10 +++++++---
+ src/libmdb/table.c   | 26 ++++++++++++++++++++------
+ src/odbc/odbc.c      |  5 ++++-
+ src/sql/mdbsql.c     | 14 ++++++++++++--
+ 7 files changed, 59 insertions(+), 17 deletions(-)
+
+diff --git a/src/libmdb/backend.c b/src/libmdb/backend.c
+index 39e1bb06..dae0ab64 100644
+--- a/src/libmdb/backend.c
++++ b/src/libmdb/backend.c
+@@ -661,8 +661,10 @@ mdb_get_relationships(MdbHandle *mdb, const gchar *dbnamespace, const char* tabl
+ 			fprintf(stderr, "No MSysRelationships\n");
+ 			return NULL;
+ 		}
+-
+-		mdb_read_columns(mdb->relationships_table);
++		if (!mdb_read_columns(mdb->relationships_table)) {
++			fprintf(stderr, "Unable to read columns of MSysRelationships\n");
++			return NULL;
++		}
+ 		for (i=0;i<5;i++) {
+ 			bound[i] = g_malloc0(mdb->bind_size);
+ 		}
+@@ -791,7 +793,7 @@ generate_table_schema(FILE *outfile, MdbCatalogEntry *entry, char *dbnamespace,
+ 	table = mdb_read_table (entry);
+ 
+ 	/* get the columns */
+-	mdb_read_columns (table);
++	mdb_read_columns(table);
+ 
+ 	/* loop over the columns, dumping the names and types */
+ 	for (i = 0; i < table->num_cols; i++) {
+diff --git a/src/libmdb/catalog.c b/src/libmdb/catalog.c
+index 2f050e7f..b9cfdfa3 100644
+--- a/src/libmdb/catalog.c
++++ b/src/libmdb/catalog.c
+@@ -104,7 +104,11 @@ GPtrArray *mdb_read_catalog (MdbHandle *mdb, int objtype)
+         goto cleanup;
+     }
+ 
+-	mdb_read_columns(table);
++	if (!mdb_read_columns(table)) {
++		fprintf(stderr, "Unable to read columns of table %s\n", msysobj.object_name);
++		mdb_free_catalog(mdb);
++		goto cleanup;
++	}
+ 
+     if (mdb_bind_column_by_name(table, "Id", obj_id, NULL) == -1 ||
+         mdb_bind_column_by_name(table, "Name", obj_name, NULL) == -1 ||
+diff --git a/src/libmdb/data.c b/src/libmdb/data.c
+index d58668b9..bbc404d0 100644
+--- a/src/libmdb/data.c
++++ b/src/libmdb/data.c
+@@ -77,6 +77,8 @@ int mdb_bind_column(MdbTableDef *table, int col_num, void *bind_ptr, int *len_pt
+ {
+ 	MdbColumn *col = NULL;
+ 
++	if (!table->columns)
++		return -1;
+ 	/* 
+ 	** the column arrary is 0 based, so decrement to get 1 based parameter 
+ 	*/
+@@ -104,6 +106,9 @@ mdb_bind_column_by_name(MdbTableDef *table, gchar *col_name, void *bind_ptr, int
+ 	unsigned int i;
+ 	int col_num = -1;
+ 	MdbColumn *col;
++
++	if (!table->columns)
++		return -1;
+ 	
+ 	for (i=0;i<table->num_cols;i++) {
+ 		col=g_ptr_array_index(table->columns,i);
+@@ -304,7 +309,7 @@ int mdb_read_row(MdbTableDef *table, unsigned int row)
+ 	MdbField *fields;
+ 	int num_fields;
+ 
+-	if (table->num_cols == 0)
++	if (table->num_cols == 0 || !table->columns)
+ 		return 0;
+ 
+ 	if (mdb_find_row(mdb, row, &row_start, &row_size) == -1 || row_size == 0) {
+diff --git a/src/libmdb/index.c b/src/libmdb/index.c
+index 049fb82d..65b614b8 100644
+--- a/src/libmdb/index.c
++++ b/src/libmdb/index.c
+@@ -238,7 +238,11 @@ mdb_read_indices(MdbTableDef *table)
+ 	table->num_real_idxs = 0;
+ 	tmpbuf = g_malloc(idx2_sz);
+ 	for (i=0;i<table->num_idxs;i++) {
+-		read_pg_if_n(mdb, tmpbuf, &cur_pos, idx2_sz);
++		if (!read_pg_if_n(mdb, tmpbuf, &cur_pos, idx2_sz)) {
++			g_free(tmpbuf);
++			mdb_free_indices(table->indices);
++			return table->indices = NULL;
++		}
+                 //fprintf(stderr, "Index defn: ");
+                 //hexdump((unsigned char *)tmpbuf, idx2_sz);
+ 		pidx = g_malloc0(sizeof(MdbIndex));
+@@ -273,8 +277,8 @@ mdb_read_indices(MdbTableDef *table)
+ 			name_sz=read_pg_if_16(mdb, &cur_pos);
+ 		}
+ 		tmpbuf = g_malloc(name_sz);
+-		read_pg_if_n(mdb, tmpbuf, &cur_pos, name_sz);
+-		mdb_unicode2ascii(mdb, tmpbuf, name_sz, pidx->name, sizeof(pidx->name));
++		if (read_pg_if_n(mdb, tmpbuf, &cur_pos, name_sz))
++			mdb_unicode2ascii(mdb, tmpbuf, name_sz, pidx->name, sizeof(pidx->name));
+ 		g_free(tmpbuf);
+ 		//fprintf(stderr, "index %d type %d name %s\n", pidx->index_num, pidx->index_type, pidx->name);
+ 	}
+diff --git a/src/libmdb/table.c b/src/libmdb/table.c
+index ad01da3a..f318f751 100644
+--- a/src/libmdb/table.c
++++ b/src/libmdb/table.c
+@@ -169,25 +169,35 @@ void *
+ read_pg_if_n(MdbHandle *mdb, void *buf, int *cur_pos, size_t len)
+ {
+ 	char* _buf = buf;
++	char* _end = buf ? buf + len : NULL;
++
++	if (*cur_pos < 0)
++		return NULL;
+ 
+ 	/* Advance to page which contains the first byte */
+ 	while (*cur_pos >= mdb->fmt->pg_size) {
+-		mdb_read_pg(mdb, mdb_get_int32(mdb->pg_buf,4));
++		if (!mdb_read_pg(mdb, mdb_get_int32(mdb->pg_buf,4)))
++			return NULL;
+ 		*cur_pos -= (mdb->fmt->pg_size - 8);
+ 	}
+ 	/* Copy pages into buffer */
+ 	while (*cur_pos + len >= (size_t)mdb->fmt->pg_size) {
+-		int piece_len = mdb->fmt->pg_size - *cur_pos;
++		size_t piece_len = mdb->fmt->pg_size - *cur_pos;
+ 		if (_buf) {
++			if (_buf + piece_len > _end)
++				return NULL;
+ 			memcpy(_buf, mdb->pg_buf + *cur_pos, piece_len);
+ 			_buf += piece_len;
+ 		}
+ 		len -= piece_len;
+-		mdb_read_pg(mdb, mdb_get_int32(mdb->pg_buf,4));
++		if (!mdb_read_pg(mdb, mdb_get_int32(mdb->pg_buf,4)))
++			return NULL;
+ 		*cur_pos = 8;
+ 	}
+ 	/* Copy into buffer from final page */
+ 	if (len && _buf) {
++		if (_buf + len > _end)
++			return NULL;
+ 		memcpy(_buf, mdb->pg_buf + *cur_pos, len);
+ 	}
+ 	*cur_pos += len;
+@@ -246,7 +256,11 @@ GPtrArray *mdb_read_columns(MdbTableDef *table)
+ 	/* printf("column %d\n", i);
+ 	mdb_buffer_dump(mdb->pg_buf, cur_pos, fmt->tab_col_entry_size); */
+ #endif
+-		read_pg_if_n(mdb, col, &cur_pos, fmt->tab_col_entry_size);
++		if (!read_pg_if_n(mdb, col, &cur_pos, fmt->tab_col_entry_size)) {
++			g_free(col);
++			mdb_free_columns(table->columns);
++			return table->columns = NULL;
++		}
+ 		pcol = g_malloc0(sizeof(MdbColumn));
+ 
+ 		pcol->table = table;
+@@ -305,8 +319,8 @@ GPtrArray *mdb_read_columns(MdbTableDef *table)
+ 		else
+ 			name_sz = read_pg_if_16(mdb, &cur_pos);
+ 		tmp_buf = g_malloc(name_sz);
+-		read_pg_if_n(mdb, tmp_buf, &cur_pos, name_sz);
+-		mdb_unicode2ascii(mdb, tmp_buf, name_sz, pcol->name, sizeof(pcol->name));
++		if (read_pg_if_n(mdb, tmp_buf, &cur_pos, name_sz))
++			mdb_unicode2ascii(mdb, tmp_buf, name_sz, pcol->name, sizeof(pcol->name));
+ 		g_free(tmp_buf);
+ 	}
+ 
+diff --git a/src/odbc/odbc.c b/src/odbc/odbc.c
+index aa3e6eef..dafad52e 100644
+--- a/src/odbc/odbc.c
++++ b/src/odbc/odbc.c
+@@ -1344,7 +1344,10 @@ SQLRETURN SQL_API SQLColumns(
+ 			LogStatementError(stmt, "Could not read table '%s'", szTableName);
+ 			return SQL_ERROR;
+ 		}
+-		mdb_read_columns(table);
++		if (!mdb_read_columns(table)) {
++			LogStatementError(stmt, "Could not read columns of table '%s'", szTableName);
++			return SQL_ERROR;
++		}
+ 		for (j=0; j<table->num_cols; j++) {
+ 			col = g_ptr_array_index(table->columns, j);
+ 
+diff --git a/src/sql/mdbsql.c b/src/sql/mdbsql.c
+index 4849aa77..9bacd3ca 100644
+--- a/src/sql/mdbsql.c
++++ b/src/sql/mdbsql.c
+@@ -696,7 +696,12 @@ void mdb_sql_describe_table(MdbSQL *sql)
+ 		return;
+ 	}
+ 
+-	mdb_read_columns(table);
++	if (!mdb_read_columns(table)) {
++		mdb_sql_error(sql, "Could not read columns of table %s", sql_tab->name);
++		/* the column and table names are no good now */
++		mdb_sql_reset(sql);
++		return;
++    }
+ 
+ 	ttable = mdb_create_temp_table(mdb, "#describe");
+ 
+@@ -794,7 +799,12 @@ int found = 0;
+ 		mdb_sql_reset(sql);
+ 		return;
+ 	}
+-	mdb_read_columns(table);
++	if (!mdb_read_columns(table)) {
++		mdb_sql_error(sql, "Could not read columns of table %s", sql_tab->name);
++		/* the column and table names are no good now */
++		mdb_sql_reset(sql);
++		return;
++    }
+ 
+ 	if (sql->sel_count && !sql->sarg_tree) {
+ 		MdbTableDef *ttable = mdb_create_temp_table(mdb, "#count");

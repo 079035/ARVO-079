@@ -1,0 +1,24 @@
+From da0889d3ba9c83bf65c8a5656c31ab54f6252329 Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Fri, 17 Apr 2020 22:21:03 +0200
+Subject: [PATCH] Adds bound check before calling
+ ndpi_handle_ipv6_extension_headers
+
+---
+ example/reader_util.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/example/reader_util.c b/example/reader_util.c
+index 94aafca2ff..1c20bbf4c2 100644
+--- a/example/reader_util.c
++++ b/example/reader_util.c
+@@ -1700,6 +1700,9 @@ struct ndpi_proto ndpi_workflow_process_packet(struct ndpi_workflow * workflow,
+     iph6 = (struct ndpi_ipv6hdr *)&packet[ip_offset];
+     proto = iph6->ip6_hdr.ip6_un1_nxt;
+     ip_len = ntohs(iph6->ip6_hdr.ip6_un1_plen);
++    if (header->caplen < ip_offset + sizeof(struct ndpi_ipv6hdr + ntohs(iph_v6->ip6_hdr.ip6_un1_plen))
++      return(nproto); /* Too short for IPv6 payload*/
++
+ 
+     const u_int8_t *l4ptr = (((const u_int8_t *) iph6) + sizeof(struct ndpi_ipv6hdr));
+     if(ndpi_handle_ipv6_extension_headers(NULL, &l4ptr, &ip_len, &proto) != 0) {

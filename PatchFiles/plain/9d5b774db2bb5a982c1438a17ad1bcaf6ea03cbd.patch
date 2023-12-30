@@ -1,0 +1,22 @@
+From 9d5b774db2bb5a982c1438a17ad1bcaf6ea03cbd Mon Sep 17 00:00:00 2001
+From: Matthew Gregan <kinetik@flim.org>
+Date: Tue, 4 Jun 2019 11:31:06 +1200
+Subject: [PATCH] Add missing E_LAST to new ne_mastering_metadata_elements
+ descriptor.
+
+---
+ src/nestegg.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/nestegg.c b/src/nestegg.c
+index 5ca6165..f7ba1fb 100644
+--- a/src/nestegg.c
++++ b/src/nestegg.c
+@@ -505,6 +505,7 @@ static struct ebml_element_desc ne_mastering_metadata_elements[] = {
+   E_FIELD(ID_WHITE_POINT_CHROMATICITY_Y, TYPE_FLOAT, struct mastering_metadata, white_point_chromaticity_y),
+   E_FIELD(ID_LUMINANCE_MAX, TYPE_FLOAT, struct mastering_metadata, luminance_max),
+   E_FIELD(ID_LUMINANCE_MIN, TYPE_FLOAT, struct mastering_metadata, luminance_min),
++  E_LAST
+ };
+ 
+ static struct ebml_element_desc ne_colour_elements[] = {

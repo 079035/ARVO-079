@@ -1,0 +1,68 @@
+commit d368db06982c8d733591e6f88ebdc2a773a6ef66
+Author: Chris Liddell <chris.liddell@artifex.com>
+Date:   Wed Dec 15 15:41:06 2021 +0000
+
+    Implement the NONATIVEFONTMAP command line parameter.
+    
+    Prevents scanning FONTDIR for potential substitute fonts.
+
+diff --git a/Resource/Init/pdf_main.ps b/Resource/Init/pdf_main.ps
+index 934e47457..38994d4f5 100644
+--- a/Resource/Init/pdf_main.ps
++++ b/Resource/Init/pdf_main.ps
+@@ -758,7 +758,7 @@ systemdict /NEWPDF known not {/NEWPDF //true def} if
+                  /PDFNOCIDFALLBACK /NO_PDFMARK_OUTLINES /NO_PDFMARK_DESTS /PDFFitPage /Printed
+                  /UseBleedBox /UseCropBox /UseArtBox /UseTrimBox /ShowAcroForm /ShowAnnots /PreserveAnnots
+                  /NoUserUnit /RENDERTTNOTDEF /DOPDFMARKS /PDFINFO /SHOWANNOTTYPES /PRESERVEANNOTTYPES
+-                 /CIDSubstPath /CIDSubstFont /IgnoreToUnicode ] def
++                 /CIDSubstPath /CIDSubstFont /IgnoreToUnicode /NONATIVEFONTMAP ] def
+ 
+   0 1 PDFSwitches length 1 sub {
+     PDFSwitches exch get dup where {
+diff --git a/pdf/ghostpdf.h b/pdf/ghostpdf.h
+index d3d1d1952..8e1859b7d 100644
+--- a/pdf/ghostpdf.h
++++ b/pdf/ghostpdf.h
+@@ -218,6 +218,7 @@ typedef struct cmd_args_s {
+     gs_string cidsubstpath;
+     gs_string cidsubstfont;
+     bool ignoretounicode;
++    bool nonativefontmap;
+ } cmd_args_t;
+ 
+ typedef struct encryption_state_s {
+diff --git a/pdf/pdf_fmap.c b/pdf/pdf_fmap.c
+index 8f71a5b3b..2c129070c 100644
+--- a/pdf/pdf_fmap.c
++++ b/pdf/pdf_fmap.c
+@@ -639,6 +639,14 @@ static int pdfi_generate_native_fontmap(pdf_context *ctx)
+ 
+     if (ctx->pdfnativefontmap != NULL) /* Only run this once */
+         return 0;
++    if (ctx->args.nonativefontmap == true) {
++        /* Basically create an empty dictionary */
++        code = pdfi_dict_alloc(ctx, 1, &ctx->pdfnativefontmap);
++        if (code < 0)
++            return code;
++        pdfi_countup(ctx->pdfnativefontmap);
++        return 0;
++    }
+ 
+     patrn = (char *)gs_alloc_bytes(ctx->memory, gp_file_name_sizeof, "pdfi_generate_native_fontmap");
+     result = (char *)gs_alloc_bytes(ctx->memory, gp_file_name_sizeof, "pdfi_generate_native_fontmap");
+diff --git a/psi/zpdfops.c b/psi/zpdfops.c
+index 455d913fa..21f18ac38 100644
+--- a/psi/zpdfops.c
++++ b/psi/zpdfops.c
+@@ -1209,6 +1209,11 @@ static int zPDFInit(i_ctx_t *i_ctx_p)
+                 goto error;
+             pdfctx->ctx->args.ignoretounicode = pvalueref->value.boolval;
+         }
++        if (dict_find_string(pdictref, "NONATIVEFONTMAP", &pvalueref) > 0) {
++            if (!r_has_type(pvalueref, t_boolean))
++                goto error;
++            pdfctx->ctx->args.nonativefontmap = pvalueref->value.boolval;
++        }
+         code = 0;
+         pop(1);
+     }

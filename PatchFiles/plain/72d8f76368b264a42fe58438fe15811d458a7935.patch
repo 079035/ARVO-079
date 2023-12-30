@@ -1,0 +1,25 @@
+From 72d8f76368b264a42fe58438fe15811d458a7935 Mon Sep 17 00:00:00 2001
+From: Michiharu Ariza <ariza@adobe.com>
+Date: Wed, 5 Dec 2018 15:49:11 -0800
+Subject: [PATCH] add minimized test case for oss-fuzz issue 11691
+
+---
+ ...se-minimized-hb-shape-fuzzer-5686369209286656 | Bin 0 -> 2880 bytes
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+ create mode 100644 test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5686369209286656
+
+diff --git a/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5686369209286656 b/test/fuzzing/fonts/clusterfuzz-testcase-minimized-hb-shape-fuzzer-5686369209286656
+new file mode 100644
+index 0000000000000000000000000000000000000000..9f47ca8a7e0b54e8e8e619de03794bdf3a527b27
+GIT binary patch
+literal 2880
+zcmeYd3Gru8fB<JVHzN>>fq~%-i2e^E@Bl*cc(j70(g-OaAfKC9Q2<iHz`$*RODVD&
+znG{$Vgk^!gtKv}sQC)%{Qbq!zmw^$;Q2>)Z*i8dU6A3^jF(Ro2@);Q!xnvj^fHtx!
+z2m$%bOhC*2Gb^wnDZ|c$djZaXsY3`LSWvlM0Vv}?y3~Jy@d`73AZf~6iSB0#eL}Qj
+zh*pT=Ao6q}8$o6NA{$MJO=YXe3k&jeA$x65cmvr%5H@)pBTpBy?SnKpke!IiCd12Q
+zXhF3T2ahsyDbtO^NfZkYiu6Ev&`{YMqy#IKttKxl$kT=F%|YP}WCsyqli_7zv@kFP
+J0NZd33;_KnoE888
+
+literal 0
+HcmV?d00001
+

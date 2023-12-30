@@ -1,31 +1,16 @@
-Vulnerability:
-Null-dereference WRITE in MqttProps_Free
+1. Vulnerability:
+The vulnerability in the code was a potential null pointer dereference. This could occur when the function `MqttIsPubRespPacket()` was called with a null pointer as an argument. This could lead to a crash or undefined behavior in the program.
 
-Summary of the fix:
-The fix addresses a null-dereference bug in the "MqttClient_WaitType" function. It ensures that the null checks are performed correctly before accessing the variables.
+2. Short Summary of the Fix:
+The fix involved modifying the condition that checks if a packet is a publish response packet. The condition was changed to ensure that `MqttIsPubRespPacket()` is only called if both `packet_type` and `wait_type` are publish response packets.
 
-Detailed description of the fix:
-In the given diff file, the fix makes changes in the "MqttClient_WaitType" function to correctly handle null checks before accessing variables. The vulnerability occurs in the following code block:
+3. Detailed Description of the Fix:
+The fix was implemented in the `MqttClient_WaitType()` function. The original condition was:
+```c
+MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)
 ```
-if ((wait_type == MQTT_PACKET_TYPE_ANY ||
-     wait_type == packet_type ||
--     MqttIsPubRespPacket(packet_type) == MqttIsPubRespPacket(wait_type)) &&
-   (wait_packet_id == 0 || wait_packet_id == packet_id))
-{
-    use_packet_obj = packet_obj;
-    waitMatchFound = 1;
-}
+This condition could lead to a null pointer dereference if either `packet_type` or `wait_type` was null. The fix changed the condition to:
+```c
+(MqttIsPubRespPacket(packet_type) && MqttIsPubRespPacket(wait_type))
 ```
-The fix implements additional parentheses around the condition to ensure correct evaluation of the null checks:
-```
-if ((wait_type == MQTT_PACKET_TYPE_ANY ||
-     wait_type == packet_type ||
-     (MqttIsPubRespPacket(packet_type) &&
-      MqttIsPubRespPacket(wait_type))) &&
-    (wait_packet_id == 0 || wait_packet_id == packet_id))
-{
-    use_packet_obj = packet_obj;
-    waitMatchFound = 1;
-}
-```
-This prevents a null-dereference WRITE vulnerability by ensuring that the proper conditions for null checks are met before accessing the variables and assigning values. This fix improves the robustness and stability of the code.
+This ensures that `MqttIsPubRespPacket()` is only called if both `packet_type` and `wait_type` are not null. This prevents the potential null pointer dereference and makes the code safer.

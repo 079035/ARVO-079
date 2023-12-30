@@ -1,12 +1,8 @@
-Vulnerability: The vulnerability in the code is that when an invalid code point is encountered, the full string is outputted to the debug output. This can cause the system to become slow for large strings. Additionally, one of the cases incorrectly assumes that the data is null-terminated.
+1. Vulnerability:
+The vulnerability in the code was related to the handling of invalid UTF-8 code points. When an invalid code point was encountered, the entire string was outputted to the debug output. This could potentially slow down the system, especially for large strings. Additionally, one of the cases incorrectly assumed the data to be null-terminated.
 
-Summary of Fix: The fix modifies the debug statements so that they do not print the full string when an invalid code point is encountered. This prevents the system from becoming slow for large strings.
+2. Short Summary of the Fix:
+The fix modifies the debug statements to prevent the full string from being printed when an invalid code point is encountered. Instead, only relevant information about the invalid code point is printed.
 
-Detailed Fix Description:
-1. In the `Utf8CodePointIterator::operator*()` function, when the first byte of the code point doesn't make sense, the debug statement is modified to only print the first byte of the code point: `dbgln("First byte doesn't make sense: {:#02x}.", m_ptr[0]);`
-
-2. Similarly, when there is not enough data left for the full code point, the debug statement is modified to only print the first byte of the code point: `dbgln("Not enough bytes (need {}, have {}), first byte is: {:#02x}.", code_point_length_in_bytes, m_length, m_ptr[0]);`
-
-3. In the loop that checks the extension bytes of the code point, the debug statement is modified to only print the extension byte and its position: `dbgln("Extension byte {:#02x} in {} position after first byte {:#02x} doesn't make sense.", m_ptr[offset], offset, m_ptr[0]);`
-
-These modifications ensure that the debug output no longer includes the full string when encountering an invalid code point, preventing the system from becoming slow for large strings. Additionally, the fix removes the assumption that the data is null-terminated, which corrects the incorrect behavior.
+3. Detailed Description of the Fix:
+The fix involves changes to the debug logging statements in the `Utf8CodePointIterator::operator*()` function. Previously, if the first byte of a code point didn't make sense or if there wasn't enough data left for the full code point, the entire string was printed to the debug output. With the fix, only the first byte and the required and available byte lengths are printed in these cases. Similarly, if an extension byte of the code point doesn't make sense, only the extension byte, its position, and the first byte are printed. This reduces the amount of data printed to the debug output, mitigating the potential for system slowdowns with large strings.

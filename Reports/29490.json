@@ -1,5 +1,5 @@
 {
-    "fix": "git://git.code.sf.net/p/matio/matio92e9a90b02cb3af869d86de1a1428b4bd9e6e7a5",
+    "fix": "https://github.com/tbeu/matio/commit/matio92e9a90b02cb3af869d86de1a1428b4bd9e6e7a5",
     "verify": "0",
     "localId": 29490,
     "project": "matio",

@@ -1,0 +1,95 @@
+From 094c1bfb40508c6c46cda71df7f3dfc254ceb997 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Caol=C3=A1n=20McNamara?= <caolanm@redhat.com>
+Date: Mon, 12 Sep 2022 10:01:32 +0100
+Subject: [PATCH] keep as std::string
+
+---
+ src/hunspell/suggestmgr.cxx | 19 +++++++++----------
+ src/hunspell/suggestmgr.hxx |  4 ++--
+ 2 files changed, 11 insertions(+), 12 deletions(-)
+
+diff --git a/src/hunspell/suggestmgr.cxx b/src/hunspell/suggestmgr.cxx
+index f8a6965f3..e4bf5660d 100644
+--- a/src/hunspell/suggestmgr.cxx
++++ b/src/hunspell/suggestmgr.cxx
+@@ -317,7 +317,7 @@ bool SuggestMgr::suggest(std::vector<std::string>& slst,
+     // did we just hit the wrong key in place of a good char
+     if ((slst.size() < maxSug) && (!cpdsuggest || (slst.size() < oldSug + maxcpdsugs))) {
+       if (utf8)
+-        badchar_utf(slst, word_utf.data(), wl, cpdsuggest);
++        badchar_utf(slst, word_utf, cpdsuggest);
+       else
+         badchar(slst, word, cpdsuggest);
+     }
+@@ -645,14 +645,14 @@ int SuggestMgr::badcharkey_utf(std::vector<std::string>& wlst,
+ }
+ 
+ // error is wrong char in place of correct one
+-int SuggestMgr::badchar(std::vector<std::string>& wlst, const char* word, int cpdsuggest) {
++int SuggestMgr::badchar(std::vector<std::string>& wlst, const std::string& word, int cpdsuggest) {
+   std::string candidate(word);
+   clock_t timelimit = clock();
+   int timer = MINTIMER;
+   // swap out each char one by one and try all the tryme
+   // chars in its place to see if that makes a good word
+   for (size_t j = 0; j < ctryl; ++j) {
+-    for (std::string::reverse_iterator aI = candidate.rbegin(), aEnd = candidate.rend(); aI != aEnd; ++aI) {
++    for (auto aI = candidate.rbegin(), aEnd = candidate.rend(); aI != aEnd; ++aI) {
+       char tmpc = *aI;
+       if (ctry[j] == tmpc)
+         continue;
+@@ -668,26 +668,25 @@ int SuggestMgr::badchar(std::vector<std::string>& wlst, const char* word, int cp
+ 
+ // error is wrong char in place of correct one
+ int SuggestMgr::badchar_utf(std::vector<std::string>& wlst,
+-                            const w_char* word,
+-                            int wl,
++                            const std::vector<w_char>& word,
+                             int cpdsuggest) {
+-  std::vector<w_char> candidate_utf(word, word + wl);
++  std::vector<w_char> candidate_utf(word);
+   std::string candidate;
+   clock_t timelimit = clock();
+   int timer = MINTIMER;
+   // swap out each char one by one and try all the tryme
+   // chars in its place to see if that makes a good word
+   for (size_t j = 0; j < ctryl; ++j) {
+-    for (int i = wl - 1; i >= 0; i--) {
+-      w_char tmpc = candidate_utf[i];
++    for (auto aI = candidate_utf.rbegin(), aEnd = candidate_utf.rend(); aI != aEnd; ++aI) {
++      w_char tmpc = *aI;
+       if (tmpc == ctry_utf[j])
+         continue;
+-      candidate_utf[i] = ctry_utf[j];
++      *aI = ctry_utf[j];
+       u16_u8(candidate, candidate_utf);
+       testsug(wlst, candidate, cpdsuggest, &timer, &timelimit);
+       if (!timer)
+         return wlst.size();
+-      candidate_utf[i] = tmpc;
++      *aI = tmpc;
+     }
+   }
+   return wlst.size();
+diff --git a/src/hunspell/suggestmgr.hxx b/src/hunspell/suggestmgr.hxx
+index 7bd672ee4..51619f20c 100644
+--- a/src/hunspell/suggestmgr.hxx
++++ b/src/hunspell/suggestmgr.hxx
+@@ -143,7 +143,7 @@ class SuggestMgr {
+   int movechar(std::vector<std::string>&, const std::string&, int);
+   int extrachar(std::vector<std::string>&, const std::string&, int);
+   int badcharkey(std::vector<std::string>&, const std::string&, int);
+-  int badchar(std::vector<std::string>&, const char*, int);
++  int badchar(std::vector<std::string>&, const std::string&, int);
+   bool twowords(std::vector<std::string>&, const char*, int, bool);
+ 
+   void capchars_utf(std::vector<std::string>&, const std::vector<w_char>&, int);
+@@ -151,7 +151,7 @@ class SuggestMgr {
+   int forgotchar_utf(std::vector<std::string>&, const std::vector<w_char>&, int);
+   int extrachar_utf(std::vector<std::string>&, const std::vector<w_char>&, int);
+   int badcharkey_utf(std::vector<std::string>&, const std::vector<w_char>&, int);
+-  int badchar_utf(std::vector<std::string>&, const w_char*, int wl, int);
++  int badchar_utf(std::vector<std::string>&, const std::vector<w_char>&, int);
+   int swapchar_utf(std::vector<std::string>&, const std::vector<w_char>&, int);
+   int longswapchar_utf(std::vector<std::string>&, const std::vector<w_char>&, int);
+   int movechar_utf(std::vector<std::string>&, const std::vector<w_char>&, int);

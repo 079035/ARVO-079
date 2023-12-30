@@ -1,0 +1,18 @@
+commit 622489f07fd4fd4eaefdb24fa1381aab3bed3ed3
+Author: Alan T. DeKok <aland@freeradius.org>
+Date:   Wed Mar 16 10:27:01 2022 -0400
+
+    it helps to check if there's room for the header.
+
+diff --git a/src/protocols/dhcpv4/decode.c b/src/protocols/dhcpv4/decode.c
+index 20ce648a05..120db27aa0 100644
+--- a/src/protocols/dhcpv4/decode.c
++++ b/src/protocols/dhcpv4/decode.c
+@@ -682,6 +682,7 @@ ssize_t fr_dhcpv4_decode_option(TALLOC_CTX *ctx, fr_pair_list_t *out,
+ 		q = packet_ctx->buffer;
+ 
+ 		for (next = data; next < end; next += 2 + next[1]) {
++			if ((end - next) < 2) return -1;
+ 			if (next[0] != data[0]) break;
+ 			if ((next + 2 + next[1]) > end) return -1;
+ 

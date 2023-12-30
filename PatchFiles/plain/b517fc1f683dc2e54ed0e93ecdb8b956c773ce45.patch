@@ -1,0 +1,35 @@
+From b517fc1f683dc2e54ed0e93ecdb8b956c773ce45 Mon Sep 17 00:00:00 2001
+From: Dirk Lemstra <dirk@git.imagemagick.org>
+Date: Sun, 18 Feb 2018 14:27:23 +0100
+Subject: [PATCH] Fixed memory leak.
+
+---
+ MagickCore/blob.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/MagickCore/blob.c b/MagickCore/blob.c
+index db5dbf227fa..c0934cda89f 100644
+--- a/MagickCore/blob.c
++++ b/MagickCore/blob.c
+@@ -1912,7 +1912,9 @@ MagickExport void *ImageToBlob(const ImageInfo *image_info,
+           status=WriteImage(blob_info,image,exception);
+           *length=image->blob->length;
+           blob=DetachBlob(image->blob);
+-          if (status == MagickFalse)
++          if (blob == (void *) NULL)
++            blob_info->blob=RelinquishMagickMemory(blob_info->blob);
++          else if (status == MagickFalse)
+             blob=RelinquishMagickMemory(blob);
+           else
+             blob=ResizeQuantumMemory(blob,*length+1,sizeof(unsigned char));
+@@ -2308,7 +2310,9 @@ MagickExport void *ImagesToBlob(const ImageInfo *image_info,Image *images,
+           status=WriteImages(clone_info,images,images->filename,exception);
+           *length=images->blob->length;
+           blob=DetachBlob(images->blob);
+-          if (status == MagickFalse)
++          if (blob == (void *) NULL)
++            clone_info->blob=RelinquishMagickMemory(clone_info->blob);
++          else if (status == MagickFalse)
+             blob=RelinquishMagickMemory(blob);
+           else
+             blob=ResizeQuantumMemory(blob,*length+1,sizeof(unsigned char));

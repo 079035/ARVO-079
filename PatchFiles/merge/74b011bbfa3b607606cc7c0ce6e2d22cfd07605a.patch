@@ -1,0 +1,19 @@
+commit 74b011bbfa3b607606cc7c0ce6e2d22cfd07605a
+Merge: f4e5d704f2 fa73f8a469
+Author: fanquake <fanquake@gmail.com>
+Date:   Wed Mar 30 19:19:24 2022 +0100
+
+    Merge bitcoin/bitcoin#23008: ci: Use clang-12 and libcxx-12 for msan
+    
+    fa73f8a4695d5bcbd054f4c68ee2a648c808afd2 ci: Use clang-12 and libcxx-12 for msan (MarcoFalke)
+    
+    Pull request description:
+    
+      Run the latest sanitizers to get the most implemented features
+    
+    ACKs for top commit:
+      fanquake:
+        ACK fa73f8a4695d5bcbd054f4c68ee2a648c808afd2 - `--disable-hardening` matches what was just added to oss-fuzz.
+    
+    Tree-SHA512: 2e533bb9273c97600176be2e41069a03f425aa586f9f32b8ed5f0c9844215a3a41e95a8edd58d044386e350807d6a1df09008a7da35428abd185a509ca71bd82
+

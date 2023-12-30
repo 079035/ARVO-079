@@ -1,0 +1,583 @@
+commit 685f752d623d44085ebd9633a1f020fcaffdb8b7
+Author: Hector Dearman <hjd@google.com>
+Date:   Tue Mar 12 14:28:56 2019 +0000
+
+    traced: Add kernel version to trace
+    
+    trace_processor needs certain information about the system the trace was
+    taken from to understand the trace. Add that information on first read.
+    
+    Change-Id: Idd50516e7d263139e87da460661e30f67938889f
+
+diff --git a/Android.bp b/Android.bp
+index c6468df72..6837f65e0 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -1651,6 +1651,7 @@ genrule {
+   name: "perfetto_protos_perfetto_trace_minimal_lite_gen",
+   srcs: [
+     "protos/perfetto/trace/clock_snapshot.proto",
++    "protos/perfetto/trace/system_info.proto",
+   ],
+   tools: [
+     "aprotoc",
+@@ -1658,6 +1659,7 @@ genrule {
+   cmd: "mkdir -p $(genDir)/external/perfetto/protos && $(location aprotoc) --cpp_out=$(genDir)/external/perfetto/protos --proto_path=external/perfetto/protos $(in)",
+   out: [
+     "external/perfetto/protos/perfetto/trace/clock_snapshot.pb.cc",
++    "external/perfetto/protos/perfetto/trace/system_info.pb.cc",
+   ],
+ }
+ 
+@@ -1666,6 +1668,7 @@ genrule {
+   name: "perfetto_protos_perfetto_trace_minimal_lite_gen_headers",
+   srcs: [
+     "protos/perfetto/trace/clock_snapshot.proto",
++    "protos/perfetto/trace/system_info.proto",
+   ],
+   tools: [
+     "aprotoc",
+@@ -1673,6 +1676,7 @@ genrule {
+   cmd: "mkdir -p $(genDir)/external/perfetto/protos && $(location aprotoc) --cpp_out=$(genDir)/external/perfetto/protos --proto_path=external/perfetto/protos $(in)",
+   out: [
+     "external/perfetto/protos/perfetto/trace/clock_snapshot.pb.h",
++    "external/perfetto/protos/perfetto/trace/system_info.pb.h",
+   ],
+   export_include_dirs: [
+     "protos",
+@@ -2146,6 +2150,7 @@ genrule {
+   name: "perfetto_protos_perfetto_trace_zero_gen",
+   srcs: [
+     "protos/perfetto/trace/clock_snapshot.proto",
++    "protos/perfetto/trace/system_info.proto",
+     "protos/perfetto/trace/test_event.proto",
+     "protos/perfetto/trace/trace.proto",
+     "protos/perfetto/trace/trace_packet.proto",
+@@ -2157,6 +2162,7 @@ genrule {
+   cmd: "mkdir -p $(genDir)/external/perfetto/protos && $(location aprotoc) --cpp_out=$(genDir)/external/perfetto/protos --proto_path=external/perfetto/protos --plugin=protoc-gen-plugin=$(location perfetto_src_protozero_protoc_plugin_protoc_plugin___gn_standalone_toolchain_gcc_like_host_) --plugin_out=wrapper_namespace=pbzero:$(genDir)/external/perfetto/protos $(in)",
+   out: [
+     "external/perfetto/protos/perfetto/trace/clock_snapshot.pbzero.cc",
++    "external/perfetto/protos/perfetto/trace/system_info.pbzero.cc",
+     "external/perfetto/protos/perfetto/trace/test_event.pbzero.cc",
+     "external/perfetto/protos/perfetto/trace/trace.pbzero.cc",
+     "external/perfetto/protos/perfetto/trace/trace_packet.pbzero.cc",
+@@ -2168,6 +2174,7 @@ genrule {
+   name: "perfetto_protos_perfetto_trace_zero_gen_headers",
+   srcs: [
+     "protos/perfetto/trace/clock_snapshot.proto",
++    "protos/perfetto/trace/system_info.proto",
+     "protos/perfetto/trace/test_event.proto",
+     "protos/perfetto/trace/trace.proto",
+     "protos/perfetto/trace/trace_packet.proto",
+@@ -2179,6 +2186,7 @@ genrule {
+   cmd: "mkdir -p $(genDir)/external/perfetto/protos && $(location aprotoc) --cpp_out=$(genDir)/external/perfetto/protos --proto_path=external/perfetto/protos --plugin=protoc-gen-plugin=$(location perfetto_src_protozero_protoc_plugin_protoc_plugin___gn_standalone_toolchain_gcc_like_host_) --plugin_out=wrapper_namespace=pbzero:$(genDir)/external/perfetto/protos $(in)",
+   out: [
+     "external/perfetto/protos/perfetto/trace/clock_snapshot.pbzero.h",
++    "external/perfetto/protos/perfetto/trace/system_info.pbzero.h",
+     "external/perfetto/protos/perfetto/trace/test_event.pbzero.h",
+     "external/perfetto/protos/perfetto/trace/trace.pbzero.h",
+     "external/perfetto/protos/perfetto/trace/trace_packet.pbzero.h",
+diff --git a/protos/perfetto/trace/BUILD.gn b/protos/perfetto/trace/BUILD.gn
+index 81dcad2dc..5369d9a26 100644
+--- a/protos/perfetto/trace/BUILD.gn
++++ b/protos/perfetto/trace/BUILD.gn
+@@ -18,7 +18,10 @@ import("../../../gn/protozero_library.gni")
+ 
+ # Common protos used by both the ":minimal_lite" target (for the service) and
+ # the generic ":lite" target
+-proto_sources_minimal = [ "clock_snapshot.proto" ]
++proto_sources_minimal = [
++  "clock_snapshot.proto",
++  "system_info.proto",
++]
+ 
+ proto_sources_trusted = [ "trusted_packet.proto" ]
+ 
+diff --git a/protos/perfetto/trace/perfetto_trace.proto b/protos/perfetto/trace/perfetto_trace.proto
+index 08242bc13..96561d1e4 100644
+--- a/protos/perfetto/trace/perfetto_trace.proto
++++ b/protos/perfetto/trace/perfetto_trace.proto
+@@ -2403,6 +2403,67 @@ message PowerRails {
+ 
+ // End of protos/perfetto/trace/power/power_rails.proto
+ 
++// Begin of protos/perfetto/trace/profiling/profile_packet.proto
++
++message ProfilePacket {
++  // either a function or library name.
++  repeated InternedString strings = 1;
++  message InternedString {
++    optional uint64 id = 1;
++    optional bytes str = 2;
++  }
++
++  repeated Frame frames = 2;
++  message Frame {
++    optional uint64 id = 1;  // Interning key
++    // E.g. "fopen"
++    optional uint64 function_name_id = 2;  // id of string.
++    optional uint64 mapping_id = 3;
++    optional uint64 rel_pc = 4;
++  }
++
++  repeated Callstack callstacks = 3;
++  message Callstack {
++    optional uint64 id = 1;
++    // Frames of this callstack. Bottom frame first.
++    repeated uint64 frame_ids = 2;
++  }
++
++  repeated Mapping mappings = 4;
++  message Mapping {
++    optional uint64 id = 1;        // Interning key.
++    optional uint64 build_id = 2;  // Interning key.
++    optional uint64 offset = 3;
++    optional uint64 start = 4;
++    optional uint64 end = 5;
++    optional uint64 load_bias = 6;
++    // E.g. ["system", "lib64", "libc.so"]
++    repeated uint64 path_string_ids = 7;  // id of string.
++  }
++
++  message HeapSample {
++    optional uint64 callstack_id = 1;
++    // bytes allocated at this frame.
++    optional uint64 self_allocated = 2;
++    // bytes freed at this frame.
++    optional uint64 self_freed = 3;
++    optional uint64 timestamp = 4;  // timestamp [opt]
++    optional uint64 alloc_count = 5;
++    optional uint64 free_count = 6;
++  }
++
++  repeated ProcessHeapSamples process_dumps = 5;
++  message ProcessHeapSamples {
++    optional uint64 pid = 1;
++    repeated HeapSample samples = 2;
++  }
++
++  optional bool continued = 6;
++  optional uint64 index = 7;
++}
++
++// End of protos/perfetto/trace/profiling/profile_packet.proto
++
+ // Begin of protos/perfetto/trace/ps/process_stats.proto
+ 
+ // Per-process periodically sampled stats. These samples are wrapped in a
+@@ -2532,6 +2593,21 @@ message SysStats {
+ 
+ // End of protos/perfetto/trace/sys_stats/sys_stats.proto
+ 
++// Begin of protos/perfetto/trace/system_info.proto
++
++message Utsname {
++  optional string sysname = 1;
++  optional string version = 2;
++  optional string release = 3;
++  optional string machine = 4;
++}
++
++message SystemInfo {
++  optional Utsname utsname = 1;
++}
++
++// End of protos/perfetto/trace/system_info.proto
++
+ // Begin of protos/perfetto/trace/trace.proto
+ 
+ message Trace {
+@@ -2552,7 +2628,7 @@ message Trace {
+ // TracePacket(s).
+ //
+ // Next reserved id: 13 (up to 15).
+-// Next id: 45.
++// Next id: 46.
+ message TracePacket {
+   // TODO(primiano): in future we should add a timestamp_clock_domain field to
+   // allow mixing timestamps from different clock domains.
+@@ -2578,6 +2654,7 @@ message TracePacket {
+     BatteryCounters battery = 38;
+     PowerRails power_rails = 40;
+     AndroidLogPacket android_log = 39;
++    SystemInfo system_info = 45;
+ 
+     // Only used by TrackEvent.
+     ProcessDescriptor process_descriptor = 43;
+@@ -2920,67 +2997,6 @@ message LegacyEventName {
+ 
+ // End of protos/perfetto/trace/track_event/track_event.proto
+ 
+-// Begin of protos/perfetto/trace/profiling/profile_packet.proto
+-
+-message ProfilePacket {
+-  // either a function or library name.
+-  repeated InternedString strings = 1;
+-  message InternedString {
+-    optional uint64 id = 1;
+-    optional bytes str = 2;
+-  }
+-
+-  repeated Frame frames = 2;
+-  message Frame {
+-    optional uint64 id = 1;  // Interning key
+-    // E.g. "fopen"
+-    optional uint64 function_name_id = 2;  // id of string.
+-    optional uint64 mapping_id = 3;
+-    optional uint64 rel_pc = 4;
+-  }
+-
+-  repeated Callstack callstacks = 3;
+-  message Callstack {
+-    optional uint64 id = 1;
+-    // Frames of this callstack. Bottom frame first.
+-    repeated uint64 frame_ids = 2;
+-  }
+-
+-  repeated Mapping mappings = 4;
+-  message Mapping {
+-    optional uint64 id = 1;  // Interning key.
+-    optional uint64 build_id = 2;  // Interning key.
+-    optional uint64 offset = 3;
+-    optional uint64 start = 4;
+-    optional uint64 end = 5;
+-    optional uint64 load_bias = 6;
+-    // E.g. ["system", "lib64", "libc.so"]
+-    repeated uint64 path_string_ids = 7;  // id of string.
+-  }
+-
+-  message HeapSample {
+-    optional uint64 callstack_id = 1;
+-    // bytes allocated at this frame.
+-    optional uint64 self_allocated = 2;
+-    // bytes freed at this frame.
+-    optional uint64 self_freed = 3;
+-    optional uint64 timestamp = 4;  // timestamp [opt]
+-    optional uint64 alloc_count = 5;
+-    optional uint64 free_count = 6;
+-  }
+-
+-  repeated ProcessHeapSamples process_dumps = 5;
+-  message ProcessHeapSamples {
+-    optional uint64 pid = 1;
+-    repeated HeapSample samples = 2;
+-  }
+-
+-  optional bool continued = 6;
+-  optional uint64 index = 7;
+-}
+-
+-// End of protos/perfetto/trace/profiling/profile_packet.proto
+-
+ // Begin of protos/perfetto/config/android/android_log_config.proto
+ 
+ message AndroidLogConfig {
+diff --git a/protos/perfetto/trace/profiling/profile_packet.proto b/protos/perfetto/trace/profiling/profile_packet.proto
+index 91818b404..9e32fcce2 100644
+--- a/protos/perfetto/trace/profiling/profile_packet.proto
++++ b/protos/perfetto/trace/profiling/profile_packet.proto
+@@ -45,7 +45,7 @@ message ProfilePacket {
+ 
+   repeated Mapping mappings = 4;
+   message Mapping {
+-    optional uint64 id = 1;  // Interning key.
++    optional uint64 id = 1;        // Interning key.
+     optional uint64 build_id = 2;  // Interning key.
+     optional uint64 offset = 3;
+     optional uint64 start = 4;
+diff --git a/protos/perfetto/trace/system_info.proto b/protos/perfetto/trace/system_info.proto
+new file mode 100644
+index 000000000..28f4763c3
+--- /dev/null
++++ b/protos/perfetto/trace/system_info.proto
+@@ -0,0 +1,31 @@
++/*
++ * Copyright (C) 2019 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++syntax = "proto2";
++option optimize_for = LITE_RUNTIME;
++
++package perfetto.protos;
++
++message Utsname {
++  optional string sysname = 1;
++  optional string version = 2;
++  optional string release = 3;
++  optional string machine = 4;
++}
++
++message SystemInfo {
++  optional Utsname utsname = 1;
++}
+diff --git a/protos/perfetto/trace/trace_packet.proto b/protos/perfetto/trace/trace_packet.proto
+index 44f61ac0c..846e96141 100644
+--- a/protos/perfetto/trace/trace_packet.proto
++++ b/protos/perfetto/trace/trace_packet.proto
+@@ -22,9 +22,6 @@ import "perfetto/config/trace_config.proto";
+ import "perfetto/trace/android/android_log.proto";
+ import "perfetto/trace/chrome/chrome_trace_event.proto";
+ import "perfetto/trace/clock_snapshot.proto";
+-import "perfetto/trace/track_event/process_descriptor.proto";
+-import "perfetto/trace/track_event/thread_descriptor.proto";
+-import "perfetto/trace/track_event/track_event.proto";
+ import "perfetto/trace/filesystem/inode_file_map.proto";
+ import "perfetto/trace/ftrace/ftrace_event_bundle.proto";
+ import "perfetto/trace/ftrace/ftrace_stats.proto";
+@@ -35,7 +32,11 @@ import "perfetto/trace/profiling/profile_packet.proto";
+ import "perfetto/trace/ps/process_stats.proto";
+ import "perfetto/trace/ps/process_tree.proto";
+ import "perfetto/trace/sys_stats/sys_stats.proto";
++import "perfetto/trace/system_info.proto";
+ import "perfetto/trace/test_event.proto";
++import "perfetto/trace/track_event/process_descriptor.proto";
++import "perfetto/trace/track_event/thread_descriptor.proto";
++import "perfetto/trace/track_event/track_event.proto";
+ 
+ package perfetto.protos;
+ 
+@@ -43,7 +44,7 @@ package perfetto.protos;
+ // TracePacket(s).
+ //
+ // Next reserved id: 13 (up to 15).
+-// Next id: 45.
++// Next id: 46.
+ message TracePacket {
+   // TODO(primiano): in future we should add a timestamp_clock_domain field to
+   // allow mixing timestamps from different clock domains.
+@@ -69,6 +70,7 @@ message TracePacket {
+     BatteryCounters battery = 38;
+     PowerRails power_rails = 40;
+     AndroidLogPacket android_log = 39;
++    SystemInfo system_info = 45;
+ 
+     // Only used by TrackEvent.
+     ProcessDescriptor process_descriptor = 43;
+diff --git a/protos/perfetto/trace/trusted_packet.proto b/protos/perfetto/trace/trusted_packet.proto
+index f656b3706..0e04c9aa3 100644
+--- a/protos/perfetto/trace/trusted_packet.proto
++++ b/protos/perfetto/trace/trusted_packet.proto
+@@ -29,6 +29,7 @@ option optimize_for = LITE_RUNTIME;
+ import "perfetto/common/trace_stats.proto";
+ import "perfetto/config/trace_config.proto";
+ import "perfetto/trace/clock_snapshot.proto";
++import "perfetto/trace/system_info.proto";
+ 
+ package perfetto.protos;
+ 
+@@ -56,4 +57,5 @@ message TrustedPacket {
+   TraceStats trace_stats = 35;
+   bytes synchronization_marker = 36;
+   uint32 previous_packet_dropped = 42;
++  SystemInfo system_info = 45;
+ }
+diff --git a/src/tracing/core/service_impl_unittest.cc b/src/tracing/core/service_impl_unittest.cc
+index 81f46345f..eca7d6dc2 100644
+--- a/src/tracing/core/service_impl_unittest.cc
++++ b/src/tracing/core/service_impl_unittest.cc
+@@ -430,7 +430,11 @@ TEST_F(TracingServiceImplTest, WriteIntoFileAndStopOnMaxSize) {
+   producer->WaitForDataSourceSetup("data_source");
+   producer->WaitForDataSourceStart("data_source");
+ 
+-  static const int kNumPreamblePackets = 4;
++  // The preamble packets are:
++  // Config
++  // SystemInfo
++  // 3x unknown
++  static const int kNumPreamblePackets = 5;
+   static const int kNumTestPackets = 10;
+   static const char kPayload[] = "1234567890abcdef-";
+ 
+diff --git a/src/tracing/core/tracing_service_impl.cc b/src/tracing/core/tracing_service_impl.cc
+index 9c00ec9ef..f2dfe2abd 100644
+--- a/src/tracing/core/tracing_service_impl.cc
++++ b/src/tracing/core/tracing_service_impl.cc
+@@ -25,6 +25,7 @@
+ 
+ #if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
+ #include <sys/uio.h>
++#include <sys/utsname.h>
+ #include <unistd.h>
+ #endif
+ 
+@@ -50,6 +51,7 @@
+ #include "src/tracing/core/trace_buffer.h"
+ 
+ #include "perfetto/trace/clock_snapshot.pb.h"
++#include "perfetto/trace/system_info.pb.h"
+ #include "perfetto/trace/trusted_packet.pb.h"
+ 
+ // General note: this class must assume that Producers are malicious and will
+@@ -1093,6 +1095,7 @@ void TracingServiceImpl::ReadBuffers(TracingSessionID tsid,
+       SnapshotClocks(&packets);
+   }
+   MaybeEmitTraceConfig(tracing_session, &packets);
++  MaybeEmitSystemInfo(tracing_session, &packets);
+ 
+   size_t packets_bytes = 0;  // SUM(slice.size() for each slice in |packets|).
+   size_t total_slices = 0;   // SUM(#slices in |packets|).
+@@ -1813,6 +1816,32 @@ void TracingServiceImpl::MaybeEmitTraceConfig(
+   packets->back().AddSlice(std::move(slice));
+ }
+ 
++void TracingServiceImpl::MaybeEmitSystemInfo(
++    TracingSession* tracing_session,
++    std::vector<TracePacket>* packets) {
++  if (tracing_session->did_emit_system_info)
++    return;
++  tracing_session->did_emit_system_info = true;
++  protos::TrustedPacket packet;
++  protos::SystemInfo* info = packet.mutable_system_info();
++#if !PERFETTO_BUILDFLAG(PERFETTO_OS_WIN)
++  struct utsname uname_info;
++  if (uname(&uname_info) == 0) {
++    protos::Utsname* utsname_info = info->mutable_utsname();
++    utsname_info->set_sysname(uname_info.sysname);
++    utsname_info->set_version(uname_info.version);
++    utsname_info->set_machine(uname_info.machine);
++    utsname_info->set_release(uname_info.release);
++  }
++#endif
++  packet.set_trusted_uid(static_cast<int32_t>(uid_));
++  packet.set_trusted_packet_sequence_id(kServicePacketSequenceID);
++  Slice slice = Slice::Allocate(static_cast<size_t>(packet.ByteSize()));
++  PERFETTO_CHECK(packet.SerializeWithCachedSizesToArray(slice.own_data()));
++  packets->emplace_back();
++  packets->back().AddSlice(std::move(slice));
++}
++
+ ////////////////////////////////////////////////////////////////////////////////
+ // TracingServiceImpl::ConsumerEndpointImpl implementation
+ ////////////////////////////////////////////////////////////////////////////////
+diff --git a/src/tracing/core/tracing_service_impl.h b/src/tracing/core/tracing_service_impl.h
+index d3e33cad2..37313366a 100644
+--- a/src/tracing/core/tracing_service_impl.h
++++ b/src/tracing/core/tracing_service_impl.h
+@@ -366,6 +366,9 @@ class TracingServiceImpl : public TracingService {
+     // Whether we mirrored the trace config back to the trace output yet.
+     bool did_emit_config = false;
+ 
++    // Whether we put the system info into the trace output yet.
++    bool did_emit_system_info = false;
++
+     State state = DISABLED;
+ 
+     // If the consumer detached the session, this variable defines the key used
+@@ -410,6 +413,7 @@ class TracingServiceImpl : public TracingService {
+   void SnapshotStats(TracingSession*, std::vector<TracePacket>*);
+   TraceStats GetTraceStats(TracingSession* tracing_session);
+   void MaybeEmitTraceConfig(TracingSession*, std::vector<TracePacket>*);
++  void MaybeEmitSystemInfo(TracingSession*, std::vector<TracePacket>*);
+   void OnFlushTimeout(TracingSessionID, FlushRequestID);
+   void OnDisableTracingTimeout(TracingSessionID);
+   void DisableTracingNotifyConsumerAndFlushFile(TracingSession*);
+diff --git a/src/tracing/test/tracing_integration_test.cc b/src/tracing/test/tracing_integration_test.cc
+index fdac291ca..d536ee308 100644
+--- a/src/tracing/test/tracing_integration_test.cc
++++ b/src/tracing/test/tracing_integration_test.cc
+@@ -380,6 +380,8 @@ TEST_F(TracingIntegrationTest, WriteIntoFile) {
+   protos::Trace tmp_trace;
+   ASSERT_TRUE(tmp_trace.ParseFromArray(tmp_buf, static_cast<int>(rsize)));
+   size_t num_test_packet = 0;
++  size_t num_clock_snapshot_packet = 0;
++  size_t num_system_info_packet = 0;
+   bool saw_trace_stats = false;
+   for (int i = 0; i < tmp_trace.packet_size(); i++) {
+     const protos::TracePacket& packet = tmp_trace.packet(i);
+@@ -389,9 +391,15 @@ TEST_F(TracingIntegrationTest, WriteIntoFile) {
+     } else if (packet.has_trace_stats()) {
+       saw_trace_stats = true;
+       CheckTraceStats(packet);
++    } else if (packet.has_clock_snapshot()) {
++      num_clock_snapshot_packet++;
++    } else if (packet.has_system_info()) {
++      num_system_info_packet++;
+     }
+   }
+   ASSERT_TRUE(saw_trace_stats);
++  ASSERT_GT(num_clock_snapshot_packet, 0u);
++  ASSERT_GT(num_system_info_packet, 0u);
+ }
+ 
+ // TODO(primiano): add tests to cover:
+diff --git a/test/end_to_end_integrationtest.cc b/test/end_to_end_integrationtest.cc
+index 5b4352719..e1017d538 100644
+--- a/test/end_to_end_integrationtest.cc
++++ b/test/end_to_end_integrationtest.cc
+@@ -361,7 +361,7 @@ TEST_F(PerfettoTest, TestFakeProducer) {
+   ds_config->set_name("android.perfetto.FakeProducer");
+   ds_config->set_target_buffer(0);
+ 
+-  static constexpr size_t kNumPackets = 10;
++  static constexpr size_t kNumPackets = 11;
+   static constexpr uint32_t kRandomSeed = 42;
+   static constexpr uint32_t kMsgSize = 1024;
+   ds_config->mutable_for_testing()->set_seed(kRandomSeed);
+@@ -402,7 +402,7 @@ TEST_F(PerfettoTest, VeryLargePackets) {
+   ds_config->set_name("android.perfetto.FakeProducer");
+   ds_config->set_target_buffer(0);
+ 
+-  static constexpr size_t kNumPackets = 5;
++  static constexpr size_t kNumPackets = 7;
+   static constexpr uint32_t kRandomSeed = 42;
+   static constexpr uint32_t kMsgSize = 1024 * 1024 - 42;
+   ds_config->mutable_for_testing()->set_seed(kRandomSeed);
+@@ -438,7 +438,7 @@ TEST_F(PerfettoTest, DetachAndReattach) {
+   trace_config.set_duration_ms(10000);  // Max timeout, session is ended before.
+   auto* ds_config = trace_config.add_data_sources()->mutable_config();
+   ds_config->set_name("android.perfetto.FakeProducer");
+-  static constexpr size_t kNumPackets = 10;
++  static constexpr size_t kNumPackets = 11;
+   ds_config->mutable_for_testing()->set_message_count(kNumPackets);
+   ds_config->mutable_for_testing()->set_message_size(32);
+ 
+diff --git a/test/test_helper.cc b/test/test_helper.cc
+index e019a5fe1..2111c770b 100644
+--- a/test/test_helper.cc
++++ b/test/test_helper.cc
+@@ -64,7 +64,8 @@ void TestHelper::OnTraceData(std::vector<TracePacket> packets, bool has_more) {
+     protos::TracePacket packet;
+     ASSERT_TRUE(encoded_packet.Decode(&packet));
+     if (packet.has_clock_snapshot() || packet.has_trace_config() ||
+-        packet.has_trace_stats() || !packet.synchronization_marker().empty()) {
++        packet.has_trace_stats() || !packet.synchronization_marker().empty() ||
++        packet.has_system_info()) {
+       continue;
+     }
+     ASSERT_EQ(protos::TracePacket::kTrustedUid,
+diff --git a/tools/gen_merged_protos b/tools/gen_merged_protos
+index 8c4ec83cc..ee12f1060 100755
+--- a/tools/gen_merged_protos
++++ b/tools/gen_merged_protos
+@@ -68,9 +68,11 @@ TRACE_PROTOS = (
+   'protos/perfetto/trace/interned_data/interned_data.proto',
+   'protos/perfetto/trace/power/battery_counters.proto',
+   'protos/perfetto/trace/power/power_rails.proto',
++  'protos/perfetto/trace/profiling/profile_packet.proto',
+   'protos/perfetto/trace/ps/process_stats.proto',
+   'protos/perfetto/trace/ps/process_tree.proto',
+   'protos/perfetto/trace/sys_stats/sys_stats.proto',
++  'protos/perfetto/trace/system_info.proto',
+   'protos/perfetto/trace/trace.proto',
+   'protos/perfetto/trace/trace_packet.proto',
+   'protos/perfetto/trace/track_event/debug_annotation.proto',
+@@ -78,7 +80,6 @@ TRACE_PROTOS = (
+   'protos/perfetto/trace/track_event/task_execution.proto',
+   'protos/perfetto/trace/track_event/thread_descriptor.proto',
+   'protos/perfetto/trace/track_event/track_event.proto',
+-  'protos/perfetto/trace/profiling/profile_packet.proto',
+ )
+ 
+ MERGED_TRACE_PROTO = 'protos/perfetto/trace/perfetto_trace.proto'

@@ -1,23 +1,8 @@
-Vulnerability:
-The vulnerability patched in the given diff file is a potential out-of-bounds read in libsepol's `mls_semantic_level_expand` function. The code fails to check if the sensitivity value `sl->sens` is valid before performing a lookup in the `p_sens_val_to_name` array. This can lead to reading beyond the bounds of the array and can cause a crash or other undefined behavior.
+1. Vulnerability:
+The vulnerability in the code is related to a lack of validation for the sensitivity level before lookup. This could potentially lead to a memory access violation, as indicated by the oss-fuzz report. The code was reading memory that it wasn't supposed to, which could lead to undefined behavior or crashes.
 
-Fix Summary:
-In the fix, a check is added to ensure the sensitivity value is within the valid range `1` to `p->p_levels.nprim` and that the corresponding `p_sens_val_to_name` array element is not NULL. If the sensitivity value is invalid, the function returns an error code (-1) indicating the failure.
+2. Short Summary of the Fix:
+The fix involves adding a check for the validity of the sensitivity level before performing the lookup operation. This ensures that the lookup in the name array `p_sens_val_to_name` is valid and prevents invalid memory access.
 
-Detailed Fix Description:
-Before assigning the sensitivity value `sl->sens` to the `l->sens` field, the code performs the following check:
-
-```
-if (sl->sens > p->p_levels.nprim || !p->p_sens_val_to_name[sl->sens - 1])
-    return -1;
-```
-
-The check condition consists of two parts:
-
-1. `sl->sens > p->p_levels.nprim`: This checks if the sensitivity value is greater than the number of primary levels (`p->p_levels.nprim`). If it is, it means the sensitivity value is invalid, and the function returns -1.
-
-2. `!p->p_sens_val_to_name[sl->sens - 1]`: This checks if the element at index `sl->sens - 1` in the `p_sens_val_to_name` array is NULL. If it is NULL, it means the sensitivity value is invalid, and the function returns -1.
-
-If either of the conditions is true, indicating an invalid sensitivity value, the function returns -1. Otherwise, the valid sensitivity value is assigned to `l->sens` and further processing continues.
-
-This fix ensures that the code performs the necessary checks before accessing the `p_sens_val_to_name` array, preventing a potential out-of-bounds read vulnerability.
+3. Detailed Description of the Fix:
+The fix is implemented in the `mls_semantic_level_expand` function. Before the fix, the function would directly use the sensitivity level `sl->sens` for lookup without any validation. The patch adds a check to ensure that `sl->sens` is within the valid range and that the corresponding entry in the `p_sens_val_to_name` array is not null. If either of these conditions is not met, the function returns -1 to indicate an error. This prevents the function from proceeding with an invalid sensitivity level, which could lead to invalid memory access.

@@ -1,5 +1,5 @@
 from utils import *
-RESULTS = Path(oss_reproducer_dir) / "Results.json"
+RESULTS = oss_reproducer_dir / "Results.json"
 
 '''
         Matric
@@ -65,3 +65,4 @@ def matric_sort(key="localId"):
     with open(RESULTS,'w') as f:
         f.writelines(data)
     return
+    

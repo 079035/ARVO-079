@@ -1,5 +1,5 @@
 {
-    "fix": "https://android.googlesource.com/platform/external/libhevc/+/4d36db275bb4d0abc410415f6d8f5af4bc179102",
+    "fix": "https://android.googlesource.com/platform/external/libhevc/+/4d36db275bb4d0abc410415f6d8f5af4bc179102%5E%21/",
     "verify": "0",
     "localId": 17196,
     "project": "libhevc",

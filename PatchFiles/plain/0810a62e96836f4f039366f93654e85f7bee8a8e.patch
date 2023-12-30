@@ -1,0 +1,52 @@
+From 0810a62e96836f4f039366f93654e85f7bee8a8e Mon Sep 17 00:00:00 2001
+From: Eric Blankenhorn <eric@wolfssl.com>
+Date: Fri, 10 Sep 2021 09:09:03 -0500
+Subject: [PATCH] Fix multithread qos1 response
+
+---
+ examples/multithread/multithread.c |  1 +
+ src/mqtt_client.c                  | 12 ++++++++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/examples/multithread/multithread.c b/examples/multithread/multithread.c
+index 1e560cbfb..5bbb2feec 100755
+--- a/examples/multithread/multithread.c
++++ b/examples/multithread/multithread.c
+@@ -61,6 +61,7 @@ static int mNumMsgsRecvd;
+     /* Posix (Linux/Mac) */
+ 	#include <pthread.h>
+ 	#include <sched.h>
++    #include <errno.h>
+     typedef pthread_t THREAD_T;
+     #define THREAD_CREATE(h, f, c) ({ int ret = pthread_create(h, NULL, f, c); if (ret) { errno = ret; } ret; })
+     #define THREAD_JOIN(h, c)      ({ int ret, x; for(x=0;x<c;x++) { ret = pthread_join(h[x], NULL); if (ret) { errno = ret; break; }} ret; })
+diff --git a/src/mqtt_client.c b/src/mqtt_client.c
+index f25465b65..d06fac66a 100644
+--- a/src/mqtt_client.c
++++ b/src/mqtt_client.c
+@@ -562,6 +562,11 @@ static int MqttClient_HandlePacket(MqttClient* client,
+                     return rc;
+                 }
+             }
++            else {
++                /* packet ID and QoS were already established */
++                packet_id = client->msg.publish.packet_id;
++                packet_qos = client->msg.publish.qos;
++            }
+ 
+             rc = MqttClient_Publish_ReadPayload(client, publish, timeout_ms);
+             if (rc < 0) {
+@@ -1168,6 +1173,13 @@ int MqttClient_Connect(MqttClient *client, MqttConnect *mc_connect)
+         wm_SemUnlock(&client->lockSend);
+     #endif
+         if (rc != len) {
++    #ifdef WOLFMQTT_MULTITHREAD
++            if ((rc != MQTT_CODE_CONTINUE) &&
++                (wm_SemLock(&client->lockClient)) == 0) {
++                MqttClient_RespList_Remove(client, &mc_connect->pendResp);
++                wm_SemUnlock(&client->lockClient);
++            }
++    #endif
+             return rc;
+         }
+     #ifdef WOLFMQTT_V5

@@ -1,16 +1,36 @@
-1. Summary of the fix:
-The fix in the diff file addresses a vulnerability related to parsing geometry specifications in the `MagickCore/geometry.c` file.
+Vulnerability:
+The vulnerability in the provided code is a potential security issue related to the parsing of a geometry specification. This vulnerability can be exploited by an attacker if the `geometry` string passed to the `ParseGeometry` function contains malicious input or is not properly validated.
 
-2. Description of the vulnerability:
-In the `ParseGeometry()` function, the code does not properly handle certain characters in the geometry string. This can lead to incorrect parsing of the geometry values and potential memory corruption.
+Summary of the Fix:
+The fix addresses the vulnerability by adding more checks and validation for the `geometry` string. It removes certain meta characters from the geometry specification and ensures that the string is properly parsed according to the expected format.
 
-3. Description of the fix:
-The fix in the diff file includes several changes to the `ParseGeometry()` function to address the vulnerability:
+Detailed Description of the Fix:
+1. The fix starts by removing any whitespace and certain meta characters (`%, !, <, >, @, and ^`) from the `geometry` specification. This step helps sanitize the input and prevent possible injection or unexpected behavior.
 
-- The code now removes whitespace and certain meta characters from the geometry string before parsing.
-- The code checks for valid characters and handles them correctly, including special cases like coordinates and negative offsets.
-- The code normalizes sampling factors and supports negative height values.
-- The code now correctly handles percentage values and sets them to the nearest integer size.
-- The code includes additional error handling and reporting.
+2. The fix initializes some variables and structures needed for parsing the geometry string.
 
-These changes improve the robustness and correctness of the geometry parsing logic, addressing the vulnerability and ensuring that geometry specifications are parsed correctly.
+3. The fix then checks if the `geometry` string is empty or null. If it is, the function returns without further processing.
+
+4. The fix checks if the length of the `geometry` string exceeds the maximum allowed length (`MagickPathExtent-1`). If it does, the function returns without further processing.
+
+5. The fix attempts to parse the `geometry` string by using the `sscanf` function. It expects to parse four floating-point values for the `rho`, `sigma`, `xi`, and `psi` coordinates. If successful, it sets the respective values in the `geometry_info` structure and sets the corresponding flags.
+
+6. Next, the fix creates a copy of the `geometry` string (`pedantic_geometry`) to perform additional checks and parsing.
+
+7. The fix then iterates through the characters of `pedantic_geometry` and applies different checks for each encountered character.
+
+8. If the character is a whitespace, it is removed from the string.
+
+9. If the character is one of the meta characters (`%, !, <, >, ^`), the corresponding flag is set, and the character is removed from the string.
+
+10. If the character is 'x' or 'X', it sets the `SeparatorValue` flag and moves to the next character.
+
+11. If the character is a digit, '+', '-', ',', '/', or ':', it moves to the next character without taking any action.
+
+12. If the character is a period ('.'), it sets the `DecimalValue` flag and moves to the next character.
+
+13. For any other character, the function returns with `NoValue`, indicating an invalid input.
+
+14. After the loop, the fix parses the `rho` value from the `pedantic_geometry` string. It checks for different possible formats (hexadecimal, negative, etc.) and sets the value in the `geometry_info` structure if successful.
+
+15. If the parsing continues after `rho`, the fix attempts to parse the `sigma

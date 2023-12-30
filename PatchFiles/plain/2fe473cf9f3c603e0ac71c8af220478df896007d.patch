@@ -1,0 +1,22 @@
+From 2fe473cf9f3c603e0ac71c8af220478df896007d Mon Sep 17 00:00:00 2001
+From: jordan <jordan@wolfssl.com>
+Date: Fri, 17 Mar 2023 22:33:35 -0500
+Subject: [PATCH] Fix out-of-bounds read in CRL parsing
+
+---
+ wolfcrypt/src/asn.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/wolfcrypt/src/asn.c b/wolfcrypt/src/asn.c
+index 9ac29d5247a..dd7b00d4163 100644
+--- a/wolfcrypt/src/asn.c
++++ b/wolfcrypt/src/asn.c
+@@ -35655,7 +35655,7 @@ static int ParseCRL_Extensions(DecodedCRL* dcrl, const byte* buf,
+                         if (ret != 0)
+                             return ret;
+                     }
+-                    else {
++                    else if (length == 1) {
+                         dcrl->crlNumber = buf[idx];
+                     }
+                 }

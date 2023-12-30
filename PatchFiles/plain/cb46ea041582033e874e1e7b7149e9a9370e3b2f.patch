@@ -1,0 +1,20 @@
+commit cb46ea041582033e874e1e7b7149e9a9370e3b2f
+Author: Chris Liddell <chris.liddell@artifex.com>
+Date:   Mon Nov 7 08:35:03 2022 +0000
+
+    oss-fuzz 53052: Additional bounds check in Ins_MSIRP()
+
+diff --git a/base/ttinterp.c b/base/ttinterp.c
+index 318087391..443b82dde 100644
+--- a/base/ttinterp.c
++++ b/base/ttinterp.c
+@@ -3639,7 +3639,8 @@ static int nInstrCount=0;
+ 
+     point = (Int)args[0];
+ 
+-    if ( BOUNDS( args[0], CUR.zp1.n_points ) )
++    if ( BOUNDS( args[0], CUR.zp1.n_points )
++      || BOUNDS( CUR.GS.rp0, CUR.zp0.n_points) )
+     {
+       CUR.error = TT_Err_Invalid_Reference;
+       return;

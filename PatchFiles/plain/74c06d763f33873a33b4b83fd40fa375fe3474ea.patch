@@ -1,0 +1,95 @@
+From 74c06d763f33873a33b4b83fd40fa375fe3474ea Mon Sep 17 00:00:00 2001
+From: James Carter <jwcart2@gmail.com>
+Date: Tue, 29 Jun 2021 11:14:01 -0400
+Subject: [PATCH] libsepol/cil: Add support for using qualified names to
+ secil2tree
+
+Provide the option "-Q" or "--qualified-names" to indicate that the
+policy is using qualified names.
+
+Using qualified names means that declaration names can have "dots"
+in them, but blocks, blockinherits, blockabstracts, and in-statements
+are not allowed in the policy.
+
+The libsepol function cil_set_qualified_names() is called with the
+desired value for the CIL db's "qualified_names" field.
+
+Signed-off-by: James Carter <jwcart2@gmail.com>
+---
+ secilc/secil2tree.8.xml |  5 +++++
+ secilc/secil2tree.c     | 11 ++++++++++-
+ 2 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/secilc/secil2tree.8.xml b/secilc/secil2tree.8.xml
+index 81382ffe4e..e95a894777 100644
+--- a/secilc/secil2tree.8.xml
++++ b/secilc/secil2tree.8.xml
+@@ -45,6 +45,11 @@
+             <listitem><para>Treat tunables as booleans.</para></listitem>
+          </varlistentry>
+ 
++         <varlistentry>
++            <term><option>-Q, --qualified-names</option></term>
++            <listitem><para>Allow names containing dots (qualified names). Blocks, blockinherits, blockabstracts, and in-statements will not be allowed.</para></listitem>
++         </varlistentry>
++
+          <varlistentry>
+             <term><option>-A, --ast-phase=&lt;phase></option></term>
+             <listitem><para>Write AST of phase <emphasis role="italic">phase</emphasis>. Must be <emphasis role="bold">parse</emphasis>, <emphasis role="bold">build</emphasis>, or <emphasis role="bold">resolve</emphasis>. (default: <emphasis role="bold">resolve</emphasis>)</para></listitem>
+diff --git a/secilc/secil2tree.c b/secilc/secil2tree.c
+index 218d058328..e5cdf6bd29 100644
+--- a/secilc/secil2tree.c
++++ b/secilc/secil2tree.c
+@@ -54,6 +54,9 @@ static __attribute__((__noreturn__)) void usage(const char *prog)
+ 	printf("Options:\n");
+ 	printf("  -o, --output=<file>      write AST to <file>. (default: stdout)\n");
+ 	printf("  -P, --preserve-tunables  treat tunables as booleans\n");
++	printf("  -Q, --qualified-names    Allow names containing dots (qualified names).\n");
++	printf("                           Blocks, blockinherits, blockabstracts, and\n");
++	printf("                           in-statements will not be allowed.\n");
+ 	printf("  -A, --ast-phase=<phase>  write AST of phase <phase>. Phase must be parse, \n");
+ 	printf("                           build, or resolve. (default: resolve)\n");
+ 	printf("  -v, --verbose            increment verbosity level\n");
+@@ -71,6 +74,7 @@ int main(int argc, char *argv[])
+ 	char *output = NULL;
+ 	struct cil_db *db = NULL;
+ 	int preserve_tunables = 0;
++	int qualified_names = 0;
+ 	enum write_ast_phase write_ast = WRITE_AST_PHASE_RESOLVE;
+ 	int opt_char;
+ 	int opt_index = 0;
+@@ -79,6 +83,7 @@ int main(int argc, char *argv[])
+ 		{"help", no_argument, 0, 'h'},
+ 		{"verbose", no_argument, 0, 'v'},
+ 		{"preserve-tunables", no_argument, 0, 'P'},
++		{"qualified-names", no_argument, 0, 'Q'},
+ 		{"output", required_argument, 0, 'o'},
+ 		{"ast-phase", required_argument, 0, 'A'},
+ 		{0, 0, 0, 0}
+@@ -86,7 +91,7 @@ int main(int argc, char *argv[])
+ 	int i;
+ 
+ 	while (1) {
+-		opt_char = getopt_long(argc, argv, "o:hvPA:", long_opts, &opt_index);
++		opt_char = getopt_long(argc, argv, "o:hvPQA:", long_opts, &opt_index);
+ 		if (opt_char == -1) {
+ 			break;
+ 		}
+@@ -97,6 +102,9 @@ int main(int argc, char *argv[])
+ 			case 'P':
+ 				preserve_tunables = 1;
+ 				break;
++			case 'Q':
++				qualified_names = 1;
++				break;
+ 			case 'o':
+ 				output = strdup(optarg);
+ 				break;
+@@ -131,6 +139,7 @@ int main(int argc, char *argv[])
+ 
+ 	cil_db_init(&db);
+ 	cil_set_preserve_tunables(db, preserve_tunables);
++	cil_set_qualified_names(db, qualified_names);
+ 	cil_set_attrs_expand_generated(db, 0);
+ 	cil_set_attrs_expand_size(db, 0);
+ 

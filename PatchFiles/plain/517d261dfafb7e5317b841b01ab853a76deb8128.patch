@@ -1,0 +1,114 @@
+commit 517d261dfafb7e5317b841b01ab853a76deb8128
+Author: Tom Tromey <tom@tromey.com>
+Date:   Sun Nov 17 15:50:31 2019 -0700
+
+    Fix latent bug in tui_copy_source_line
+    
+    tui_copy_source_line has a bug, where it can advance past the
+    terminating \0 in its input string.  This patch fixes the bug and adds
+    a test case for this function.
+    
+    gdb/ChangeLog
+    2019-12-01  Tom Tromey  <tom@tromey.com>
+    
+            * tui/tui-winsource.c (tui_copy_source_line): Don't advance past
+            \0.
+            * unittests/tui-selftests.c: New file.
+            * Makefile.in (SUBDIR_UNITTESTS_SRCS): Add tui-selftests.c.
+    
+    Change-Id: I46cdabe6e57549983149b8f640cda5edd16fa260
+
+diff --git a/gdb/ChangeLog b/gdb/ChangeLog
+index 67b76dc2ef9..e61b08b49c8 100644
+--- a/gdb/ChangeLog
++++ b/gdb/ChangeLog
+@@ -1,3 +1,10 @@
++2019-12-01  Tom Tromey  <tom@tromey.com>
++
++	* tui/tui-winsource.c (tui_copy_source_line): Don't advance past
++	\0.
++	* unittests/tui-selftests.c: New file.
++	* Makefile.in (SUBDIR_UNITTESTS_SRCS): Add tui-selftests.c.
++
+ 2019-12-01  Tom Tromey  <tom@tromey.com>
+ 
+ 	* tui/tui.c (tui_enable): Call tui_update_variables earlier.
+diff --git a/gdb/Makefile.in b/gdb/Makefile.in
+index 58f5f93c54f..e5c8faaa9ae 100644
+--- a/gdb/Makefile.in
++++ b/gdb/Makefile.in
+@@ -442,6 +442,7 @@ SUBDIR_UNITTESTS_SRCS = \
+ 	unittests/string_view-selftests.c \
+ 	unittests/style-selftests.c \
+ 	unittests/tracepoint-selftests.c \
++	unittests/tui-selftests.c \
+ 	unittests/unpack-selftests.c \
+ 	unittests/utils-selftests.c \
+ 	unittests/vec-utils-selftests.c \
+diff --git a/gdb/tui/tui-winsource.c b/gdb/tui/tui-winsource.c
+index 81937c100c5..6653709e7cb 100644
+--- a/gdb/tui/tui-winsource.c
++++ b/gdb/tui/tui-winsource.c
+@@ -103,6 +103,8 @@ tui_copy_source_line (const char **ptr, int line_no, int first_col,
+ 	  lineptr += skip_bytes;
+ 	  continue;
+ 	}
++      if (c == '\0')
++	break;
+ 
+       ++lineptr;
+       ++column;
+diff --git a/gdb/unittests/tui-selftests.c b/gdb/unittests/tui-selftests.c
+new file mode 100644
+index 00000000000..3a5d34fe48c
+--- /dev/null
++++ b/gdb/unittests/tui-selftests.c
+@@ -0,0 +1,48 @@
++/* Self tests for the TUI
++
++   Copyright (C) 2019 Free Software Foundation, Inc.
++
++   This file is part of GDB.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3 of the License, or
++   (at your option) any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
++
++#include "defs.h"
++#include "gdbsupport/selftest.h"
++#include "tui/tui-winsource.h"
++
++namespace selftests {
++namespace tui {
++
++static void
++run_tests ()
++{
++  const char *text = "hello";
++  std::string result = tui_copy_source_line (&text, 0, 0, 50, 0);
++  SELF_CHECK (result == "hello");
++  SELF_CHECK (*text == '\0');
++
++  text = "hello\n";
++  result = tui_copy_source_line (&text, 0, 0, 3, 0);
++  SELF_CHECK (result == "hel");
++  SELF_CHECK (*text == '\0');
++}
++
++} /* namespace tui*/
++} /* namespace selftests */
++
++void
++_initialize_tui_selftest ()
++{
++  selftests::register_test ("tui", selftests::tui::run_tests);
++}

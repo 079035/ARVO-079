@@ -1,0 +1,34 @@
+commit ea59e9d9917421469b4c09c5ff41cf369c29939c
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Wed May 4 09:16:32 2022 +0100
+
+    ofz#47199 Abort
+    
+    Change-Id: I5e18242b3a18f0c9ca1891ab4e29bd43aaab1f26
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/133811
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/vcl/source/text/TextLayoutCache.cxx b/vcl/source/text/TextLayoutCache.cxx
+index 7cbc7c4dc744..1d3e8e5045a6 100644
+--- a/vcl/source/text/TextLayoutCache.cxx
++++ b/vcl/source/text/TextLayoutCache.cxx
+@@ -23,6 +23,7 @@
+ 
+ #include <o3tl/hash_combine.hxx>
+ #include <o3tl/lru_map.hxx>
++#include <unotools/configmgr.hxx>
+ #include <vcl/lazydelete.hxx>
+ #include <officecfg/Office/Common.hxx>
+ 
+@@ -55,7 +56,9 @@ std::shared_ptr<const TextLayoutCache> TextLayoutCache::Create(OUString const& r
+                           FastStringCompareEqual, TextLayoutCacheCost>
+         Cache;
+     static vcl::DeleteOnDeinit<Cache> cache(
+-        officecfg::Office::Common::Cache::Font::TextRunsCacheSize::get());
++        !utl::ConfigManager::IsFuzzing()
++            ? officecfg::Office::Common::Cache::Font::TextRunsCacheSize::get()
++            : 100);
+     if (Cache* map = cache.get())
+     {
+         auto it = map->find(rString);

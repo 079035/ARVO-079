@@ -1,0 +1,31 @@
+From 6849af422fd296cb8ce160d376978ef5d79f9417 Mon Sep 17 00:00:00 2001
+From: Marti Maria <marti.maria@littlecms.com>
+Date: Sat, 23 Jul 2022 18:40:17 +0200
+Subject: [PATCH] fix previous fix
+
+we used this internally, so let's get it back
+---
+ src/cmsio0.c | 9 ++-------
+ 1 file changed, 2 insertions(+), 7 deletions(-)
+
+diff --git a/src/cmsio0.c b/src/cmsio0.c
+index d261451df..205f829fa 100644
+--- a/src/cmsio0.c
++++ b/src/cmsio0.c
+@@ -804,14 +804,9 @@ cmsBool _cmsReadHeader(_cmsICCPROFILE* Icc)
+         }
+ 
+         Icc ->TagCount++;
+-    }
++	}
+ 
+-    if (Icc->TagCount == 0) {
+-        cmsSignalError(Icc->ContextID, cmsERROR_RANGE, "Corrupted profile: no tags found");
+-        return FALSE;
+-    }
+-        
+-     return TRUE;
++	return TRUE;
+ }
+ 
+ // Saves profile header

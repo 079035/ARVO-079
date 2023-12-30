@@ -1,0 +1,51 @@
+From 35ff4fed902412dfbf8ae7ad1b8ad7cde3a1e89d Mon Sep 17 00:00:00 2001
+From: Micah Snyder <micasnyd@cisco.com>
+Date: Wed, 19 Jul 2023 17:38:29 -0700
+Subject: [PATCH] Correction to PE wwunpack overread guard
+
+The prior fix for the wwunpack overread in commit
+89cd0df3d7d4c2163d79056b5c0ec55c4992c8f4 was a little too late, but
+also removed an earlier, smaller guard for a write.
+
+This commit just moves the larger guard a little earlier to protect
+against both.
+
+Resolves: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=60655
+---
+ libclamav/wwunpack.c | 16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/libclamav/wwunpack.c b/libclamav/wwunpack.c
+index 7968a1b0a8..8c06d617cc 100644
+--- a/libclamav/wwunpack.c
++++ b/libclamav/wwunpack.c
+@@ -232,19 +232,23 @@ cl_error_t wwunpack(uint8_t *exe, uint32_t exesz, uint8_t *wwsect, struct cli_ex
+ 
+     if (CL_SUCCESS == error) {
+ 
+-        exe[pe + 6] = (uint8_t)scount;
+-        exe[pe + 7] = (uint8_t)(scount >> 8);
+-        
+-        if (!CLI_ISCONTAINED(wwsect, sects[scount].rsz, wwsect + 0x295, 4)) {
++        // Verify minimum size of exe before dereferencing.
++        if (!CLI_ISCONTAINED(exe, exesz, exe + pe + 0x50, 4)) {
+             cli_dbgmsg("WWPack: unpack memory address out of bounds.\n");
+             return CL_EFORMAT;
+         }
+-        cli_writeint32(&exe[pe + 0x28], cli_readint32(wwsect + 0x295) + sects[scount].rva + 0x299);
+ 
+-        if (!CLI_ISCONTAINED(exe, exesz, exe + pe + 0x50, 4)) {
++        // Verify minimum size of wwsect before dereferencing.
++        if (!CLI_ISCONTAINED(wwsect, sects[scount].rsz, wwsect + 0x295, 4)) {
+             cli_dbgmsg("WWPack: unpack memory address out of bounds.\n");
+             return CL_EFORMAT;
+         }
++
++        exe[pe + 6] = (uint8_t)scount;
++        exe[pe + 7] = (uint8_t)(scount >> 8);
++
++        cli_writeint32(&exe[pe + 0x28], cli_readint32(wwsect + 0x295) + sects[scount].rva + 0x299);
++
+         cli_writeint32(&exe[pe + 0x50], cli_readint32(&exe[pe + 0x50]) - sects[scount].vsz);
+ 
+         // Bounds check not required here, because we know exesz > pe + 0x50 + 4

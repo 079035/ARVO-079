@@ -1,0 +1,23 @@
+From eb39c43b6ef992abadb0d25f0504d0cf2f3ccd86 Mon Sep 17 00:00:00 2001
+From: Georg Brandl <georg@python.org>
+Date: Mon, 11 Jan 2021 09:53:12 +0100
+Subject: [PATCH] xquery: fix pop from empty stack
+
+---
+ pygments/lexers/webmisc.py | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/pygments/lexers/webmisc.py b/pygments/lexers/webmisc.py
+index dde8357a1e..abc9076c81 100644
+--- a/pygments/lexers/webmisc.py
++++ b/pygments/lexers/webmisc.py
+@@ -128,7 +128,8 @@ def operator_root_callback(lexer, match, ctx):
+ 
+     def popstate_tag_callback(lexer, match, ctx):
+         yield match.start(), Name.Tag, match.group(1)
+-        ctx.stack.append(lexer.xquery_parse_state.pop())
++        if lexer.xquery_parse_state:
++            ctx.stack.append(lexer.xquery_parse_state.pop())
+         ctx.pos = match.end()
+ 
+     def popstate_xmlcomment_callback(lexer, match, ctx):

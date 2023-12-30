@@ -1,0 +1,129 @@
+From d5294be00b0f89486b3459d5835045dbf26444b5 Mon Sep 17 00:00:00 2001
+From: Alex <aleksandrosansan@gmail.com>
+Date: Sat, 10 Dec 2022 01:22:00 +0000
+Subject: [PATCH 1/3] Fixes Heap-buffer-overflow READ 4 in
+ Assimp::ScenePreprocessor::ProcessMesh
+
+https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=49797
+---
+ code/AssetLib/OFF/OFFLoader.cpp | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/code/AssetLib/OFF/OFFLoader.cpp b/code/AssetLib/OFF/OFFLoader.cpp
+index a366d74633..cb265029a0 100644
+--- a/code/AssetLib/OFF/OFFLoader.cpp
++++ b/code/AssetLib/OFF/OFFLoader.cpp
+@@ -290,11 +290,12 @@ void OFFImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
+         sz = line; SkipSpaces(&sz);
+         idx = strtoul10(sz,&sz);
+         if(!idx || idx > 9) {
+-	    ASSIMP_LOG_ERROR("OFF: Faces with zero indices aren't allowed");
++	        ASSIMP_LOG_ERROR("OFF: Faces with zero indices aren't allowed");
+             --mesh->mNumFaces;
++            ++i;
+             continue;
+-	}
+-	faces->mNumIndices = idx;
++	    }
++	    faces->mNumIndices = idx;
+         faces->mIndices = new unsigned int[faces->mNumIndices];
+         for (unsigned int m = 0; m < faces->mNumIndices;++m) {
+             SkipSpaces(&sz);
+
+From 90769ef3e6a6d05691e46024b7415aafda4b9c7d Mon Sep 17 00:00:00 2001
+From: Alex <aleksandrosansan@gmail.com>
+Date: Sun, 11 Dec 2022 00:02:09 +0000
+Subject: [PATCH 2/3] Fixes Heap-buffer-overflow READ 1 in
+ Assimp::MD5::MD5Parser::ParseHeader
+
+https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=49422
+When it reaches the `SkipSpacesAndLineEnd`, `in` already points past `bufferEnd` and it leads to out of bounds memory read.
+---
+ code/AssetLib/MD5/MD5Parser.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/code/AssetLib/MD5/MD5Parser.cpp b/code/AssetLib/MD5/MD5Parser.cpp
+index 2cd7385818..02b34fe4b3 100644
+--- a/code/AssetLib/MD5/MD5Parser.cpp
++++ b/code/AssetLib/MD5/MD5Parser.cpp
+@@ -117,6 +117,8 @@ void MD5Parser::ParseHeader() {
+         ReportError("MD5 version tag is unknown (10 is expected)");
+     }
+     SkipLine();
++    if (buffer == bufferEnd)
++        return;
+ 
+     // print the command line options to the console
+     // FIX: can break the log length limit, so we need to be careful
+
+From db8ff416799bbbed7195c9b7e0c98292e8631ce1 Mon Sep 17 00:00:00 2001
+From: Kim Kulling <kimkulling@users.noreply.github.com>
+Date: Thu, 15 Dec 2022 14:06:57 +0100
+Subject: [PATCH 3/3] Update MD5Parser.cpp
+
+---
+ code/AssetLib/MD5/MD5Parser.cpp | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/code/AssetLib/MD5/MD5Parser.cpp b/code/AssetLib/MD5/MD5Parser.cpp
+index 02b34fe4b3..dce4c57323 100644
+--- a/code/AssetLib/MD5/MD5Parser.cpp
++++ b/code/AssetLib/MD5/MD5Parser.cpp
+@@ -5,8 +5,6 @@ Open Asset Import Library (assimp)
+ 
+ Copyright (c) 2006-2022, assimp team
+ 
+-
+-
+ All rights reserved.
+ 
+ Redistribution and use of this software in source and binary forms,
+@@ -117,8 +115,9 @@ void MD5Parser::ParseHeader() {
+         ReportError("MD5 version tag is unknown (10 is expected)");
+     }
+     SkipLine();
+-    if (buffer == bufferEnd)
++    if (buffer == bufferEnd) {
+         return;
++    }
+ 
+     // print the command line options to the console
+     // FIX: can break the log length limit, so we need to be careful
+@@ -137,8 +136,9 @@ bool MD5Parser::ParseSection(Section &out) {
+ 
+     // first parse the name of the section
+     char *sz = buffer;
+-    while (!IsSpaceOrNewLine(*buffer))
+-        buffer++;
++    while (!IsSpaceOrNewLine(*buffer)) {
++        ++buffer;
++    }
+     out.mName = std::string(sz, (uintptr_t)(buffer - sz));
+     SkipSpaces();
+ 
+@@ -146,14 +146,14 @@ bool MD5Parser::ParseSection(Section &out) {
+     while (running) {
+         if ('{' == *buffer) {
+             // it is a normal section so read all lines
+-            buffer++;
++            ++buffer;
+             bool run = true;
+             while (run) {
+                 if (!SkipSpacesAndLineEnd()) {
+                     return false; // seems this was the last section
+                 }
+                 if ('}' == *buffer) {
+-                    buffer++;
++                    ++buffer;
+                     break;
+                 }
+ 
+@@ -165,7 +165,7 @@ bool MD5Parser::ParseSection(Section &out) {
+ 
+                 // terminate the line with zero
+                 while (!IsLineEnd(*buffer))
+-                    buffer++;
++                    ++buffer;
+                 if (*buffer) {
+                     ++lineNumber;
+                     *buffer++ = '\0';

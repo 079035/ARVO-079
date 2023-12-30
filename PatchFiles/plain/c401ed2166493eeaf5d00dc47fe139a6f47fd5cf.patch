@@ -1,0 +1,24 @@
+commit c401ed2166493eeaf5d00dc47fe139a6f47fd5cf
+Author: Nick Wellnhofer <wellnhofer@aevum.de>
+Date:   Thu Mar 16 17:50:53 2023 +0100
+
+    transform: Avoid null deref on documents without root node
+    
+    Documents should always have a root node, but we shouldn't segfault if
+    it's missing.
+    
+    Found by OSS-Fuzz.
+
+diff --git a/libxslt/transform.c b/libxslt/transform.c
+index d7992605..0fc0400c 100644
+--- a/libxslt/transform.c
++++ b/libxslt/transform.c
+@@ -5767,6 +5767,8 @@ xsltCleanupSourceDoc(xmlDocPtr doc) {
+         if (cur->children != NULL && cur->type != XML_ENTITY_REF_NODE) {
+             cur = cur->children;
+         } else {
++            if (cur == (xmlNodePtr) doc)
++                return;
+             while (cur->next == NULL) {
+                 cur = cur->parent;
+                 if (cur == (xmlNodePtr) doc)

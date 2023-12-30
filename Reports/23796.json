@@ -1,5 +1,5 @@
 {
-    "fix": "https://android.googlesource.com/platform/external/aac//+/22e70729b4bf541ea507dda074e368dd00e29d0c",
+    "fix": "https://android.googlesource.com/platform/external/aac//+/22e70729b4bf541ea507dda074e368dd00e29d0c%5E%21/",
     "verify": "0",
     "localId": 23796,
     "project": "aac",

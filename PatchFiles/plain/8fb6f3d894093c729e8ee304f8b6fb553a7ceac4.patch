@@ -1,0 +1,27 @@
+commit 8fb6f3d894093c729e8ee304f8b6fb553a7ceac4
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Tue Jun 21 08:57:03 2022 +0100
+
+    ofz#48161 Container-overflow
+    
+    Change-Id: I99a63c3cfa48344221dbe4a7400d313d875abd82
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/136207
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/hwpfilter/source/hwpreader.cxx b/hwpfilter/source/hwpreader.cxx
+index f5592124b37d..ab495315722c 100644
+--- a/hwpfilter/source/hwpreader.cxx
++++ b/hwpfilter/source/hwpreader.cxx
+@@ -2816,10 +2816,8 @@ void HwpReader::make_text_p3(HWPPara * para,bool bParaStart)
+     }
+ 
+     int n = 0;
+-    while (n < para->nch)
++    for (const auto& box : para->hhstr)
+     {
+-        const auto& box = para->hhstr[n];
+-
+         if (!box->hh)
+             break;
+ 

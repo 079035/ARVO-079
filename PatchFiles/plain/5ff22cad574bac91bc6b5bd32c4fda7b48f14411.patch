@@ -1,0 +1,47 @@
+From 5ff22cad574bac91bc6b5bd32c4fda7b48f14411 Mon Sep 17 00:00:00 2001
+From: Nick Brown <nickbroon@gmail.com>
+Date: Mon, 11 May 2020 17:39:09 +0100
+Subject: [PATCH] debian: fixes for dpkg-buildpackage  (#1634)
+
+Flex, Bison are build dependencies to optional run time dependencies.
+Depend on linked libraries using ${shlibs}
+Silence some Lintian warnings about statically linked vendored libraries.
+
+Signed-off-by: Nicholas Brown <nick.brown@att.com>
+---
+ debian/control                        | 5 ++---
+ debian/td-agent-bit.lintian-overrides | 1 +
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/debian/control b/debian/control
+index d6178053f42..ab5c399930b 100644
+--- a/debian/control
++++ b/debian/control
+@@ -2,7 +2,7 @@ Source: td-agent-bit
+ Section: net
+ Priority: optional
+ Maintainer: Eduardo Silva <eduardo@treasure-data.com>
+-Build-Depends: debhelper (>= 7.0.50~), cmake (>= 2.6)
++Build-Depends: debhelper (>= 7.0.50~), cmake (>= 2.6), flex, bison
+ Standards-Version: 4.3.0
+ Homepage: http://fluentbit.io
+ Vcs-Git: https://github.com/fluent/fluent-bit
+@@ -10,8 +10,7 @@ Vcs-Browser: https://github.com/fluent/fluent-bit
+ 
+ Package: td-agent-bit
+ Architecture: any
+-Depends: ${misc:Depends}
+-Suggests: flex, bison
++Depends: ${misc:Depends}, ${shlibs:Depends}
+ Description: High performance Log Forwarder for Linux.
+  Fluent Bit is a high performance data collector and log forwarder for Linux. 
+  It provides a flexible architecture and plugins to collect, parser, filter and
+diff --git a/debian/td-agent-bit.lintian-overrides b/debian/td-agent-bit.lintian-overrides
+index 04dc0797e80..1d4b1483b0b 100644
+--- a/debian/td-agent-bit.lintian-overrides
++++ b/debian/td-agent-bit.lintian-overrides
+@@ -1,3 +1,4 @@
++td-agent-bit: embedded-library *
+ td-agent-bit: package-name-doesnt-match-sonames libfluent-bit
+ td-agent-bit: embedded-library opt/td-agent-bit/bin/td-agent-bit: mbedtls
+ td-agent-bit: embedded-library opt/td-agent-bit/lib/x86_64-linux-gnu/libfluent-bit.so: mbedtls

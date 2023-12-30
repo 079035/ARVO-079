@@ -1,0 +1,7 @@
+commit 1f4c96297b05958d0eaae0dc657f515a0905ca26
+Merge: e6689ed 4d36db2
+Author: Treehugger Robot <treehugger-gerrit@google.com>
+Date:   Thu Nov 14 20:51:30 2019 +0000
+
+    Merge "fuzzer: Updates to fuzzer plugin"
+

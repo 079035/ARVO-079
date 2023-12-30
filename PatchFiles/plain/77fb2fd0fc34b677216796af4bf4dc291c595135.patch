@@ -1,0 +1,60 @@
+From 77fb2fd0fc34b677216796af4bf4dc291c595135 Mon Sep 17 00:00:00 2001
+From: Eric Blankenhorn <eric@wolfssl.com>
+Date: Mon, 21 Feb 2022 16:57:21 -0600
+Subject: [PATCH] Fix decoding user property and add example
+
+---
+ examples/mqttclient/mqttclient.c | 10 ++++++++--
+ src/mqtt_packet.c                |  4 ++--
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/examples/mqttclient/mqttclient.c b/examples/mqttclient/mqttclient.c
+index 47a73d978..871b7a8ab 100644
+--- a/examples/mqttclient/mqttclient.c
++++ b/examples/mqttclient/mqttclient.c
+@@ -189,7 +189,14 @@ static int mqtt_property_cb(MqttClient *client, MqttProp *head, void *ctx)
+                 break;
+ 
+             case MQTT_PROP_REASON_STR:
+-                PRINTF("Reason String: %s", prop->data_str.str);
++                PRINTF("Reason String: %.*s",
++                        prop->data_str.len, prop->data_str.str);
++                break;
++
++            case MQTT_PROP_USER_PROP:
++                PRINTF("User property: key=\"%.*s\", value=\"%.*s\"",
++                        prop->data_str.len, prop->data_str.str,
++                        prop->data_str2.len, prop->data_str2.str);
+                 break;
+ 
+             case MQTT_PROP_PAYLOAD_FORMAT_IND:
+@@ -202,7 +209,6 @@ static int mqtt_property_cb(MqttClient *client, MqttProp *head, void *ctx)
+             case MQTT_PROP_TOPIC_ALIAS:
+             case MQTT_PROP_TYPE_MAX:
+             case MQTT_PROP_RECEIVE_MAX:
+-            case MQTT_PROP_USER_PROP:
+             case MQTT_PROP_WILDCARD_SUB_AVAIL:
+             case MQTT_PROP_SHARED_SUBSCRIPTION_AVAIL:
+             case MQTT_PROP_RESP_INFO:
+diff --git a/src/mqtt_packet.c b/src/mqtt_packet.c
+index 5095ac85d..7314de857 100755
+--- a/src/mqtt_packet.c
++++ b/src/mqtt_packet.c
+@@ -598,7 +598,7 @@ int MqttDecode_Props(MqttPacketType packet, MqttProp** props, byte* pbuf,
+                         (const char**)&cur_prop->data_str.str,
+                         &cur_prop->data_str.len);
+                 if (cur_prop->data_str.len <=
+-                    (buf_len - (buf + tmp - pbuf))) {
++                    (buf_len - (buf - pbuf))) {
+                     buf += tmp;
+                     total += tmp;
+                     prop_len -= (word32)tmp;
+@@ -607,7 +607,7 @@ int MqttDecode_Props(MqttPacketType packet, MqttProp** props, byte* pbuf,
+                             (const char**)&cur_prop->data_str2.str,
+                             &cur_prop->data_str2.len);
+                     if (cur_prop->data_str2.len <=
+-                        (buf_len - (buf + tmp - pbuf))) {
++                        (buf_len - (buf - pbuf))) {
+                         buf += tmp;
+                         total += tmp;
+                         prop_len -= (word32)tmp;

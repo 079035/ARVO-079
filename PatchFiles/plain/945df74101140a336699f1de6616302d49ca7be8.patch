@@ -1,0 +1,23 @@
+From 945df74101140a336699f1de6616302d49ca7be8 Mon Sep 17 00:00:00 2001
+From: rouzier <rouzier@gmail.com>
+Date: Mon, 15 Jan 2018 11:06:38 -0500
+Subject: [PATCH] CURLOPT_TCP_NODELAY.3: fix typo
+
+Closes #2239
+---
+ docs/libcurl/opts/CURLOPT_TCP_NODELAY.3 | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/docs/libcurl/opts/CURLOPT_TCP_NODELAY.3 b/docs/libcurl/opts/CURLOPT_TCP_NODELAY.3
+index 701e3150202e2c..bbfa6f3eef0ca9 100644
+--- a/docs/libcurl/opts/CURLOPT_TCP_NODELAY.3
++++ b/docs/libcurl/opts/CURLOPT_TCP_NODELAY.3
+@@ -52,7 +52,7 @@ CURL *curl = curl_easy_init();
+ if(curl) {
+   curl_easy_setopt(curl, CURLOPT_URL, "http://example.com");
+   /* disable Nagle */
+-  curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 0);
++  curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 0);
+   curl_easy_perform(curl);
+ }
+ .fi

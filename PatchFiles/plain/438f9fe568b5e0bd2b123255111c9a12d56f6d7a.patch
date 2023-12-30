@@ -1,0 +1,477 @@
+From c3e69b5b8273a7b261213c4fe2a2d3c25e9a5308 Mon Sep 17 00:00:00 2001
+From: Alex <aleksandrosansan@gmail.com>
+Date: Wed, 31 May 2023 07:57:36 +0000
+Subject: [PATCH 01/11] Fix Heap-buffer-overflow READ in
+ Assimp::ObjFileParser::getFace
+
+---
+ code/AssetLib/Obj/ObjFileParser.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/code/AssetLib/Obj/ObjFileParser.cpp b/code/AssetLib/Obj/ObjFileParser.cpp
+index ed416dc933..38fc0533e1 100644
+--- a/code/AssetLib/Obj/ObjFileParser.cpp
++++ b/code/AssetLib/Obj/ObjFileParser.cpp
+@@ -456,8 +456,8 @@ void ObjFileParser::getFace(aiPrimitiveType type) {
+             iPos = 0;
+         } else {
+             //OBJ USES 1 Base ARRAYS!!!!
+-            const char *token = &(*m_DataIt);
+-            const int iVal = ::atoi(token);
++            std::string number(&(*m_DataIt), m_DataItEnd - m_DataIt);
++            const int iVal(::atoi(number.c_str()));
+ 
+             // increment iStep position based off of the sign and # of digits
+             int tmp = iVal;
+
+From 4cc70cb73ce5139b406fef1ed1e03ab1148e8174 Mon Sep 17 00:00:00 2001
+From: Alex <aleksandrosansan@gmail.com>
+Date: Wed, 31 May 2023 14:10:57 +0000
+Subject: [PATCH 02/11] Optimize
+
+---
+ code/AssetLib/Obj/ObjFileParser.cpp | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/code/AssetLib/Obj/ObjFileParser.cpp b/code/AssetLib/Obj/ObjFileParser.cpp
+index 38fc0533e1..432023264e 100644
+--- a/code/AssetLib/Obj/ObjFileParser.cpp
++++ b/code/AssetLib/Obj/ObjFileParser.cpp
+@@ -456,8 +456,16 @@ void ObjFileParser::getFace(aiPrimitiveType type) {
+             iPos = 0;
+         } else {
+             //OBJ USES 1 Base ARRAYS!!!!
+-            std::string number(&(*m_DataIt), m_DataItEnd - m_DataIt);
+-            const int iVal(::atoi(number.c_str()));
++            int iVal;
++            auto end = m_DataIt;
++            while (end < m_DataItEnd && *end != '\0')
++                ++end;
++            if (end != m_DataItEnd) {
++                iVal = ::atoi(&(*m_DataIt));
++            } else {
++                std::string number(&(*m_DataIt), m_DataItEnd - m_DataIt);
++                iVal = ::atoi(number.c_str());
++            }
+ 
+             // increment iStep position based off of the sign and # of digits
+             int tmp = iVal;
+
+From d3506c24e73b28afd4ef91583bff16a6abc0e138 Mon Sep 17 00:00:00 2001
+From: Alex <aleksandrosansan@gmail.com>
+Date: Fri, 2 Jun 2023 18:57:53 +0200
+Subject: [PATCH 03/11] Update ObjFileParser.cpp
+
+---
+ code/AssetLib/Obj/ObjFileParser.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/code/AssetLib/Obj/ObjFileParser.cpp b/code/AssetLib/Obj/ObjFileParser.cpp
+index 432023264e..ad97a470b5 100644
+--- a/code/AssetLib/Obj/ObjFileParser.cpp
++++ b/code/AssetLib/Obj/ObjFileParser.cpp
+@@ -458,11 +458,14 @@ void ObjFileParser::getFace(aiPrimitiveType type) {
+             //OBJ USES 1 Base ARRAYS!!!!
+             int iVal;
+             auto end = m_DataIt;
++            // find either the buffer end or the '\0'
+             while (end < m_DataItEnd && *end != '\0')
+                 ++end;
++            // avoid temporary string allocation if there is a zero
+             if (end != m_DataItEnd) {
+                 iVal = ::atoi(&(*m_DataIt));
+             } else {
++                // otherwise make a zero terminated copy, which is safe to pass to atoi
+                 std::string number(&(*m_DataIt), m_DataItEnd - m_DataIt);
+                 iVal = ::atoi(number.c_str());
+             }
+
+From 05ab5c2e3b3ead0641f143843b7d620041d21862 Mon Sep 17 00:00:00 2001
+From: mosfet80 <realeandrea@yahoo.it>
+Date: Sun, 4 Jun 2023 22:49:12 +0200
+Subject: [PATCH 04/11] Delete old unused patch
+
+Remove old file poly2tri_patch.txt
+---
+ contrib/poly2tri_patch.txt | 75 --------------------------------------
+ 1 file changed, 75 deletions(-)
+ delete mode 100644 contrib/poly2tri_patch.txt
+
+diff --git a/contrib/poly2tri_patch.txt b/contrib/poly2tri_patch.txt
+deleted file mode 100644
+index e9cca4cec5..0000000000
+--- a/contrib/poly2tri_patch.txt
++++ /dev/null
+@@ -1,75 +0,0 @@
+-diff -r 5de9623d6a50 poly2tri/common/shapes.h
+---- a/poly2tri/common/shapes.h	Mon Aug 08 22:26:41 2011 -0400
+-+++ b/poly2tri/common/shapes.h	Tue Jan 17 02:36:52 2012 +0100
+-@@ -35,6 +35,7 @@
+- 
+- #include <vector>
+- #include <cstddef>
+-+#include <stdexcept>
+- #include <assert.h>
+- #include <cmath>
+- 
+-@@ -136,7 +137,9 @@
+-         p = &p2;
+-       } else if (p1.x == p2.x) {
+-         // Repeat points
+--        assert(false);
+-+		  // ASSIMP_CHANGE (aramis_acg)
+-+		  throw std::runtime_error("repeat points");
+-+        //assert(false);
+-       }
+-     }
+- 
+-diff -r 5de9623d6a50 poly2tri/sweep/sweep.cc
+---- a/poly2tri/sweep/sweep.cc	Mon Aug 08 22:26:41 2011 -0400
+-+++ b/poly2tri/sweep/sweep.cc	Tue Jan 17 02:36:52 2012 +0100
+-@@ -113,6 +113,8 @@
+-   Point* p1 = triangle->PointCCW(point);
+-   Orientation o1 = Orient2d(eq, *p1, ep);
+-   if (o1 == COLLINEAR) {
+-+	  // ASSIMP_CHANGE (aramis_acg)
+-+	  throw std::runtime_error("EdgeEvent - collinear points not supported");
+-     if( triangle->Contains(&eq, p1)) {
+-       triangle->MarkConstrainedEdge(&eq, p1 );
+-       // We are modifying the constraint maybe it would be better to 
+-@@ -121,8 +123,8 @@
+-       triangle = &triangle->NeighborAcross(point);
+-       EdgeEvent( tcx, ep, *p1, triangle, *p1 );
+-     } else {
+-+	  // ASSIMP_CHANGE (aramis_acg)
+-       std::runtime_error("EdgeEvent - collinear points not supported");
+--      assert(0);
+-     }
+-     return;
+-   }
+-@@ -130,6 +132,9 @@
+-   Point* p2 = triangle->PointCW(point);
+-   Orientation o2 = Orient2d(eq, *p2, ep);
+-   if (o2 == COLLINEAR) {
+-+	  // ASSIMP_CHANGE (aramis_acg)
+-+	  throw std::runtime_error("EdgeEvent - collinear points not supported");
+-+
+-     if( triangle->Contains(&eq, p2)) {
+-       triangle->MarkConstrainedEdge(&eq, p2 );
+-       // We are modifying the constraint maybe it would be better to 
+-@@ -138,8 +143,8 @@
+-       triangle = &triangle->NeighborAcross(point);
+-       EdgeEvent( tcx, ep, *p2, triangle, *p2 );
+-     } else {
+--      std::runtime_error("EdgeEvent - collinear points not supported");
+--      assert(0);
+-+      // ASSIMP_CHANGE (aramis_acg)
+-+      throw std::runtime_error("EdgeEvent - collinear points not supported");
+-     }
+-     return;
+-   }
+-@@ -712,7 +717,8 @@
+-     return *ot.PointCW(op);
+-   } else{
+-     //throw new RuntimeException("[Unsupported] Opposing point on constrained edge");
+--    assert(0);
+-+	  // ASSIMP_CHANGE (aramis_acg)
+-+	  throw std::runtime_error("[Unsupported] Opposing point on constrained edge");
+-   }
+- }
+- 
+
+From 36dfa3bed31fe220a15648083a78c925fbec0792 Mon Sep 17 00:00:00 2001
+From: Alex <aleksandrosansan@gmail.com>
+Date: Wed, 14 Jun 2023 15:50:50 +0000
+Subject: [PATCH 05/11] Fix UNKNOWN WRITE in
+ Assimp::SortByPTypeProcess::Execute
+
+---
+ code/AssetLib/OFF/OFFLoader.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/code/AssetLib/OFF/OFFLoader.cpp b/code/AssetLib/OFF/OFFLoader.cpp
+index cb265029a0..f50afb57ba 100644
+--- a/code/AssetLib/OFF/OFFLoader.cpp
++++ b/code/AssetLib/OFF/OFFLoader.cpp
+@@ -284,7 +284,7 @@ void OFFImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
+     for (unsigned int i = 0; i < numFaces; ) {
+         if(!GetNextLine(buffer,line)) {
+             ASSIMP_LOG_ERROR("OFF: The number of faces in the header is incorrect");
+-            break;
++            throw DeadlyImportError("OFF: The number of faces in the header is incorrect");
+         }
+         unsigned int idx;
+         sz = line; SkipSpaces(&sz);
+
+From 10059e64318f0c5bac24c55ed230b1e859693fd9 Mon Sep 17 00:00:00 2001
+From: Kim Kulling <kim.kulling@googlemail.com>
+Date: Mon, 19 Jun 2023 23:21:35 +0200
+Subject: [PATCH 06/11] Add handling for negative indices.
+
+---
+ code/AssetLib/DXF/DXFLoader.cpp | 49 ++++++++++++++-------------------
+ code/AssetLib/DXF/DXFLoader.h   |  4 +--
+ 2 files changed, 22 insertions(+), 31 deletions(-)
+
+diff --git a/code/AssetLib/DXF/DXFLoader.cpp b/code/AssetLib/DXF/DXFLoader.cpp
+index 1fb9490ccd..a458d0fd8f 100644
+--- a/code/AssetLib/DXF/DXFLoader.cpp
++++ b/code/AssetLib/DXF/DXFLoader.cpp
+@@ -71,7 +71,7 @@ static const aiColor4D AI_DXF_DEFAULT_COLOR(aiColor4D(0.6f, 0.6f, 0.6f, 0.6f));
+ // color indices for DXF - 16 are supported, the table is
+ // taken directly from the DXF spec.
+ static aiColor4D g_aclrDxfIndexColors[] = {
+-    aiColor4D (0.6f, 0.6f, 0.6f, 1.0f),
++    aiColor4D(0.6f, 0.6f, 0.6f, 1.0f),
+     aiColor4D (1.0f, 0.0f, 0.0f, 1.0f), // red
+     aiColor4D (0.0f, 1.0f, 0.0f, 1.0f), // green
+     aiColor4D (0.0f, 0.0f, 1.0f, 1.0f), // blue
+@@ -88,6 +88,7 @@ static aiColor4D g_aclrDxfIndexColors[] = {
+     aiColor4D (1.0f, 1.0f, 1.0f, 1.0f), // white
+     aiColor4D (0.6f, 0.0f, 1.0f, 1.0f)  // violet
+ };
++
+ #define AI_DXF_NUM_INDEX_COLORS (sizeof(g_aclrDxfIndexColors)/sizeof(g_aclrDxfIndexColors[0]))
+ #define AI_DXF_ENTITIES_MAGIC_BLOCK "$ASSIMP_ENTITIES_MAGIC"
+ 
+@@ -109,14 +110,6 @@ static const aiImporterDesc desc = {
+     "dxf"
+ };
+ 
+-// ------------------------------------------------------------------------------------------------
+-// Constructor to be privately used by Importer
+-DXFImporter::DXFImporter() = default;
+-
+-// ------------------------------------------------------------------------------------------------
+-// Destructor, private as well
+-DXFImporter::~DXFImporter() = default;
+-
+ // ------------------------------------------------------------------------------------------------
+ // Returns whether the class can handle the format of the given file.
+ bool DXFImporter::CanRead( const std::string& filename, IOSystem* pIOHandler, bool /*checkSig*/ ) const {
+@@ -229,7 +222,7 @@ void DXFImporter::ConvertMeshes(aiScene* pScene, DXF::FileData& output) {
+         ASSIMP_LOG_VERBOSE_DEBUG("DXF: Unexpanded polycount is ", icount, ", vertex count is ", vcount);
+     }
+ 
+-    if (! output.blocks.size()  ) {
++    if (output.blocks.empty()) {
+         throw DeadlyImportError("DXF: no data blocks loaded");
+     }
+ 
+@@ -587,10 +580,10 @@ void DXFImporter::ParseInsertion(DXF::LineReader& reader, DXF::FileData& output)
+     }
+ }
+ 
+-#define DXF_POLYLINE_FLAG_CLOSED        0x1
+-#define DXF_POLYLINE_FLAG_3D_POLYLINE   0x8
+-#define DXF_POLYLINE_FLAG_3D_POLYMESH   0x10
+-#define DXF_POLYLINE_FLAG_POLYFACEMESH  0x40
++static constexpr unsigned int DXF_POLYLINE_FLAG_CLOSED = 0x1;
++static constexpr unsigned int DXF_POLYLINE_FLAG_3D_POLYLINE = 0x8;
++static constexpr unsigned int DXF_POLYLINE_FLAG_3D_POLYMESH = 0x10;
++static constexpr unsigned int DXF_POLYLINE_FLAG_POLYFACEMESH = 0x40;
+ 
+ // ------------------------------------------------------------------------------------------------
+ void DXFImporter::ParsePolyLine(DXF::LineReader& reader, DXF::FileData& output) {
+@@ -639,12 +632,6 @@ void DXFImporter::ParsePolyLine(DXF::LineReader& reader, DXF::FileData& output)
+         reader++;
+     }
+ 
+-    //if (!(line.flags & DXF_POLYLINE_FLAG_POLYFACEMESH))   {
+-    //  DefaultLogger::get()->warn((Formatter::format("DXF: polyline not currently supported: "),line.flags));
+-    //  output.blocks.back().lines.pop_back();
+-    //  return;
+-    //}
+-
+     if (vguess && line.positions.size() != vguess) {
+         ASSIMP_LOG_WARN("DXF: unexpected vertex count in polymesh: ",
+             line.positions.size(),", expected ", vguess );
+@@ -734,12 +721,18 @@ void DXFImporter::ParsePolyLineVertex(DXF::LineReader& reader, DXF::PolyLine& li
+         case 71:
+         case 72:
+         case 73:
+-        case 74:
+-            if (cnti == 4) {
+-                ASSIMP_LOG_WARN("DXF: more than 4 indices per face not supported; ignoring");
+-                break;
++        case 74: {
++                if (cnti == 4) {
++                    ASSIMP_LOG_WARN("DXF: more than 4 indices per face not supported; ignoring");
++                    break;
++                }
++                const int index = reader.ValueAsSignedInt();
++                if (index >= 0) {
++                    indices[cnti++] = static_cast<unsigned int>(index);
++                } else {
++                    ASSIMP_LOG_WARN("DXF: Skip invisible face.");
++                }
+             }
+-            indices[cnti++] = reader.ValueAsUnsignedInt();
+             break;
+ 
+         // color
+@@ -777,8 +770,7 @@ void DXFImporter::ParsePolyLineVertex(DXF::LineReader& reader, DXF::PolyLine& li
+ }
+ 
+ // ------------------------------------------------------------------------------------------------
+-void DXFImporter::Parse3DFace(DXF::LineReader& reader, DXF::FileData& output)
+-{
++void DXFImporter::Parse3DFace(DXF::LineReader& reader, DXF::FileData& output) {
+     // (note) this is also used for for parsing line entities, so we
+     // must handle the vertex_count == 2 case as well.
+ 
+@@ -795,8 +787,7 @@ void DXFImporter::Parse3DFace(DXF::LineReader& reader, DXF::FileData& output)
+         if (reader.GroupCode() == 0) {
+             break;
+         }
+-        switch (reader.GroupCode())
+-        {
++        switch (reader.GroupCode()) {
+ 
+         // 8 specifies the layer
+         case 8:
+diff --git a/code/AssetLib/DXF/DXFLoader.h b/code/AssetLib/DXF/DXFLoader.h
+index b32ae106f7..89a0b79c2a 100644
+--- a/code/AssetLib/DXF/DXFLoader.h
++++ b/code/AssetLib/DXF/DXFLoader.h
+@@ -68,8 +68,8 @@ namespace DXF {
+  */
+ class DXFImporter : public BaseImporter {
+ public:
+-    DXFImporter();
+-    ~DXFImporter() override;
++    DXFImporter() = default;
++    ~DXFImporter() override = default;
+ 
+     // -------------------------------------------------------------------
+     /** Returns whether the class can handle the format of the given file.
+
+From 7f0c388ad8b9ebf521f52b3ae1e491126c37bd37 Mon Sep 17 00:00:00 2001
+From: Kim Kulling <kim.kulling@googlemail.com>
+Date: Mon, 19 Jun 2023 23:27:32 +0200
+Subject: [PATCH 07/11] Fix: Put unused var into comments to later use.
+
+---
+ code/AssetLib/DXF/DXFLoader.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/code/AssetLib/DXF/DXFLoader.cpp b/code/AssetLib/DXF/DXFLoader.cpp
+index a458d0fd8f..94d071647c 100644
+--- a/code/AssetLib/DXF/DXFLoader.cpp
++++ b/code/AssetLib/DXF/DXFLoader.cpp
+@@ -581,7 +581,8 @@ void DXFImporter::ParseInsertion(DXF::LineReader& reader, DXF::FileData& output)
+ }
+ 
+ static constexpr unsigned int DXF_POLYLINE_FLAG_CLOSED = 0x1;
+-static constexpr unsigned int DXF_POLYLINE_FLAG_3D_POLYLINE = 0x8;
++// Currently unused
++//static constexpr unsigned int DXF_POLYLINE_FLAG_3D_POLYLINE = 0x8;
+ static constexpr unsigned int DXF_POLYLINE_FLAG_3D_POLYMESH = 0x10;
+ static constexpr unsigned int DXF_POLYLINE_FLAG_POLYFACEMESH = 0x40;
+ 
+
+From 9c9d72169ff9a65cf711eabaab79e08707167d7b Mon Sep 17 00:00:00 2001
+From: Kim Kulling <kim.kulling@googlemail.com>
+Date: Mon, 19 Jun 2023 23:34:14 +0200
+Subject: [PATCH 08/11] Fix: Put unused var into comments to later use.
+
+---
+ contrib/zlib/CMakeLists.txt | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/contrib/zlib/CMakeLists.txt b/contrib/zlib/CMakeLists.txt
+index 5bc2d6065a..e37efe07a7 100644
+--- a/contrib/zlib/CMakeLists.txt
++++ b/contrib/zlib/CMakeLists.txt
+@@ -77,13 +77,13 @@ if(MSVC)
+     add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+     add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" ) # clang-cl
+-        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
++        #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
+     endif()
+ 
+     include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+ else()
+     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" ) # clang-cl
+-        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
++        S#ET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
+     endif()
+ endif()
+ 
+
+From 3d19cd9362f72bd866f38e7df31b935e7ad5dbfb Mon Sep 17 00:00:00 2001
+From: Kim Kulling <kim.kulling@googlemail.com>
+Date: Mon, 19 Jun 2023 23:35:50 +0200
+Subject: [PATCH 09/11] Fix: Put unused var into comments to later use.
+
+---
+ contrib/zlib/CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/contrib/zlib/CMakeLists.txt b/contrib/zlib/CMakeLists.txt
+index e37efe07a7..5fda54bdd0 100644
+--- a/contrib/zlib/CMakeLists.txt
++++ b/contrib/zlib/CMakeLists.txt
+@@ -83,7 +83,7 @@ if(MSVC)
+     include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+ else()
+     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" ) # clang-cl
+-        S#ET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
++        #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
+     endif()
+ endif()
+ 
+
+From 6502b97d3e6c1ee7bcd836e70e7929da5d653b39 Mon Sep 17 00:00:00 2001
+From: Kim Kulling <kim.kulling@googlemail.com>
+Date: Mon, 19 Jun 2023 23:38:57 +0200
+Subject: [PATCH 10/11] Fix: Put unused var into comments to later use.
+
+---
+ code/AssetLib/DXF/DXFLoader.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/code/AssetLib/DXF/DXFLoader.cpp b/code/AssetLib/DXF/DXFLoader.cpp
+index 94d071647c..6b820d046c 100644
+--- a/code/AssetLib/DXF/DXFLoader.cpp
++++ b/code/AssetLib/DXF/DXFLoader.cpp
+@@ -583,7 +583,7 @@ void DXFImporter::ParseInsertion(DXF::LineReader& reader, DXF::FileData& output)
+ static constexpr unsigned int DXF_POLYLINE_FLAG_CLOSED = 0x1;
+ // Currently unused
+ //static constexpr unsigned int DXF_POLYLINE_FLAG_3D_POLYLINE = 0x8;
+-static constexpr unsigned int DXF_POLYLINE_FLAG_3D_POLYMESH = 0x10;
++//static constexpr unsigned int DXF_POLYLINE_FLAG_3D_POLYMESH = 0x10;
+ static constexpr unsigned int DXF_POLYLINE_FLAG_POLYFACEMESH = 0x40;
+ 
+ // ------------------------------------------------------------------------------------------------
+
+From 63e1b071df002a1cf263be9e22ffc0f1f99280d3 Mon Sep 17 00:00:00 2001
+From: Kim Kulling <kim.kulling@googlemail.com>
+Date: Mon, 19 Jun 2023 23:50:32 +0200
+Subject: [PATCH 11/11] Remove deprecated switch to disable warning.
+
+---
+ contrib/zlib/CMakeLists.txt | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/contrib/zlib/CMakeLists.txt b/contrib/zlib/CMakeLists.txt
+index 5fda54bdd0..af8aa4f65c 100644
+--- a/contrib/zlib/CMakeLists.txt
++++ b/contrib/zlib/CMakeLists.txt
+@@ -76,15 +76,7 @@ if(MSVC)
+     set(CMAKE_DEBUG_POSTFIX "d")
+     add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+     add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
+-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" ) # clang-cl
+-        #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
+-    endif()
+-
+     include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+-else()
+-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" ) # clang-cl
+-        #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-non-prototype")
+-    endif()
+ endif()
+ 
+ if(NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)

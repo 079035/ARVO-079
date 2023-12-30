@@ -1,0 +1,32 @@
+commit f27080e90427c1714eb894f2f749e10a618a50a6
+Author: Hsin-Yu Chao <hychao@google.com>
+Date:   Mon Jun 3 12:57:49 2019 +0800
+
+    CRAS: rclient - Fix buffer overflow in fuzz test
+    
+    oss-fuzz issue at
+    https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15058
+    
+    BUG=None
+    TEST=None
+    
+    Change-Id: Id187351e5e1bb574f5a67fcd0399d3a5c08c7f95
+    Reviewed-on: https://chromium-review.googlesource.com/1640757
+    Commit-Ready: Hsinyu Chao <hychao@chromium.org>
+    Tested-by: Hsinyu Chao <hychao@chromium.org>
+    Legacy-Commit-Queue: Commit Bot <commit-bot@chromium.org>
+    Reviewed-by: Cheng-Yi Chiang <cychiang@chromium.org>
+
+diff --git a/cras/src/server/cras_rclient.c b/cras/src/server/cras_rclient.c
+index 87823ed7..51606791 100644
+--- a/cras/src/server/cras_rclient.c
++++ b/cras/src/server/cras_rclient.c
+@@ -605,6 +605,8 @@ int cras_rclient_message_from_client(struct cras_rclient *client,
+ 	case CRAS_SERVER_SET_BT_WBS_ENABLED: {
+ 		const struct cras_set_bt_wbs_enabled *m =
+ 			(const struct cras_set_bt_wbs_enabled *)msg;
++		if (!MSG_LEN_VALID(msg, struct cras_set_bt_wbs_enabled))
++			return -EINVAL;
+ 		cras_system_set_bt_wbs_enabled(m->enabled);
+ 		break;
+ 	}

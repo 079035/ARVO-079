@@ -1,11 +1,14 @@
-Vulnerability: Stack-Buffer-Overflow
+1. Vulnerability:
+The vulnerability in the code is a stack buffer overflow. This occurs when the program writes more data to a buffer located on the stack than what is actually allocated for that buffer. This can lead to overwriting of adjacent memory and can cause erratic program behavior, including memory access errors, incorrect results, a crash, or a breach of system security.
 
-Summary of the fix: Add a check to verify that the output size is within the bounds of the buffer when a tag is found.
+2. Short Summary of the Fix:
+The fix involves adding checks to ensure that the output size is within the bounds of the buffer. This is done by checking if the offset plus the tag length and size length is greater than or equal to the input length, or if the input length minus the offset, tag length, and size length is less than the size. If either of these conditions is true, the function returns an error indicating invalid data.
 
-Detailed description of the fix:
-1. Before the fix, the code would check if a tag is found in the input data and calculate the size of the tagged data.
-2. Then, it would check if the calculated size is within the bounds of the input data.
-3. However, it inadvertently missed checking if the remaining data after the tag and size is within the bounds of the input data. This could lead to a stack-buffer-overflow if the remaining data is larger than the available buffer space.
-4. The fix introduces a new check to verify if the remaining data after the tag and size is within the bounds of the input data.
-5. If the remaining data is larger than the available buffer space, an error message is logged, and the function returns with an "internal error" status.
-6. This prevents potential stack-buffer-overflow vulnerabilities by ensuring that the tagged data does not exceed the available buffer space.
+3. Detailed Description of the Fix:
+The fix is implemented in the `authentic_get_tagged_data` function. This function is used to get tagged data from an input buffer. The fix adds two checks to ensure that the output size is within the bounds of the buffer. 
+
+The first check is added at the beginning of the loop that iterates over the input buffer. If the offset plus 1 is greater than or equal to the input length, an error is returned indicating invalid data. This check ensures that there is enough data in the buffer to read the tag.
+
+The second check is added in the condition that checks if the current tag is equal to the input tag. If the offset plus the tag length and size length is greater than or equal to the input length, or if the input length minus the offset, tag length, and size length is less than the size, an error is returned indicating invalid data. This check ensures that there is enough data in the buffer to read the size and that the size does not exceed the remaining data in the buffer. 
+
+These checks prevent the function from reading or writing beyond the bounds of the buffer, thus preventing a stack buffer overflow.

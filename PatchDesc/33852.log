@@ -1,22 +1,8 @@
-Vulnerability:
-The vulnerability in the given diff file is a potential use-after-free issue. The `m_heredoc_initiations` vector is being cleared before it is used, which can lead to accessing invalid memory.
+1. Vulnerability:
+The vulnerability in the code is related to the parsing of heredoc entries in the shell script. The issue arises when the same heredoc entry is parsed multiple times if it contains a sequence terminated by a newline. This could potentially lead to unexpected behavior or errors in the shell script execution.
 
-Summary of the fix:
-The fix involves moving the `m_heredoc_initiations` vector to a local value before processing it. This ensures that the vector is not modified while it is being accessed, avoiding potential use-after-free issues.
+2. Short Summary of the Fix:
+The fix involves moving the heredocs vector to a local value before processing it. This prevents the same heredoc entry from being parsed multiple times. The instance vector is emptied and the state is kept on the stack to ensure correct parsing.
 
-Detailed description of the fix:
-1. The `m_heredoc_initiations` vector is moved to a local variable `heredocs` using the `move()` function. This transfers ownership of the vector's contents to `heredocs`.
-   ```cpp
-   auto heredocs = move(m_heredoc_initiations);
-   ```
-2. The `m_heredoc_initiations` vector is then cleared to empty it for future use.
-   ```cpp
-   m_heredoc_initiations.clear();
-   ```
-3. The for loop that iterates over the `heredocs` vector is modified to iterate over the `heredocs` variable instead of the `m_heredoc_initiations` vector.
-   ```cpp
-   for (auto& record : heredocs) {
-   ```
-4. The remaining code in the for loop remains the same, processing the heredoc entries based on the record.
-
-The fix ensures that the `m_heredoc_initiations` vector is not modified while it is being accessed, preventing potential use-after-free issues.
+3. Detailed Description of the Fix:
+In the original code, the heredoc entries were parsed directly from the `m_heredoc_initiations` vector. This led to issues when the same heredoc entry was parsed multiple times. To fix this, the `m_heredoc_initiations` vector is moved to a local variable `heredocs` and then cleared. The heredoc entries are then parsed from the `heredocs` local variable. This ensures that each heredoc entry is parsed only once. The fix also involves handling the end condition of the heredoc entry parsing correctly to ensure that the correct heredoc key is found. If the key is not found, an error is raised. The contents of the heredoc entry are then set correctly based on whether interpolation is allowed or not.

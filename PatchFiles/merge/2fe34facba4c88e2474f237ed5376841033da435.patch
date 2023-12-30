@@ -1,0 +1,9 @@
+commit 2fe34facba4c88e2474f237ed5376841033da435
+Merge: 6e21b8c90 909aa86d2
+Author: Sean Parkinson <sean@wolfssl.com>
+Date:   Tue Feb 14 12:51:20 2023 +1000
+
+    Merge pull request #6084 from philljj/zd15607
+    
+    Check keyLen matches cipher in wolfSSL_CMAC_Init.
+

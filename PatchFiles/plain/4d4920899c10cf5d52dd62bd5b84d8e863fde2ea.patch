@@ -1,0 +1,24 @@
+commit 4d4920899c10cf5d52dd62bd5b84d8e863fde2ea
+Author: Caolán McNamara <caolan.mcnamara@collabora.com>
+Date:   Wed Jun 14 09:01:01 2023 +0100
+
+    ofz#59817 Heap-buffer-overflow READ 8
+    
+    Change-Id: I442d103c7103c0bd88dd7fdefd44c3274a9c80fb
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/153038
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolan.mcnamara@collabora.com>
+
+diff --git a/vcl/source/filter/png/PngImageReader.cxx b/vcl/source/filter/png/PngImageReader.cxx
+index ec4e2d421e3c..1cb72bdbe6b5 100644
+--- a/vcl/source/filter/png/PngImageReader.cxx
++++ b/vcl/source/filter/png/PngImageReader.cxx
+@@ -129,6 +129,8 @@ int handle_unknown_chunk(png_structp png, png_unknown_chunkp chunk)
+     APNGInfo* aAPNGInfo = static_cast<APNGInfo*>(png_get_user_chunk_ptr(png));
+     if (sName == "acTL")
+     {
++        if (chunk->size < sizeof(acTLChunk))
++            return -1;
+         aAPNGInfo->maACTLChunk = *reinterpret_cast<acTLChunk*>(chunk->data);
+         aAPNGInfo->maACTLChunk.num_frames = OSL_SWAPDWORD(aAPNGInfo->maACTLChunk.num_frames);
+         aAPNGInfo->maACTLChunk.num_plays = OSL_SWAPDWORD(aAPNGInfo->maACTLChunk.num_plays);

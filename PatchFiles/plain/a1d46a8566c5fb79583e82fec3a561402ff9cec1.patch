@@ -1,0 +1,55 @@
+From a1d46a8566c5fb79583e82fec3a561402ff9cec1 Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Mon, 7 Mar 2022 14:58:06 -0500
+Subject: [PATCH] improve checking for conditional function arguments
+
+---
+ MagickCore/fx.c | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/MagickCore/fx.c b/MagickCore/fx.c
+index 1df91ba28a3..9ac9c88ce08 100644
+--- a/MagickCore/fx.c
++++ b/MagickCore/fx.c
+@@ -1787,6 +1787,13 @@ static MagickBooleanType GetFunction (FxInfo * pfx, FunctionE fe)
+     }
+     switch (FndArgs) {
+       case 1:
++        if (ndx1 != NULL_ADDRESS) {
++          (void) ThrowMagickException (
++            pfx->exception, GetMagickModule(), OptionError,
++            "For function", "'%s' required argument is missing at '%s'",
++            funStr, SetShortExp(pfx));
++          return MagickFalse;
++        }
+         ndx1 = pfx->usedElements;
+         if (fe==fWhile) {
+           (void) AddAddressingElement (pfx, rIfZeroGoto, NULL_ADDRESS); /* address will be ndx2+1 */
+@@ -1800,6 +1807,13 @@ static MagickBooleanType GetFunction (FxInfo * pfx, FunctionE fe)
+         }
+         break;
+       case 2:
++        if (ndx2 != NULL_ADDRESS) {
++          (void) ThrowMagickException (
++            pfx->exception, GetMagickModule(), OptionError,
++            "For function", "'%s' required argument is missing at '%s'",
++            funStr, SetShortExp(pfx));
++          return MagickFalse;
++        }
+         ndx2 = pfx->usedElements;
+         if (fe==fWhile) {
+           pfx->Elements[pfx->usedElements-1].DoPush = MagickFalse;
+@@ -1816,6 +1830,13 @@ static MagickBooleanType GetFunction (FxInfo * pfx, FunctionE fe)
+         }
+         break;
+       case 3:
++        if (ndx3 != NULL_ADDRESS) {
++          (void) ThrowMagickException (
++            pfx->exception, GetMagickModule(), OptionError,
++            "For function", "'%s' required argument is missing at '%s'",
++            funStr, SetShortExp(pfx));
++          return MagickFalse;
++        }
+         if (fe==fFor) {
+           pfx->Elements[pfx->usedElements-1].DoPush = MagickFalse;
+           (void) AddAddressingElement (pfx, rGoto, ndx1);

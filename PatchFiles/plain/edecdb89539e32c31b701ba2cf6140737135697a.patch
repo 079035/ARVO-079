@@ -1,0 +1,111 @@
+From edecdb89539e32c31b701ba2cf6140737135697a Mon Sep 17 00:00:00 2001
+From: Aaron Boxer <boxerab@protonmail.com>
+Date: Sat, 25 Jun 2022 08:59:53 -0400
+Subject: [PATCH] TLM: validate tile index entry against signalled number of
+ tiles
+
+fixes
+https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=48224&sort=-opened&can=1&q=proj%3Agrok
+---
+ src/lib/jp2/cache/LengthCache.cpp                     | 11 ++++++++---
+ src/lib/jp2/cache/LengthCache.h                       |  5 +++--
+ src/lib/jp2/codestream/CodeStreamDecompress.cpp       |  8 ++++----
+ .../jp2/codestream/CodeStreamDecompress_Markers.cpp   |  3 +--
+ 4 files changed, 16 insertions(+), 11 deletions(-)
+
+diff --git a/src/lib/jp2/cache/LengthCache.cpp b/src/lib/jp2/cache/LengthCache.cpp
+index 31dd7ab82..de24d1b38 100644
+--- a/src/lib/jp2/cache/LengthCache.cpp
++++ b/src/lib/jp2/cache/LengthCache.cpp
+@@ -226,12 +226,13 @@ TilePartLengthInfo::TilePartLengthInfo() : TilePartLengthInfo(0, 0) {}
+ TilePartLengthInfo::TilePartLengthInfo(uint16_t tileno, uint32_t len)
+ 	: tileIndex_(tileno), length_(len)
+ {}
+-TileLengthMarkers::TileLengthMarkers()
++TileLengthMarkers::TileLengthMarkers(uint16_t numSignalledTiles)
+ 	: markers_(new TL_MAP()), markerIt_(markers_->end()), markerTilePartIndex_(0),
+ 	  curr_vec_(nullptr), stream_(nullptr), streamStart(0), valid_(true), hasTileIndices_(false),
+-	  tileCount_(0)
++	  tileCount_(0),
++	  numSignalledTiles_(numSignalledTiles)
+ {}
+-TileLengthMarkers::TileLengthMarkers(IBufferedStream* stream) : TileLengthMarkers()
++TileLengthMarkers::TileLengthMarkers(IBufferedStream* stream) : TileLengthMarkers(USHRT_MAX)
+ {
+ 	stream_ = stream;
+ }
+@@ -419,6 +420,10 @@ TilePartLengthInfo* TileLengthMarkers::next(bool peek)
+ 		if(curr_vec_)
+ 		{
+ 			auto rc = &curr_vec_->operator[](markerTilePartIndex_);
++			if (rc->tileIndex_ >= numSignalledTiles_){
++				GRK_ERROR("TLM entry tile index %d must be less than signalled number of tiles %d",rc->tileIndex_, numSignalledTiles_);
++				throw CorruptTLMException();
++			}
+ 			if(!peek)
+ 				markerTilePartIndex_++;
+ 			return rc;
+diff --git a/src/lib/jp2/cache/LengthCache.h b/src/lib/jp2/cache/LengthCache.h
+index c61a6ef75..aa18479b5 100644
+--- a/src/lib/jp2/cache/LengthCache.h
++++ b/src/lib/jp2/cache/LengthCache.h
+@@ -105,8 +105,8 @@ typedef std::map<uint16_t, TL_INFO_VEC*> TL_MAP;
+ 
+ struct TileLengthMarkers
+ {
+-	TileLengthMarkers();
+-	TileLengthMarkers(IBufferedStream* stream);
++	explicit TileLengthMarkers(uint16_t numSignalledTiles);
++	explicit TileLengthMarkers(IBufferedStream* stream);
+ 	~TileLengthMarkers();
+ 
+ 	bool read(uint8_t* headerData, uint16_t header_size);
+@@ -143,6 +143,7 @@ struct TileLengthMarkers
+ 	// used to track tile index when there are no tile indices
+ 	// stored in markers
+ 	uint16_t tileCount_;
++	uint16_t numSignalledTiles_;
+ };
+ 
+ struct PacketInfo
+diff --git a/src/lib/jp2/codestream/CodeStreamDecompress.cpp b/src/lib/jp2/codestream/CodeStreamDecompress.cpp
+index e50e7e076..6882e4a2d 100644
+--- a/src/lib/jp2/codestream/CodeStreamDecompress.cpp
++++ b/src/lib/jp2/codestream/CodeStreamDecompress.cpp
+@@ -598,8 +598,10 @@ bool CodeStreamDecompress::decompressTiles(void)
+ 			if(curr_marker_ == J2K_MS_SOT)
+ 			{
+ 				uint16_t markerSize;
+-				if(!readCurrentMarkerBody(&markerSize))
+-					return false;
++				if(!readCurrentMarkerBody(&markerSize)){
++					success = false;
++					goto cleanup;
++				}
+ 			}
+ 			break;
+ 		}
+@@ -632,9 +634,7 @@ bool CodeStreamDecompress::decompressTiles(void)
+ 	{
+ 		executor->run(taskflow).wait();
+ 		delete executor;
+-		executor = nullptr;
+ 		delete[] node;
+-		node = nullptr;
+ 	}
+ 	return success;
+ }
+diff --git a/src/lib/jp2/codestream/CodeStreamDecompress_Markers.cpp b/src/lib/jp2/codestream/CodeStreamDecompress_Markers.cpp
+index bdb9d7a1a..88b19fd17 100644
+--- a/src/lib/jp2/codestream/CodeStreamDecompress_Markers.cpp
++++ b/src/lib/jp2/codestream/CodeStreamDecompress_Markers.cpp
+@@ -947,8 +947,7 @@ bool CodeStreamDecompress::read_cbd(uint8_t* headerData, uint16_t header_size)
+ bool CodeStreamDecompress::read_tlm(uint8_t* headerData, uint16_t header_size)
+ {
+ 	if(!cp_.tlm_markers)
+-		cp_.tlm_markers = new TileLengthMarkers();
+-
++		cp_.tlm_markers = new TileLengthMarkers(cp_.t_grid_width * cp_.t_grid_height);
+ 	bool rc = cp_.tlm_markers->read(headerData, header_size);
+ 
+ 	// disable

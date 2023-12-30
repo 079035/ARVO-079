@@ -1,0 +1,109 @@
+{
+    "fix": "https://github.com/apple/swift-protobuf/commit/b09ca380d6116c442a6c838bf8bac6f72c82b0ad",
+    "verify": "0",
+    "localId": 38264,
+    "project": "swift-protobuf",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Invalid-free",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 38264,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1631134682,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5109315292233728\n\nProject: swift-protobuf\nFuzzing Engine: libFuzzer\nFuzz Target: FuzzTextFormat_release\nJob Type: libfuzzer_asan_swift-protobuf\nPlatform Id: linux\n\nCrash Type: Invalid-free\nCrash Address: 0x559c6a880880\nCrash State:\n  swift_unexpectedError\n  function signature specialization <Arg\n  function signature specialization <Arg\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_swift-protobuf&range=202109070608:202109080613\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5109315292233728\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 38264,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1631187374,
+                "content": "This crash occurs very frequently on linux platform and is likely preventing the fuzzer FuzzTextFormat_release from making much progress. Fixing this will allow more bugs to be found.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Fuzz-Blocker"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 38264,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1502387951",
+                    "displayName": "thomasvl@google.com"
+                },
+                "timestamp": 1631208436,
+                "content": "This should be fixed via https://github.com/apple/swift-protobuf/pull/1169\n"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 38264,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1631213577,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2021-12-07"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 38264,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1631292476,
+                "content": "ClusterFuzz testcase 5109315292233728 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_swift-protobuf&range=202109090608:202109100609\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 38264,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1631299423,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "b09ca380d6116c442a6c838bf8bac6f72c82b0ad",
+    "repo_addr": "https://github.com/apple/swift-protobuf.git"
+}

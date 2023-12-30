@@ -1,15 +1,8 @@
-Vulnerability:
-The vulnerability in the code is that it assumes the address size to be 6 bytes. This assumption causes a failing read when the address size is not actually 6 bytes.
+1. Vulnerability:
+The vulnerability in the code was an incorrect assumption about the size of addresses. The code assumed that the size of the addresses was always 6, which could lead to a failing read if the size was not 6. This could potentially lead to a buffer overflow, causing the program to crash or behave unexpectedly.
 
-Summary of Fix:
-The fix for this vulnerability is to use addresses from the structures and allocate dynamic memory for the `hash_buf` instead of using a local buffer.
+2. Short Summary of the Fix:
+The fix involves using the actual sizes of the source and destination addresses instead of assuming a fixed size. It also involves allocating dynamic memory for the hash buffer instead of using a local buffer.
 
-Detailed Description of Fix:
-1. The fix begins by declaring two variables `src_len` and `dst_len` of type `guint8`, which will hold the lengths of the `src` and `dst` addresses, respectively.
-2. Then, a new variable `hash_buf_len` of type `guint8` is declared, which calculates the total size of the `hash_buf` based on the lengths of the `src` and `dst` addresses, the size of `guint8`, and the size of `guint32`.
-3. Next, a dynamic memory block is allocated using the function `wmem_alloc()`. The memory is allocated with the size calculated in `hash_buf_len` and with the packet scope, indicated by the `wmem_packet_scope()` function.
-4. The original code that copied the address bytes to `hash_buf` is modified to use the lengths `src_len` and `dst_len` instead of assuming a fixed length of 6 bytes. The `memcpy()` function is used to copy the address bytes to the appropriate positions in `hash_buf`.
-5. The line that sets the `hash_buf[12]` value is left unchanged.
-6. Similarly, the line that copies the `vlan_id` to `hash_buf` is modified to correctly calculate the position based on the lengths of `src` and `dst` addresses, the `guint8` value, and the `guint32` value.
-7. Finally, the `hash_val` is calculated using the modified `hash_buf` and the `hash_buf_len` parameter in the `wmem_strong_hash()` function.
-8. The fix ensures that the address size is no longer assumed to be 6 bytes and uses the actual lengths of the `src` and `dst` addresses, provided by the input data.
+3. Detailed Description of the Fix:
+The fix modifies the `ieee1905_fragment_hash` function. Instead of assuming the size of the source and destination addresses to be 6, it now correctly uses the actual lengths of the source and destination addresses (`src_len` and `dst_len`). The size of the hash buffer is now dynamically calculated based on the lengths of the source and destination addresses, the size of a `guint8` (for the fragment id), and the size of a `guint32` (for the vlan id). The hash buffer is then allocated using `wmem_alloc` with the calculated size. The source and destination addresses, fragment id, and vlan id are then copied into the hash buffer using `memcpy`. Finally, the hash value is calculated using `wmem_strong_hash` with the hash buffer and its size. This fix prevents potential buffer overflows and failing reads by correctly handling addresses of varying sizes.

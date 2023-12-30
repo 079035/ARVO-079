@@ -1,0 +1,524 @@
+From f883c31cce18372269fc1e46b3379295de7c9f7c Mon Sep 17 00:00:00 2001
+From: Ebrahim Byagowi <ebrahim@gnu.org>
+Date: Sun, 13 Oct 2019 12:31:53 +0330
+Subject: [PATCH] Implement glyph outline path API
+
+Got help from https://github.com/opentypejs/opentype.js/blob/4e0bb99/src/tables/glyf.js#L222
+---
+ src/Makefile.am             |   5 ++
+ src/Makefile.sources        |   2 +
+ src/harfbuzz.cc             |   1 +
+ src/hb-ot-glyf-table.hh     | 119 +++++++++++++++++++++++++++---------
+ src/hb-ot-glyph.cc          |  50 +++++++++++++++
+ src/hb-ot-glyph.h           |  52 ++++++++++++++++
+ src/hb-ot-var-gvar-table.hh |   6 +-
+ src/hb-ot.h                 |   1 +
+ src/test-ot-glyph.cc        |  84 +++++++++++++++++++++++++
+ 9 files changed, 290 insertions(+), 30 deletions(-)
+ create mode 100644 src/hb-ot-glyph.cc
+ create mode 100644 src/hb-ot-glyph.h
+ create mode 100644 src/test-ot-glyph.cc
+
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 10668ce6b7a..f2d2c1faead 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -334,6 +334,7 @@ noinst_PROGRAMS = \
+ 	test-buffer-serialize \
+ 	test-ot-meta \
+ 	test-ot-name \
++	test-ot-glyph \
+ 	test-ot-glyphname \
+ 	test-gpos-size-params \
+ 	test-gsub-would-substitute \
+@@ -360,6 +361,10 @@ test_ot_name_SOURCES = test-ot-name.cc
+ test_ot_name_CPPFLAGS = $(HBCFLAGS)
+ test_ot_name_LDADD = libharfbuzz.la $(HBLIBS)
+ 
++test_ot_glyph_SOURCES = test-ot-glyph.cc
++test_ot_glyph_CPPFLAGS = $(HBCFLAGS)
++test_ot_glyph_LDADD = libharfbuzz.la $(HBLIBS)
++
+ test_ot_glyphname_SOURCES = test-ot-glyphname.cc
+ test_ot_glyphname_CPPFLAGS = $(HBCFLAGS)
+ test_ot_glyphname_LDADD = libharfbuzz.la $(HBLIBS)
+diff --git a/src/Makefile.sources b/src/Makefile.sources
+index 17362ba7030..061b3b8a8f3 100644
+--- a/src/Makefile.sources
++++ b/src/Makefile.sources
+@@ -73,6 +73,7 @@ HB_BASE_sources = \
+ 	hb-ot-font.cc \
+ 	hb-ot-gasp-table.hh \
+ 	hb-ot-glyf-table.hh \
++	hb-ot-glyph.cc \
+ 	hb-ot-hdmx-table.hh \
+ 	hb-ot-head-table.hh \
+ 	hb-ot-hhea-table.hh \
+@@ -199,6 +200,7 @@ HB_BASE_headers = \
+ 	hb-ot-color.h \
+ 	hb-ot-deprecated.h \
+ 	hb-ot-font.h \
++	hb-ot-glyph.h \
+ 	hb-ot-layout.h \
+ 	hb-ot-math.h \
+ 	hb-ot-meta.h \
+diff --git a/src/harfbuzz.cc b/src/harfbuzz.cc
+index 251a0654dc4..a7b82697dd6 100644
+--- a/src/harfbuzz.cc
++++ b/src/harfbuzz.cc
+@@ -14,6 +14,7 @@
+ #include "hb-ot-color.cc"
+ #include "hb-ot-face.cc"
+ #include "hb-ot-font.cc"
++#include "hb-ot-glyph.cc"
+ #include "hb-ot-layout.cc"
+ #include "hb-ot-map.cc"
+ #include "hb-ot-math.cc"
+diff --git a/src/hb-ot-glyf-table.hh b/src/hb-ot-glyf-table.hh
+index 3e7adcfc375..32028bc9cd7 100644
+--- a/src/hb-ot-glyf-table.hh
++++ b/src/hb-ot-glyf-table.hh
+@@ -391,6 +391,18 @@ struct glyf
+ 
+   struct Glyph
+   {
++    enum simple_glyph_flag_t
++    {
++      FLAG_ON_CURVE  = 0x01,
++      FLAG_X_SHORT   = 0x02,
++      FLAG_Y_SHORT   = 0x04,
++      FLAG_REPEAT    = 0x08,
++      FLAG_X_SAME    = 0x10,
++      FLAG_Y_SAME    = 0x20,
++      FLAG_RESERVED1 = 0x40,
++      FLAG_RESERVED2 = 0x80
++    };
++
+     private:
+     struct GlyphHeader
+     {
+@@ -445,18 +457,6 @@ struct glyf
+ 	return instructionLength;
+       }
+ 
+-      enum simple_glyph_flag_t
+-      {
+-	FLAG_ON_CURVE  = 0x01,
+-	FLAG_X_SHORT   = 0x02,
+-	FLAG_Y_SHORT   = 0x04,
+-	FLAG_REPEAT    = 0x08,
+-	FLAG_X_SAME    = 0x10,
+-	FLAG_Y_SAME    = 0x20,
+-	FLAG_RESERVED1 = 0x40,
+-	FLAG_RESERVED2 = 0x80
+-      };
+-
+       const Glyph trim_padding () const
+       {
+ 	/* based on FontTools _g_l_y_f.py::trim */
+@@ -582,7 +582,10 @@ struct glyf
+ 	end_points_.resize (num_contours);
+ 
+ 	for (int i = 0; i < num_contours; i++)
++	{
+ 	  end_points_[i] = endPtsOfContours[i];
++	  points_[end_points_[i]].is_end_point = true;
++	}
+ 
+ 	/* Skip instructions */
+ 	const HBUINT8 *p = &StructAtOffset<HBUINT8> (&endPtsOfContours[num_contours + 1],
+@@ -838,14 +841,13 @@ struct glyf
+       float min_x, min_y, max_x, max_y;
+     };
+ 
+-#ifndef HB_NO_VAR
+     /* Note: Recursively calls itself.
+      * all_points includes phantom points
+      */
+-    bool get_points_var (hb_codepoint_t gid,
+-			 const int *coords, unsigned int coord_count,
+-			 contour_point_vector_t &all_points /* OUT */,
+-			 unsigned int depth = 0) const
++    bool _get_points (hb_codepoint_t gid,
++		      const int *coords, unsigned int coord_count,
++		      contour_point_vector_t &all_points /* OUT */,
++		      unsigned int depth = 0) const
+     {
+       if (unlikely (depth++ > HB_MAX_NESTING_LEVEL)) return false;
+       contour_point_vector_t points;
+@@ -854,18 +856,20 @@ struct glyf
+       if (unlikely (!glyph.get_contour_points (points, end_points))) return false;
+       hb_array_t<contour_point_t> phantoms = points.sub_array (points.length - PHANTOM_COUNT, PHANTOM_COUNT);
+       init_phantom_points (gid, phantoms);
++#ifndef HB_NO_VAR
+       if (unlikely (!face->table.gvar->apply_deltas_to_points (gid, coords, coord_count, points.as_array (), end_points.as_array ()))) return false;
++#endif
+ 
+-      unsigned int comp_index = 0;
+       if (glyph.is_simple_glyph ())
+ 	all_points.extend (points.as_array ());
+       else if (glyph.is_composite_glyph ())
+       {
++	unsigned int comp_index = 0;
+ 	for (auto &item : glyph.get_composite_iterator ())
+ 	{
+ 	  contour_point_vector_t comp_points;
+-	  if (unlikely (!get_points_var (item.glyphIndex, coords, coord_count,
+-					 comp_points, depth))
++	  if (unlikely (!_get_points (item.glyphIndex, coords, coord_count,
++				      comp_points, depth))
+ 			|| comp_points.length < PHANTOM_COUNT)
+ 	    return false;
+ 
+@@ -906,9 +910,9 @@ struct glyf
+       return true;
+     }
+ 
+-    bool get_points_bearing_applied (hb_font_t *font, hb_codepoint_t gid, contour_point_vector_t &all_points) const
++    bool get_points (hb_font_t *font, hb_codepoint_t gid, contour_point_vector_t &all_points) const
+     {
+-      if (unlikely (!get_points_var (gid, font->coords, font->num_coords, all_points) ||
++      if (unlikely (!_get_points (gid, font->coords, font->num_coords, all_points) ||
+ 		    all_points.length < PHANTOM_COUNT)) return false;
+ 
+       /* Undocumented rasterizer behavior:
+@@ -920,14 +924,13 @@ struct glyf
+       return true;
+     }
+ 
+-    protected:
+-
++#ifndef HB_NO_VAR
+     bool get_var_extents_and_phantoms (hb_font_t *font, hb_codepoint_t gid,
+-				       hb_glyph_extents_t *extents=nullptr /* OUT */,
+-				       contour_point_vector_t *phantoms=nullptr /* OUT */) const
++				       hb_glyph_extents_t *extents /* OUT */,
++				       contour_point_vector_t *phantoms /* OUT */) const
+     {
+       contour_point_vector_t all_points;
+-      if (unlikely (!get_points_bearing_applied (font, gid, all_points))) return false;
++      if (unlikely (!get_points (font, gid, all_points))) return false;
+       if (extents)
+       {
+ 	contour_bounds_t bounds;
+@@ -947,7 +950,7 @@ struct glyf
+ 
+     bool get_extents_var (hb_font_t *font, hb_codepoint_t gid,
+ 			  hb_glyph_extents_t *extents) const
+-    { return get_var_extents_and_phantoms (font, gid, extents); }
++    { return get_var_extents_and_phantoms (font, gid, extents, nullptr); }
+ #endif
+ 
+     public:
+@@ -1039,6 +1042,66 @@ struct glyf
+         add_gid_and_children (item.glyphIndex, gids_to_retain, depth);
+     }
+ 
++    bool
++    get_path (hb_font_t *font, hb_codepoint_t gid, hb_vector_t<hb_ot_glyph_path_point_t> &path) const
++    {
++      contour_point_vector_t all_points;
++      if (unlikely (!get_points (font, gid, all_points))) return false;
++      hb_array_t<contour_point_t> points = all_points.sub_array (0, all_points.length - 4);
++
++      unsigned contour_start = 0;
++      while (contour_start < points.length)
++      {
++	unsigned contour_length = 0;
++	for (unsigned i = contour_start; i < points.length; ++i)
++	{
++	  contour_length++;
++	  if (points[i].is_end_point)
++	    break;
++	}
++	contour_point_t *curr = &points[contour_start + contour_length - 1];
++	contour_point_t *next = &points[contour_start];
++
++	if (curr->flag & Glyph::FLAG_ON_CURVE)
++	  path.push ((hb_ot_glyph_path_point_t)
++		     {'M', font->em_scalef_x (curr->x), font->em_scalef_y (curr->y)});
++	else
++	{
++	  if (next->flag & Glyph::FLAG_ON_CURVE)
++	    path.push ((hb_ot_glyph_path_point_t)
++		       {'M', font->em_scalef_x (next->x), font->em_scalef_y (next->y)});
++	  else
++	  /* If both first and last points are off-curve, start at their middle. */
++	    path.push ((hb_ot_glyph_path_point_t)
++		       {'M', font->em_scalef_x ((curr->x + next->x) / 2), font->em_scalef_y ((curr->y + next->y) / 2)});
++	}
++
++	for (unsigned i = 0; i < contour_length; ++i)
++	{
++	  curr = next;
++	  next = &points[contour_start + ((i + 1) % contour_length)];
++
++	  if (curr->flag & Glyph::FLAG_ON_CURVE)
++	    path.push ((hb_ot_glyph_path_point_t)
++		       {'L', font->em_scalef_x (curr->x), font->em_scalef_y (curr->y)}); /* straight line */
++	  else
++	  {
++	    path.push ((hb_ot_glyph_path_point_t)
++		       {'Q', font->em_scalef_x (curr->x), font->em_scalef_y (curr->y)});
++	    if (next->flag & Glyph::FLAG_ON_CURVE)
++	      path.push ((hb_ot_glyph_path_point_t)
++			 {' ', font->em_scalef_x (next->x), font->em_scalef_y (next->y)});
++	    else
++	      path.push ((hb_ot_glyph_path_point_t)
++			 {' ', font->em_scalef_x ((curr->x + next->x) / 2), font->em_scalef_y ((curr->y + next->y) / 2)});
++	  }
++	}
++	path.push ((hb_ot_glyph_path_point_t) {'Z', 0, 0});
++	contour_start += contour_length;
++      }
++      return true;
++    }
++
+     private:
+     bool short_offset;
+     unsigned int num_glyphs;
+diff --git a/src/hb-ot-glyph.cc b/src/hb-ot-glyph.cc
+new file mode 100644
+index 00000000000..aefea8cd52d
+--- /dev/null
++++ b/src/hb-ot-glyph.cc
+@@ -0,0 +1,50 @@
++/*
++ * Copyright © 2019  Ebrahim Byagowi
++ *
++ *  This is part of HarfBuzz, a text shaping library.
++ *
++ * Permission is hereby granted, without written agreement and without
++ * license or royalty fees, to use, copy, modify, and distribute this
++ * software and its documentation for any purpose, provided that the
++ * above copyright notice and the following two paragraphs appear in
++ * all copies of this software.
++ *
++ * IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE TO ANY PARTY FOR
++ * DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
++ * ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN
++ * IF THE COPYRIGHT HOLDER HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
++ * DAMAGE.
++ *
++ * THE COPYRIGHT HOLDER SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,
++ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
++ * FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
++ * ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
++ * PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
++ */
++
++#include "hb.hh"
++
++#ifndef HB_NO_OT_GLYPH
++
++#include "hb-ot.h"
++#include "hb-ot-glyf-table.hh"
++
++unsigned int
++hb_ot_glyph_get_outline_path (hb_font_t                *font,
++			      hb_codepoint_t            glyph,
++			      unsigned int              start_offset,
++			      unsigned int             *points_count /* IN/OUT.  May be NULL. */,
++			      hb_ot_glyph_path_point_t *points       /* OUT.     May be NULL. */)
++{
++  hb_vector_t<hb_ot_glyph_path_point_t> path;
++  font->face->table.glyf->get_path (font, glyph, path);
++  if (likely (points_count && points))
++  {
++    + path.sub_array (start_offset, points_count)
++    | hb_sink (hb_array (points, *points_count))
++    ;
++  }
++  return path.length;
++}
++
++#endif
+diff --git a/src/hb-ot-glyph.h b/src/hb-ot-glyph.h
+new file mode 100644
+index 00000000000..22d983dca08
+--- /dev/null
++++ b/src/hb-ot-glyph.h
+@@ -0,0 +1,52 @@
++/*
++ * Copyright © 2019  Ebrahim Byagowi
++ *
++ *  This is part of HarfBuzz, a text shaping library.
++ *
++ * Permission is hereby granted, without written agreement and without
++ * license or royalty fees, to use, copy, modify, and distribute this
++ * software and its documentation for any purpose, provided that the
++ * above copyright notice and the following two paragraphs appear in
++ * all copies of this software.
++ *
++ * IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE TO ANY PARTY FOR
++ * DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
++ * ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN
++ * IF THE COPYRIGHT HOLDER HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
++ * DAMAGE.
++ *
++ * THE COPYRIGHT HOLDER SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,
++ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
++ * FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
++ * ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
++ * PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
++ */
++
++#ifndef HB_OT_H_IN
++#error "Include <hb-ot.h> instead."
++#endif
++
++#ifndef HB_OT_GLYPH_H
++#define HB_OT_GLYPH_H
++
++#include "hb.h"
++
++HB_BEGIN_DECLS
++
++typedef struct hb_ot_glyph_path_point_t
++{
++  char cmd;
++  hb_position_t x;
++  hb_position_t y;
++} hb_ot_glyph_path_point_t;
++
++HB_EXTERN unsigned int
++hb_ot_glyph_get_outline_path (hb_font_t                *font,
++			      hb_codepoint_t            glyph,
++			      unsigned int              start_offset,
++			      unsigned int             *points_count /* IN/OUT.  May be NULL. */,
++			      hb_ot_glyph_path_point_t *points       /* OUT.     May be NULL. */);
++
++HB_END_DECLS
++
++#endif /* HB_OT_GLYPH_H */
+diff --git a/src/hb-ot-var-gvar-table.hh b/src/hb-ot-var-gvar-table.hh
+index 37e7148746e..dcfdb1861fb 100644
+--- a/src/hb-ot-var-gvar-table.hh
++++ b/src/hb-ot-var-gvar-table.hh
+@@ -42,12 +42,14 @@ namespace OT {
+ 
+ struct contour_point_t
+ {
+-  void init (float x_=0.f, float y_=0.f) { flag = 0; x = x_; y = y_; }
++  void init (float x_ = 0.f, float y_ = 0.f, bool is_end_point_ = false)
++  { flag = 0; x = x_; y = y_; is_end_point = is_end_point_; }
+ 
+   void translate (const contour_point_t &p) { x += p.x; y += p.y; }
+ 
+   uint8_t flag;
+   float x, y;
++  bool is_end_point;
+ };
+ 
+ struct contour_point_vector_t : hb_vector_t<contour_point_t>
+@@ -563,7 +565,7 @@ struct gvar
+ 				 const hb_array_t<contour_point_t> points,
+ 				 const hb_array_t<unsigned int> end_points) const
+     {
+-      if (unlikely (coord_count != gvar_table->axisCount)) return false;
++      if (unlikely (coord_count != gvar_table->axisCount)) return !coord_count;
+ 
+       const GlyphVarData *var_data = gvar_table->get_glyph_var_data (glyph);
+       if (var_data == &Null (GlyphVarData)) return true;
+diff --git a/src/hb-ot.h b/src/hb-ot.h
+index f2dbaa1b317..a66840bea4b 100644
+--- a/src/hb-ot.h
++++ b/src/hb-ot.h
+@@ -33,6 +33,7 @@
+ #include "hb-ot-color.h"
+ #include "hb-ot-deprecated.h"
+ #include "hb-ot-font.h"
++#include "hb-ot-glyph.h"
+ #include "hb-ot-layout.h"
+ #include "hb-ot-math.h"
+ #include "hb-ot-meta.h"
+diff --git a/src/test-ot-glyph.cc b/src/test-ot-glyph.cc
+new file mode 100644
+index 00000000000..085fc54c99e
+--- /dev/null
++++ b/src/test-ot-glyph.cc
+@@ -0,0 +1,84 @@
++/*
++ * Copyright © 2019  Ebrahim Byagowi
++ *
++ *  This is part of HarfBuzz, a text shaping library.
++ *
++ * Permission is hereby granted, without written agreement and without
++ * license or royalty fees, to use, copy, modify, and distribute this
++ * software and its documentation for any purpose, provided that the
++ * above copyright notice and the following two paragraphs appear in
++ * all copies of this software.
++ *
++ * IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE TO ANY PARTY FOR
++ * DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
++ * ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN
++ * IF THE COPYRIGHT HOLDER HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
++ * DAMAGE.
++ *
++ * THE COPYRIGHT HOLDER SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,
++ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
++ * FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
++ * ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
++ * PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
++ */
++
++#include "hb-ot.h"
++
++#ifdef HB_NO_OPEN
++#define hb_blob_create_from_file(x)  hb_blob_get_empty ()
++#endif
++
++#include <stdlib.h>
++#include <stdio.h>
++
++int
++main (int argc, char **argv)
++{
++  if (argc != 2)
++  {
++    fprintf (stderr, "usage: %s font-file.ttf\n", argv[0]);
++    exit (1);
++  }
++
++  hb_blob_t *blob = hb_blob_create_from_file (argv[1]);
++  unsigned int num_faces = hb_face_count (blob);
++  if (num_faces == 0)
++  {
++    fprintf (stderr, "error: The file (%s) was corrupted, empty or not found", argv[1]);
++    exit (1);
++  }
++
++  for (unsigned int face_index = 0; face_index < hb_face_count (blob); face_index++)
++  {
++    hb_face_t *face = hb_face_create (blob, face_index);
++    hb_font_t *font = hb_font_create (face);
++    unsigned int glyph_count = hb_face_get_glyph_count (face);
++    for (unsigned int gid = 0; gid < glyph_count; ++gid)
++    {
++      hb_ot_glyph_path_point_t points[200];
++      unsigned int points_len = 200;
++      printf ("\ngid %d, points count: %d\n", gid, hb_ot_glyph_get_outline_path (font, gid, 0, &points_len, points));
++      hb_glyph_extents_t extents = {0};
++      hb_font_get_glyph_extents (font, gid, &extents);
++      char name[100];
++      sprintf (name, "%d.svg", gid);
++      FILE *f = fopen (name, "wb");
++      int factor = 1;
++      if (extents.height < 0) factor = -1;
++      fprintf (f, "<svg xmlns=\"http://www.w3.org/2000/svg\""
++		  " viewBox=\"0 0 %d %d\"><path d=\"", extents.width, extents.height * factor);
++      for (unsigned i = 0; i < points_len; ++i)
++	if (points[i].cmd == 'Z') fprintf (f, "Z");
++	else fprintf (f, "%c%d,%d", points[i].cmd, points[i].x, (points[i].y + extents.height) * factor);
++      fprintf (f, "\"/></svg>");
++
++      fclose (f);
++    }
++    hb_font_destroy (font);
++    hb_face_destroy (face);
++  }
++
++  hb_blob_destroy (blob);
++
++  return 0;
++}

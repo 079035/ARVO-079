@@ -1,0 +1,29 @@
+From 3c66ca236b0a1a4f62049af186247d4083ba99b7 Mon Sep 17 00:00:00 2001
+From: Nardi Ivan <nardi.ivan@gmail.com>
+Date: Wed, 27 May 2020 13:08:00 +0200
+Subject: [PATCH] Make lua script more robust
+
+---
+ wireshark/ndpi.lua | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/wireshark/ndpi.lua b/wireshark/ndpi.lua
+index 6038d8965b..75ca95a70c 100644
+--- a/wireshark/ndpi.lua
++++ b/wireshark/ndpi.lua
+@@ -895,10 +895,12 @@ function ndpi_proto.dissector(tvb, pinfo, tree)
+    -- The trick below avoids to process the packet twice
+ 
+    if(pinfo.visited == true) then
+-      local eth_trailer = f_eth_trailer()
++      local eth_trailer = {f_eth_trailer()}
+ 
+-      if(eth_trailer ~= nil) then
+-	 local eth_trailer = getval(eth_trailer)
++      -- Depending on Wireshark configuration, there may be multiple ethernet trailer fields.
++      -- Ours should be the last one, anyway
++      if(eth_trailer[#eth_trailer] ~= nil) then
++	 local eth_trailer = getval(eth_trailer[#eth_trailer])
+ 	 local magic = string.sub(eth_trailer, 1, 11)
+ 
+ 	 if(magic == "19:68:09:24") then

@@ -1,29 +1,10 @@
-Vulnerability:
+1. Vulnerability:
+The vulnerability in the code was a heap-buffer-overflow error. This type of error occurs when a program writes more data to a block of allocated memory (heap) than it can hold. In this case, the error was triggered when the program tried to read a string from a memory location that was beyond the allocated memory block. This could potentially lead to unexpected behavior, crashes, or even code execution if an attacker can control the overflow.
 
-The vulnerability patched in this diff file is a heap-buffer-overflow error. The AddressSanitizer has detected a read of 12 bytes at address 0x60b000014739, which is located 0 bytes to the right of a 105-byte region. The overflow occurs in the function `ndpi_check_http_header` of the `http.c` file.
+2. Short Summary of the Fix:
+The fix for this vulnerability involved changing the way strings were read from memory in the `ndpi_check_http_header` function. Instead of reading the string directly using the pointer, the code now reads only up to the length of the string, preventing it from reading beyond the allocated memory.
 
-Summary of the fix:
+3. Detailed Description of the Fix:
+The fix was applied in the `ndpi_check_http_header` function. This function checks HTTP headers for suspicious content. For each header, it was using the `snprintf` function to copy the header content into a buffer. The problem was that it was using the `%s` format specifier, which reads until it encounters a null character. If the header content didn't contain a null character, `snprintf` would read beyond the end of the allocated memory, causing a heap-buffer-overflow.
 
-The fix involves modifying the `sprintf` function calls in the `switch` cases inside the `ndpi_check_http_header` function. Instead of using `snprintf` with a fixed buffer size, the code is modified to use `snprintf` with the length of the string obtained from the `packet->line[i]` parameter. This ensures that the buffer is not overrun.
-
-Detailed description of the fix:
-
-The fix addresses the heap-buffer-overflow error in the `ndpi_check_http_header` function by modifying the `snprintf` calls in the `switch` cases. The code previously used a fixed buffer size of 64 bytes for the `str` buffer, but this could lead to a buffer overflow if the length of the string obtained from `packet->line[i]` exceeded the buffer size.
-
-The fix replaces the fixed buffer size with the length of the string obtained from `packet->line[i]`. This ensures that the buffer size is dynamically determined based on the length of the string, preventing any potential buffer overflow.
-
-For example, the line:
-
-```
-snprintf(str, sizeof(str), "Found %s", packet->line[i].ptr);
-```
-
-is modified to:
-
-```
-snprintf(str, packet->line[i].len + 8, "Found %.*s", packet->line[i].len, packet->line[i].ptr);
-```
-
-By using `%.*s` in the format string, the length of the string is passed as an argument to `snprintf`, ensuring that the buffer is not overrun.
-
-This fix prevents the heap-buffer-overflow error and ensures that the code operates correctly without the risk of buffer overflows.
+The fix changes the `%s` format specifier to `%.*s`. The `*` in the format specifier means that the length of the string is passed as an argument to `snprintf`. This way, `snprintf` only reads as many characters as the length of the string, preventing it from reading beyond the allocated memory. The length of the string is stored in `packet->line[i].len`, so this value is passed as the argument for the `*` in the format specifier. This change was made for each case in the switch statement where `snprintf` was used.

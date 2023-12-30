@@ -1,0 +1,19 @@
+commit 59c370cd1ce6f92e7cfa606e50ec12e21e2ca4c6
+Author: tbeu <tbeu@users.noreply.github.com>
+Date:   Sun Jan 17 22:04:06 2021 +0100
+
+    Avoid uninitialized memory
+
+diff --git a/src/mat73.c b/src/mat73.c
+index 2e8d9c2..0623155 100644
+--- a/src/mat73.c
++++ b/src/mat73.c
+@@ -906,7 +906,7 @@ Mat_H5ReadGroupInfo(mat_t *mat,matvar_t *matvar,hid_t dset_id)
+             return;
+         }
+     }
+-    fields = (matvar_t**)malloc(matvar->nbytes);
++    fields = (matvar_t**)calloc(matvar->nbytes, 1);
+     matvar->data = fields;
+     if ( NULL != fields ) {
+         hsize_t k;

@@ -1,0 +1,32 @@
+From 4e198c00646604b5fe6726cdc9eba4c2b7861ce2 Mon Sep 17 00:00:00 2001
+From: "Christoph M. Becker" <cmbecker69@gmx.de>
+Date: Mon, 14 Sep 2020 22:31:15 +0200
+Subject: [PATCH] Avoid segfault if module/extension version is not defined
+
+---
+ ext/opcache/ZendAccelerator.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/ext/opcache/ZendAccelerator.c b/ext/opcache/ZendAccelerator.c
+index 3c6a1ae6890b4..dffa3849f8a9d 100644
+--- a/ext/opcache/ZendAccelerator.c
++++ b/ext/opcache/ZendAccelerator.c
+@@ -2710,12 +2710,16 @@ static void accel_gen_system_id(void)
+      */
+ 	ZEND_HASH_FOREACH_PTR(&module_registry, module) {
+ 		PHP_MD5Update(&context, module->name, strlen(module->name));
+-		PHP_MD5Update(&context, module->version, strlen(module->version));
++		if (module->version != NULL) {
++			PHP_MD5Update(&context, module->version, strlen(module->version));
++		}
+ 	} ZEND_HASH_FOREACH_END();
+ 	extension = (zend_extension *) zend_llist_get_first_ex(&zend_extensions, &pos);
+ 	while (extension) {
+ 		PHP_MD5Update(&context, extension->name, strlen(extension->name));
+-		PHP_MD5Update(&context, extension->version, strlen(extension->version));
++		if (extension->version != NULL) {
++			PHP_MD5Update(&context, extension->version, strlen(extension->version));
++		}
+ 		extension = (zend_extension *) zend_llist_get_next_ex(&zend_extensions, &pos);
+ 	}
+ 	PHP_MD5Final(digest, &context);

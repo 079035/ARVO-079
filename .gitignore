@@ -5,5 +5,7 @@ output
 _*
 .DS_Store*
 unitTest*
+fxTest*
 Log
-PaperData
+Data/
+PatchDesc*

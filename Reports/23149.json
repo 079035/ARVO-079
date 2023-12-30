@@ -1,5 +1,5 @@
 {
-    "fix": "https://android.googlesource.com/platform/external/perfetto//+/509812647060893522be508e0ab5b6c62dec03bd",
+    "fix": "https://android.googlesource.com/platform/external/perfetto//+/509812647060893522be508e0ab5b6c62dec03bd%5E%21/",
     "verify": "0",
     "localId": 23149,
     "project": "perfetto",

@@ -1,0 +1,136 @@
+From 0f83367f57861a55907691b51db4b2d4177c6296 Mon Sep 17 00:00:00 2001
+From: tira-misu <gunter.burchardt@boschrexroth.de>
+Date: Wed, 10 Feb 2021 20:45:34 +0100
+Subject: [PATCH] JSON schema - tailing double quotes for maximum (#6452)
+
+* Fix C/C++ Create<Type>Direct with sorted vectors
+
+If a struct has a key the vector has to be sorted. To sort the vector
+you can't use "const".
+
+* Changes due to code review
+
+* Improve code readability
+
+* Add generate of JSON schema to string to lib
+
+* option indent_step is supported
+
+* Remove unused variables
+
+* Fix break in test
+
+* Fix style to be consistent with rest of the code
+
+* Fix  double quotes for (u)int8 in json schema
+
+* Fix reference file for JSON schema test
+
+* Fix reference file for JSON schema test
+---
+ src/idl_gen_json_schema.cpp    |  4 ++--
+ tests/arrays_test.schema.json  |  2 +-
+ tests/monster_test.schema.json | 16 ++++++++--------
+ 3 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/src/idl_gen_json_schema.cpp b/src/idl_gen_json_schema.cpp
+index 55192c92c37..d58bb849769 100644
+--- a/src/idl_gen_json_schema.cpp
++++ b/src/idl_gen_json_schema.cpp
+@@ -49,10 +49,10 @@ std::string GenType(BaseType type) {
+       return "\"type\" : \"integer\", \"minimum\" : " +
+              NumToString(std::numeric_limits<int8_t>::min()) +
+              ", \"maximum\" : " +
+-             NumToString(std::numeric_limits<int8_t>::max()) + "\"";
++             NumToString(std::numeric_limits<int8_t>::max());
+     case BASE_TYPE_UCHAR:
+       return "\"type\" : \"integer\", \"minimum\" : 0, \"maximum\" :" +
+-             NumToString(std::numeric_limits<uint8_t>::max()) + "\"";
++             NumToString(std::numeric_limits<uint8_t>::max());
+     case BASE_TYPE_SHORT:
+       return "\"type\" : \"integer\", \"minimum\" : " +
+              NumToString(std::numeric_limits<int16_t>::min()) +
+diff --git a/tests/arrays_test.schema.json b/tests/arrays_test.schema.json
+index ed33fba1ae2..c33dc6caf43 100644
+--- a/tests/arrays_test.schema.json
++++ b/tests/arrays_test.schema.json
+@@ -41,7 +41,7 @@
+                 "maxItems": 15
+               },
+         "c" : {
+-                "type" : "integer", "minimum" : -128, "maximum" : 127"
++                "type" : "integer", "minimum" : -128, "maximum" : 127
+               },
+         "d" : {
+                 "type" : "array", "items" : {"$ref" : "#/definitions/MyGame_Example_NestedStruct"},
+diff --git a/tests/monster_test.schema.json b/tests/monster_test.schema.json
+index f2a307fc312..d42699e89f4 100644
+--- a/tests/monster_test.schema.json
++++ b/tests/monster_test.schema.json
+@@ -71,7 +71,7 @@
+                 "type" : "integer", "minimum" : -32768, "maximum" : 32767
+               },
+         "b" : {
+-                "type" : "integer", "minimum" : -128, "maximum" : 127"
++                "type" : "integer", "minimum" : -128, "maximum" : 127
+               }
+       },
+       "additionalProperties" : false
+@@ -166,7 +166,7 @@
+                 "deprecated" : true,
+               },
+         "inventory" : {
+-                "type" : "array", "items" : {"type" : "integer", "minimum" : 0, "maximum" :255"}
++                "type" : "array", "items" : {"type" : "integer", "minimum" : 0, "maximum" :255}
+               },
+         "color" : {
+                 "$ref" : "#/definitions/MyGame_Example_Color"
+@@ -190,7 +190,7 @@
+                 "$ref" : "#/definitions/MyGame_Example_Monster"
+               },
+         "testnestedflatbuffer" : {
+-                "type" : "array", "items" : {"type" : "integer", "minimum" : 0, "maximum" :255"}
++                "type" : "array", "items" : {"type" : "integer", "minimum" : 0, "maximum" :255}
+               },
+         "testempty" : {
+                 "$ref" : "#/definitions/MyGame_Example_Stat"
+@@ -241,7 +241,7 @@
+                 "type" : "array", "items" : {"$ref" : "#/definitions/MyGame_Example_Ability"}
+               },
+         "flex" : {
+-                "type" : "array", "items" : {"type" : "integer", "minimum" : 0, "maximum" :255"}
++                "type" : "array", "items" : {"type" : "integer", "minimum" : 0, "maximum" :255}
+               },
+         "test5" : {
+                 "type" : "array", "items" : {"$ref" : "#/definitions/MyGame_Example_Test"}
+@@ -298,7 +298,7 @@
+                 "$ref" : "#/definitions/MyGame_Example_Race"
+               },
+         "testrequirednestedflatbuffer" : {
+-                "type" : "array", "items" : {"type" : "integer", "minimum" : 0, "maximum" :255"}
++                "type" : "array", "items" : {"type" : "integer", "minimum" : 0, "maximum" :255}
+               },
+         "scalar_key_sorted_tables" : {
+                 "type" : "array", "items" : {"$ref" : "#/definitions/MyGame_Example_Stat"}
+@@ -311,10 +311,10 @@
+       "type" : "object",
+       "properties" : {
+         "i8" : {
+-                "type" : "integer", "minimum" : -128, "maximum" : 127"
++                "type" : "integer", "minimum" : -128, "maximum" : 127
+               },
+         "u8" : {
+-                "type" : "integer", "minimum" : 0, "maximum" :255"
++                "type" : "integer", "minimum" : 0, "maximum" :255
+               },
+         "i16" : {
+                 "type" : "integer", "minimum" : -32768, "maximum" : 32767
+@@ -341,7 +341,7 @@
+                 "type" : "number"
+               },
+         "v8" : {
+-                "type" : "array", "items" : {"type" : "integer", "minimum" : -128, "maximum" : 127"}
++                "type" : "array", "items" : {"type" : "integer", "minimum" : -128, "maximum" : 127}
+               },
+         "vf64" : {
+                 "type" : "array", "items" : {"type" : "number"}

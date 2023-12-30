@@ -1,0 +1,181 @@
+From 925efed69ee3faa4e92612ac97628886442a9ce9 Mon Sep 17 00:00:00 2001
+From: Khaled Hosny <khaledhosny@eglug.org>
+Date: Mon, 20 Mar 2017 22:11:28 +0200
+Subject: [PATCH] [fuzz] Heap-use-after-free in ots::OTSStream::Write
+
+https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=919
+---
+ src/ots.cc                                    |  55 ++++++++++--------
+ src/ots.h                                     |   4 +-
+ ...66065770241b8c31bd35201ad62102962a5aa.woff | Bin 0 -> 800 bytes
+ 3 files changed, 33 insertions(+), 26 deletions(-)
+ create mode 100644 tests/fonts/fuzzing/72566065770241b8c31bd35201ad62102962a5aa.woff
+
+diff --git a/src/ots.cc b/src/ots.cc
+index 8a860ce8..54c9d71d 100644
+--- a/src/ots.cc
++++ b/src/ots.cc
+@@ -47,24 +47,7 @@
+ #include "vmtx.h"
+ #include "vorg.h"
+ 
+-namespace {
+-
+-// Generate a message with or without a table tag, when 'header' is the FontFile pointer
+-#define OTS_FAILURE_MSG_TAG(msg_,tag_) OTS_FAILURE_MSG_TAG_(header, msg_, tag_)
+-#define OTS_FAILURE_MSG_HDR(msg_)      OTS_FAILURE_MSG_(header, msg_)
+-#define OTS_WARNING_MSG_HDR(msg_)      OTS_WARNING_MSG_(header, msg_)
+-
+-
+-bool CheckTag(uint32_t tag_value) {
+-  for (unsigned i = 0; i < 4; ++i) {
+-    const uint32_t check = tag_value & 0xff;
+-    if (check < 32 || check > 126) {
+-      return false;  // non-ASCII character found.
+-    }
+-    tag_value >>= 8;
+-  }
+-  return true;
+-}
++namespace ots {
+ 
+ struct Arena {
+  public:
+@@ -85,6 +68,27 @@ struct Arena {
+   std::vector<uint8_t*> hunks_;
+ };
+ 
++}; // namespace ots
++
++namespace {
++
++// Generate a message with or without a table tag, when 'header' is the FontFile pointer
++#define OTS_FAILURE_MSG_TAG(msg_,tag_) OTS_FAILURE_MSG_TAG_(header, msg_, tag_)
++#define OTS_FAILURE_MSG_HDR(msg_)      OTS_FAILURE_MSG_(header, msg_)
++#define OTS_WARNING_MSG_HDR(msg_)      OTS_WARNING_MSG_(header, msg_)
++
++
++bool CheckTag(uint32_t tag_value) {
++  for (unsigned i = 0; i < 4; ++i) {
++    const uint32_t check = tag_value & 0xff;
++    if (check < 32 || check > 126) {
++      return false;  // non-ASCII character found.
++    }
++    tag_value >>= 8;
++  }
++  return true;
++}
++
+ const struct {
+   uint32_t tag;
+   bool required;
+@@ -505,13 +509,13 @@ ots::TableAction GetTableAction(const ots::FontFile *header, uint32_t tag) {
+ 
+ bool GetTableData(const uint8_t *data,
+                   const ots::TableEntry& table,
+-                  Arena *arena,
++                  ots::Arena &arena,
+                   size_t *table_length,
+                   const uint8_t **table_data) {
+   if (table.uncompressed_length != table.length) {
+     // Compressed table. Need to uncompress into memory first.
+     *table_length = table.uncompressed_length;
+-    *table_data = (*arena).Allocate(*table_length);
++    *table_data = arena.Allocate(*table_length);
+     uLongf dest_len = *table_length;
+     int r = uncompress((Bytef*) *table_data, &dest_len,
+                        data + table.offset, table.length);
+@@ -629,6 +633,7 @@ bool ProcessGeneric(ots::FontFile *header,
+     table_map[tables[i].tag] = tables[i];
+   }
+ 
++  ots::Arena arena;
+   // Parse known tables first as we need to parse them in specific order.
+   for (unsigned i = 0; ; ++i) {
+     if (supported_tables[i].tag == 0) break;
+@@ -640,7 +645,7 @@ bool ProcessGeneric(ots::FontFile *header,
+         return OTS_FAILURE_MSG_TAG("missing required table", tag);
+       }
+     } else {
+-      if (!font->ParseTable(it->second, data)) {
++      if (!font->ParseTable(it->second, data, arena)) {
+         return OTS_FAILURE_MSG_TAG("Failed to parse table", tag);
+       }
+     }
+@@ -649,7 +654,7 @@ bool ProcessGeneric(ots::FontFile *header,
+   // Then parse any tables left.
+   for (const auto &table_entry : tables) {
+     if (!font->GetTable(table_entry.tag)) {
+-      if (!font->ParseTable(table_entry, data)) {
++      if (!font->ParseTable(table_entry, data, arena)) {
+         return OTS_FAILURE_MSG_TAG("Failed to parse table", table_entry.tag);
+       }
+     }
+@@ -810,7 +815,8 @@ FontFile::~FontFile() {
+   tables.clear();
+ }
+ 
+-bool Font::ParseTable(const TableEntry& table_entry, const uint8_t* data) {
++bool Font::ParseTable(const TableEntry& table_entry, const uint8_t* data,
++                      Arena &arena) {
+   uint32_t tag = table_entry.tag;
+   TableAction action = GetTableAction(file, tag);
+   if (action == TABLE_ACTION_DROP) {
+@@ -861,11 +867,10 @@ bool Font::ParseTable(const TableEntry& table_entry, const uint8_t* data) {
+   }
+ 
+   if (table) {
+-    Arena arena;
+     const uint8_t* table_data;
+     size_t table_length;
+ 
+-    if (GetTableData(data, table_entry, &arena, &table_length, &table_data)) {
++    if (GetTableData(data, table_entry, arena, &table_length, &table_data)) {
+       // FIXME: Parsing some tables will fail if the table is not added to
+       // m_tables first.
+       m_tables[tag] = table;
+diff --git a/src/ots.h b/src/ots.h
+index 021d33aa..f533d357 100644
+--- a/src/ots.h
++++ b/src/ots.h
+@@ -218,6 +218,7 @@ bool IsValidVersionTag(uint32_t tag);
+ struct Font;
+ struct FontFile;
+ struct TableEntry;
++struct Arena;
+ 
+ class Table {
+  public:
+@@ -273,7 +274,8 @@ struct Font {
+         range_shift(0) {
+   }
+ 
+-  bool ParseTable(const TableEntry& tableinfo, const uint8_t* data);
++  bool ParseTable(const TableEntry& tableinfo, const uint8_t* data,
++                  Arena &arena);
+   Table* GetTable(uint32_t tag) const;
+ 
+   FontFile *file;
+diff --git a/tests/fonts/fuzzing/72566065770241b8c31bd35201ad62102962a5aa.woff b/tests/fonts/fuzzing/72566065770241b8c31bd35201ad62102962a5aa.woff
+new file mode 100644
+index 0000000000000000000000000000000000000000..7e9af18da6dfa8a52232601d98c791c425230814
+GIT binary patch
+literal 800
+zcmZvZZAep57{{M;@7;`fOHI)wt8O|-lcw8LRw<O47F71K5BaIPIh}@YtW^_2wq}>8
+zOald_Am5P456&bC3S0P+f+$FsMP}MCLYaa^R^GdwnIAix-@WJmob!L4^W1wiKQ|W$
+z;Gj8BY`nvR&;O15bICdY%7A+(5WZ<*eWbA5RE4ox)LJA5>gWM$S#>e4zayR?FG80S
+zONvYu05XO;4M|^LjGZjOAbORkIYiA$^2w5Ny8~kk>Zl-FTP1s0Wg(s;UexRcWzbY^
+za$sH3iCTqlpoX;yQ+W}3pQBDk4Ae8lYE|VWJH}Q}??(=$*_>0@Zx#SECG$Wi<{)}P
+z;y0$Ax<!nBNk^s^r4FgxPo^c^678T2qDG9Pvc!Js6E%r$4Sub+%)t$Jqz<h#jS2Kb
+zT3C?UNa_5_ijR~^ZC|KvQZIfJXGn`=rQ)d=ECz1IN2z6gzz&H%1`B5_P||9n%rBSL
+zArKH<%(C=Qeg^V@789f^Nxep|<3k~D;d#EOd7K*#59>UV!SKaA13L!EPV5O_H)O&|
+zIKO!g=GA`;PaQS)d)SXEmaFo)TX)^;U+PQt*N@M3KNwXF9oFonBacNvtW^>GNkjyY
+zg+Uf02Mu)>+yJ6$GuOngHv?Yp`?b8UuQIJV`ZOc+P*DAtnG5b0x4bsETurVUm!rG2
+zG~JO=Tiid=Fg)m#tL`0;H60ydx3Ljpcgom+QaL$o)oK$`QpSH;v6Wu)3>e$JUIyr{
+z&^^IiJa0zi<_K<dOILxCb*6@dU-!i+_ciYb1oAvm&-(0-nD%HE-q{qV@Xni_2D}At
+znX~Yg&nDjaq(!;re8~yd1U082^PFH5?7~?=CFBTkU~HE4{qvc@9VlQE*=b0Mk94PH
+fr)DR|>u+CpR3BzF+e(jLwAEB>hsL^)-&p4_9#Q@e
+
+literal 0
+HcmV?d00001
+

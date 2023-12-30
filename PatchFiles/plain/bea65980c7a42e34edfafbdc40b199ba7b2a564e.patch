@@ -1,0 +1,650 @@
+From 1a3fa1f5fafd433bdcf1834426d6963eff532125 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 11:25:59 +0200
+Subject: [PATCH 01/11] commit_list: avoid use of strtol64 without length limit
+
+When quick-parsing a commit, we use `git__strtol64` to parse the
+commit's time. The buffer that's passed to `commit_quick_parse` is the
+raw data of an ODB object, though, whose data may not be properly
+formatted and also does not have to be `NUL` terminated. This may lead
+to out-of-bound reads.
+
+Use `git__strntol64` to avoid this problem.
+---
+ src/commit_list.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/commit_list.c b/src/commit_list.c
+index 96bd9dc1505..b4313eed2be 100644
+--- a/src/commit_list.c
++++ b/src/commit_list.c
+@@ -171,7 +171,9 @@ static int commit_quick_parse(
+ 			buffer--;
+ 	}
+ 
+-	if ((buffer == committer_start) || (git__strtol64(&commit_time, (char *)(buffer + 1), NULL, 10) < 0))
++	if ((buffer == committer_start) ||
++	    (git__strntol64(&commit_time, (char *)(buffer + 1),
++			    buffer_end - buffer + 1, NULL, 10) < 0))
+ 		return commit_error(commit, "cannot parse commit time");
+ 
+ 	commit->time = commit_time;
+
+From 600ceadd1426b874ae0618651210a690a68b27e9 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 11:29:06 +0200
+Subject: [PATCH 02/11] index: avoid out-of-bounds read when reading reuc entry
+ stage
+
+We use `git__strtol64` to parse file modes of the index entries, which
+does not limit the parsed buffer length. As the index can be essentially
+treated as "untrusted" in that the data stems from the file system, it
+may be misformatted and may not contain terminating `NUL` bytes. This
+may lead to out-of-bounds reads when trying to parse index entries with
+such malformatted modes.
+
+Fix the issue by using `git__strntol64` instead.
+---
+ src/index.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/index.c b/src/index.c
+index 465efaa4eab..8858d23a1d2 100644
+--- a/src/index.c
++++ b/src/index.c
+@@ -2243,7 +2243,7 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
+ 		for (i = 0; i < 3; i++) {
+ 			int64_t tmp;
+ 
+-			if (git__strtol64(&tmp, buffer, &endptr, 8) < 0 ||
++			if (git__strntol64(&tmp, buffer, size, &endptr, 8) < 0 ||
+ 				!endptr || endptr == buffer || *endptr ||
+ 				tmp < 0 || tmp > UINT32_MAX) {
+ 				index_entry_reuc_free(lost);
+
+From 3db9aa6f79711103a331a2bbbd044a3c37d4f136 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 11:32:48 +0200
+Subject: [PATCH 03/11] signature: avoid out-of-bounds reads when parsing
+ signature dates
+
+We use `git__strtol64` and `git__strtol32` to parse the trailing commit
+or author date and timezone of signatures. As signatures are usually
+part of a commit or tag object and thus essentially untrusted data, the
+buffer may be misformatted and may not be `NUL` terminated. This may
+lead to an out-of-bounds read.
+
+Fix the issue by using `git__strntol64` and `git__strntol32` instead.
+---
+ src/signature.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/signature.c b/src/signature.c
+index 286d0a618c0..91864bb88dc 100644
+--- a/src/signature.c
++++ b/src/signature.c
+@@ -231,7 +231,8 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
+ 		const char *time_start = email_end + 2;
+ 		const char *time_end;
+ 
+-		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0) {
++		if (git__strntol64(&sig->when.time, time_start,
++				   buffer_end - time_start, &time_end, 10) < 0) {
+ 			git__free(sig->name);
+ 			git__free(sig->email);
+ 			sig->name = sig->email = NULL;
+@@ -246,7 +247,8 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
+ 			tz_start = time_end + 1;
+ 
+ 			if ((tz_start[0] != '-' && tz_start[0] != '+') ||
+-				git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0) {
++			    git__strntol32(&offset, tz_start + 1,
++					   buffer_end - tz_start + 1, &tz_end, 10) < 0) {
+ 				/* malformed timezone, just assume it's zero */
+ 				offset = 0;
+ 			}
+
+From 1a2efd10bde66f798375e2f47ba57ef00ad5c193 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 11:35:08 +0200
+Subject: [PATCH 04/11] config: remove last instance of `git__strntol64`
+
+When parsing integers from configuration values, we use `git__strtol64`.
+This is fine to do, as we always sanitize values and can thus be sure
+that they'll have a terminating `NUL` byte. But as this is the last
+call-site of `git__strtol64`, let's just pass in the length explicitly
+by calling `strlen` on the value to be able to remove `git__strtol64`
+altogether.
+---
+ src/config.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/config.c b/src/config.c
+index 8d2e12f98e7..0837500f50f 100644
+--- a/src/config.c
++++ b/src/config.c
+@@ -1300,7 +1300,7 @@ int git_config_parse_int64(int64_t *out, const char *value)
+ 	const char *num_end;
+ 	int64_t num;
+ 
+-	if (!value || git__strtol64(&num, value, &num_end, 0) < 0)
++	if (!value || git__strntol64(&num, value, strlen(value), &num_end, 0) < 0)
+ 		goto fail_parse;
+ 
+ 	switch (*num_end) {
+
+From 68deb2cc80ef19bf3a1915c26b5308b283a6d69a Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 11:37:10 +0200
+Subject: [PATCH 05/11] util: remove unsafe `git__strtol64` function
+
+The function `git__strtol64` does not take a maximum buffer length as
+parameter. This has led to some unsafe usages of this function, and as
+such we may consider it as being unsafe to use. As we have now
+eradicated all usages of this function, let's remove it completely to
+avoid future misuse.
+---
+ src/util.c          |  6 ------
+ src/util.h          |  1 -
+ tests/core/strtol.c | 38 ++++++++++++++++----------------------
+ 3 files changed, 16 insertions(+), 29 deletions(-)
+
+diff --git a/src/util.c b/src/util.c
+index 79b362f7f4d..099a28a2a79 100644
+--- a/src/util.c
++++ b/src/util.c
+@@ -68,12 +68,6 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
+ 	return 0;
+ }
+ 
+-int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int base)
+-{
+-
+-	return git__strntol64(result, nptr, (size_t)-1, endptr, base);
+-}
+-
+ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+ {
+ 	const char *p;
+diff --git a/src/util.h b/src/util.h
+index b6f5b751982..646631bcf5d 100644
+--- a/src/util.h
++++ b/src/util.h
+@@ -60,7 +60,6 @@ GIT_INLINE(int) git__signum(int val)
+ 
+ extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
+ extern int git__strntol32(int32_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
+-extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int base);
+ extern int git__strntol64(int64_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
+ 
+ 
+diff --git a/tests/core/strtol.c b/tests/core/strtol.c
+index 0d3b6a5e67b..30109b438e8 100644
+--- a/tests/core/strtol.c
++++ b/tests/core/strtol.c
+@@ -17,29 +17,23 @@ void test_core_strtol__int32(void)
+ 	cl_git_fail(git__strtol32(&i, "  -2147483657 ", NULL, 10));
+ }
+ 
+-void test_core_strtol__int64(void)
++static void assert_l64_parses(const char *string, int64_t expected, int base)
+ {
+ 	int64_t i;
+-
+-	cl_git_pass(git__strtol64(&i, "123", NULL, 10));
+-	cl_assert(i == 123);
+-	cl_git_pass(git__strtol64(&i, "  +123 ", NULL, 10));
+-	cl_assert(i == 123);
+-	cl_git_pass(git__strtol64(&i, "  +2147483647 ", NULL, 10));
+-	cl_assert(i == 2147483647);
+-	cl_git_pass(git__strtol64(&i, "  -2147483648 ", NULL, 10));
+-	cl_assert(i == -2147483648LL);
+-	cl_git_pass(git__strtol64(&i, "  2147483657 ", NULL, 10));
+-	cl_assert(i == 2147483657LL);
+-	cl_git_pass(git__strtol64(&i, "  -2147483657 ", NULL, 10));
+-	cl_assert(i == -2147483657LL);
+-	cl_git_pass(git__strtol64(&i, " 9223372036854775807  ", NULL, 10));
+-	cl_assert(i == INT64_MAX);
+-	cl_git_pass(git__strtol64(&i, "   -9223372036854775808  ", NULL, 10));
+-	cl_assert(i == INT64_MIN);
+-	cl_git_pass(git__strtol64(&i, "   0x7fffffffffffffff  ", NULL, 16));
+-	cl_assert(i == INT64_MAX);
+-	cl_git_pass(git__strtol64(&i, "   -0x8000000000000000   ", NULL, 16));
+-	cl_assert(i == INT64_MIN);
++	cl_git_pass(git__strntol64(&i, string, strlen(string), NULL, base));
++	cl_assert_equal_i(i, expected);
+ }
+ 
++void test_core_strtol__int64(void)
++{
++	assert_l64_parses("123", 123, 10);
++	assert_l64_parses("  +123 ", 123, 10);
++	assert_l64_parses("  +2147483647 ", 2147483647, 10);
++	assert_l64_parses("  -2147483648 ", -2147483648LL, 10);
++	assert_l64_parses("  2147483657 ", 2147483657LL, 10);
++	assert_l64_parses("  -2147483657 ", -2147483657LL, 10);
++	assert_l64_parses(" 9223372036854775807  ", INT64_MAX, 10);
++	assert_l64_parses("   -9223372036854775808  ", INT64_MIN, 10);
++	assert_l64_parses("   0x7fffffffffffffff  ", INT64_MAX, 16);
++	assert_l64_parses("   -0x8000000000000000   ", INT64_MIN, 16);
++}
+
+From 21652ee9de439e042cc2e69b208aa2ef8ce31147 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 11:43:30 +0200
+Subject: [PATCH 06/11] tree-cache: avoid out-of-bound reads when parsing trees
+
+We use the `git__strtol32` function to parse the child and entry count
+of treecaches from the index, which do not accept a buffer length. As
+the buffer that is being passed in is untrusted data and may thus be
+malformed and may not contain a terminating `NUL` byte, we can overrun
+the buffer and thus perform an out-of-bounds read.
+
+Fix the issue by uzing `git__strntol32` instead.
+---
+ src/tree-cache.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/tree-cache.c b/src/tree-cache.c
+index b331d22a212..c33e6af9e84 100644
+--- a/src/tree-cache.c
++++ b/src/tree-cache.c
+@@ -91,7 +91,7 @@ static int read_tree_internal(git_tree_cache **out,
+ 		return -1;
+ 
+ 	/* Blank-terminated ASCII decimal number of entries in this tree */
+-	if (git__strtol32(&count, buffer, &buffer, 10) < 0)
++	if (git__strntol32(&count, buffer, buffer_end - buffer, &buffer, 10) < 0)
+ 		goto corrupted;
+ 
+ 	tree->entry_count = count;
+@@ -100,7 +100,7 @@ static int read_tree_internal(git_tree_cache **out,
+ 		goto corrupted;
+ 
+ 	 /* Number of children of the tree, newline-terminated */
+-	if (git__strtol32(&count, buffer, &buffer, 10) < 0 || count < 0)
++	if (git__strntol32(&count, buffer, buffer_end - buffer, &buffer, 10) < 0 || count < 0)
+ 		goto corrupted;
+ 
+ 	tree->children_count = count;
+
+From 2613fbb26a3e1a34dda8a5d198c108626cfd6cc3 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 11:58:14 +0200
+Subject: [PATCH 07/11] global: replace remaining use of `git__strtol32`
+
+Replace remaining uses of the `git__strtol32` function. While these uses
+are all safe as the strings were either sanitized or from a trusted
+source, we want to remove `git__strtol32` altogether to avoid future
+misuse.
+---
+ src/rebase.c               | 2 +-
+ src/revparse.c             | 5 +++--
+ src/streams/curl.c         | 2 +-
+ src/transports/smart_pkt.c | 2 +-
+ src/transports/winhttp.c   | 3 ++-
+ 5 files changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/src/rebase.c b/src/rebase.c
+index bc3c5995cf2..6503e5fc5ae 100644
+--- a/src/rebase.c
++++ b/src/rebase.c
+@@ -152,7 +152,7 @@ GIT_INLINE(int) rebase_readint(
+ 	if ((error = rebase_readfile(asc_out, state_path, filename)) < 0)
+ 		return error;
+ 
+-	if (git__strtol32(&num, asc_out->ptr, &eol, 10) < 0 || num < 0 || *eol) {
++	if (git__strntol32(&num, asc_out->ptr, asc_out->size, &eol, 10) < 0 || num < 0 || *eol) {
+ 		giterr_set(GITERR_REBASE, "the file '%s' contains an invalid numeric value", filename);
+ 		return -1;
+ 	}
+diff --git a/src/revparse.c b/src/revparse.c
+index bdbf8755887..df96f9d8639 100644
+--- a/src/revparse.c
++++ b/src/revparse.c
+@@ -128,7 +128,8 @@ static int try_parse_numeric(int *n, const char *curly_braces_content)
+ 	int32_t content;
+ 	const char *end_ptr;
+ 
+-	if (git__strtol32(&content, curly_braces_content, &end_ptr, 10) < 0)
++	if (git__strntol32(&content, curly_braces_content, strlen(curly_braces_content),
++			   &end_ptr, 10) < 0)
+ 		return -1;
+ 
+ 	if (*end_ptr != '\0')
+@@ -578,7 +579,7 @@ static int extract_how_many(int *n, const char *spec, size_t *pos)
+ 		} while (spec[(*pos)] == kind && kind == '~');
+ 
+ 		if (git__isdigit(spec[*pos])) {
+-			if (git__strtol32(&parsed, spec + *pos, &end_ptr, 10) < 0)
++			if (git__strntol32(&parsed, spec + *pos, strlen(spec + *pos), &end_ptr, 10) < 0)
+ 				return GIT_EINVALIDSPEC;
+ 
+ 			accumulated += (parsed - 1);
+diff --git a/src/streams/curl.c b/src/streams/curl.c
+index ee13be1dcc4..3c0af3b04b8 100644
+--- a/src/streams/curl.c
++++ b/src/streams/curl.c
+@@ -330,7 +330,7 @@ int git_curl_stream_new(git_stream **out, const char *host, const char *port)
+ 		return -1;
+ 	}
+ 
+-	if ((error = git__strtol32(&iport, port, NULL, 10)) < 0) {
++	if ((error = git__strntol32(&iport, port, strlen(port), NULL, 10)) < 0) {
+ 		git__free(st);
+ 		return error;
+ 	}
+diff --git a/src/transports/smart_pkt.c b/src/transports/smart_pkt.c
+index 6a404efe46d..fb59c70ecac 100644
+--- a/src/transports/smart_pkt.c
++++ b/src/transports/smart_pkt.c
+@@ -391,7 +391,7 @@ static int parse_len(size_t *out, const char *line, size_t linelen)
+ 		}
+ 	}
+ 
+-	if ((error = git__strtol32(&len, num, &num_end, 16)) < 0)
++	if ((error = git__strntol32(&len, num, PKT_LEN_SIZE, &num_end, 16)) < 0)
+ 		return error;
+ 
+ 	if (len < 0)
+diff --git a/src/transports/winhttp.c b/src/transports/winhttp.c
+index 3df892d095f..e925dbdc0e2 100644
+--- a/src/transports/winhttp.c
++++ b/src/transports/winhttp.c
+@@ -766,7 +766,8 @@ static int winhttp_connect(
+ 	t->connection = NULL;
+ 
+ 	/* Prepare port */
+-	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
++	if (git__strntol32(&port, t->connection_data.port,
++			   strlen(t->connection_data.port), NULL, 10) < 0)
+ 		return -1;
+ 
+ 	/* Prepare host */
+
+From 8d7fa88a9d5011b653035497b0f523e0f177b6a6 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 12:04:07 +0200
+Subject: [PATCH 08/11] util: remove `git__strtol32`
+
+The function `git__strtol32` can easily be misused when untrusted data
+is passed to it that may not have been sanitized with trailing `NUL`
+bytes. As all usages of this function have now been removed, we can
+remove this function altogether to avoid future misuse of it.
+---
+ src/util.c          |  6 ------
+ src/util.h          |  1 -
+ tests/core/strtol.c | 31 +++++++++++++++++++------------
+ 3 files changed, 19 insertions(+), 19 deletions(-)
+
+diff --git a/src/util.c b/src/util.c
+index 099a28a2a79..96276ab3e76 100644
+--- a/src/util.c
++++ b/src/util.c
+@@ -150,12 +150,6 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
+ 	return 0;
+ }
+ 
+-int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int base)
+-{
+-
+-	return git__strntol32(result, nptr, (size_t)-1, endptr, base);
+-}
+-
+ int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+ {
+ 	int error;
+diff --git a/src/util.h b/src/util.h
+index 646631bcf5d..40002437395 100644
+--- a/src/util.h
++++ b/src/util.h
+@@ -58,7 +58,6 @@ GIT_INLINE(int) git__signum(int val)
+ 	return ((val > 0) - (val < 0));
+ }
+ 
+-extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
+ extern int git__strntol32(int32_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
+ extern int git__strntol64(int64_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
+ 
+diff --git a/tests/core/strtol.c b/tests/core/strtol.c
+index 30109b438e8..c35f1821236 100644
+--- a/tests/core/strtol.c
++++ b/tests/core/strtol.c
+@@ -1,20 +1,16 @@
+ #include "clar_libgit2.h"
+ 
+-void test_core_strtol__int32(void)
++static void assert_l32_parses(const char *string, int32_t expected, int base)
+ {
+ 	int32_t i;
++	cl_git_pass(git__strntol32(&i, string, strlen(string), NULL, base));
++	cl_assert_equal_i(i, expected);
++}
+ 
+-	cl_git_pass(git__strtol32(&i, "123", NULL, 10));
+-	cl_assert(i == 123);
+-	cl_git_pass(git__strtol32(&i, "  +123 ", NULL, 10));
+-	cl_assert(i == 123);
+-	cl_git_pass(git__strtol32(&i, "  +2147483647 ", NULL, 10));
+-	cl_assert(i == 2147483647);
+-	cl_git_pass(git__strtol32(&i, "  -2147483648 ", NULL, 10));
+-	cl_assert(i == -2147483648LL);
+-	
+-	cl_git_fail(git__strtol32(&i, "  2147483657 ", NULL, 10));
+-	cl_git_fail(git__strtol32(&i, "  -2147483657 ", NULL, 10));
++static void assert_l32_fails(const char *string, int base)
++{
++	int32_t i;
++	cl_git_fail(git__strntol32(&i, string, strlen(string), NULL, base));
+ }
+ 
+ static void assert_l64_parses(const char *string, int64_t expected, int base)
+@@ -24,6 +20,17 @@ static void assert_l64_parses(const char *string, int64_t expected, int base)
+ 	cl_assert_equal_i(i, expected);
+ }
+ 
++void test_core_strtol__int32(void)
++{
++	assert_l32_parses("123", 123, 10);
++	assert_l32_parses("  +123 ", 123, 10);
++	assert_l32_parses("  +2147483647 ", 2147483647, 10);
++	assert_l32_parses("  -2147483648 ", -2147483648LL, 10);
++
++	assert_l32_fails("  2147483657 ", 10);
++	assert_l32_fails("  -2147483657 ", 10);
++}
++
+ void test_core_strtol__int64(void)
+ {
+ 	assert_l64_parses("123", 123, 10);
+
+From 39087ab8ef77004c9f3b8984c38a834a6cb238bc Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 12:11:33 +0200
+Subject: [PATCH 09/11] tests: core::strtol: test for some more edge-cases
+
+Some edge cases were currently completely untested, e.g. parsing numbers
+greater than INT64_{MIN,MAX}, truncating buffers by length and invalid
+characters. Add tests to verify that the system under test performs as
+expected.
+---
+ tests/core/strtol.c | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/tests/core/strtol.c b/tests/core/strtol.c
+index c35f1821236..3d284b350e8 100644
+--- a/tests/core/strtol.c
++++ b/tests/core/strtol.c
+@@ -20,13 +20,24 @@ static void assert_l64_parses(const char *string, int64_t expected, int base)
+ 	cl_assert_equal_i(i, expected);
+ }
+ 
++static void assert_l64_fails(const char *string, int base)
++{
++	int64_t i;
++	cl_git_fail(git__strntol64(&i, string, strlen(string), NULL, base));
++}
++
+ void test_core_strtol__int32(void)
+ {
+ 	assert_l32_parses("123", 123, 10);
+ 	assert_l32_parses("  +123 ", 123, 10);
+ 	assert_l32_parses("  +2147483647 ", 2147483647, 10);
+ 	assert_l32_parses("  -2147483648 ", -2147483648LL, 10);
++	assert_l32_parses("A", 10, 16);
++	assert_l32_parses("1x1", 1, 10);
+ 
++	assert_l32_fails("", 10);
++	assert_l32_fails("a", 10);
++	assert_l32_fails("x10x", 10);
+ 	assert_l32_fails("  2147483657 ", 10);
+ 	assert_l32_fails("  -2147483657 ", 10);
+ }
+@@ -43,4 +54,24 @@ void test_core_strtol__int64(void)
+ 	assert_l64_parses("   -9223372036854775808  ", INT64_MIN, 10);
+ 	assert_l64_parses("   0x7fffffffffffffff  ", INT64_MAX, 16);
+ 	assert_l64_parses("   -0x8000000000000000   ", INT64_MIN, 16);
++	assert_l64_parses("1a", 26, 16);
++	assert_l64_parses("1A", 26, 16);
++
++	assert_l64_fails("", 10);
++	assert_l64_fails("a", 10);
++	assert_l64_fails("x10x", 10);
++	assert_l64_fails("0x8000000000000000", 16);
++	assert_l64_fails("-0x8000000000000001", 16);
++}
++
++void test_core_strtol__buffer_length_truncates(void)
++{
++	int32_t i32;
++	int64_t i64;
++
++	cl_git_pass(git__strntol32(&i32, "11", 1, NULL, 10));
++	cl_assert_equal_i(i32, 1);
++
++	cl_git_pass(git__strntol64(&i64, "11", 1, NULL, 10));
++	cl_assert_equal_i(i64, 1);
+ }
+
+From b09c1c7b636c4112e247adc24245c65f3f9478d0 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 14:37:55 +0200
+Subject: [PATCH 10/11] util: avoid signed integer overflows in
+ `git__strntol64`
+
+While `git__strntol64` tries to detect integer overflows when doing the
+necessary arithmetics to come up with the final result, it does the
+detection only after the fact. This check thus relies on undefined
+behavior of signed integer overflows. Fix this by instead checking
+up-front whether the multiplications or additions will overflow.
+
+Note that a detected overflow will not cause us to abort parsing the
+current sequence of digits. In the case of an overflow, previous
+behavior was to still set up the end pointer correctly to point to the
+first character immediately after the currently parsed number. We do not
+want to change this now as code may rely on the end pointer being set up
+correctly even if the parsed number is too big to be represented as
+64 bit integer.
+---
+ src/util.c | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/src/util.c b/src/util.c
+index 96276ab3e76..a1336f3a507 100644
+--- a/src/util.c
++++ b/src/util.c
+@@ -126,10 +126,20 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
+ 			v = c - 'A' + 10;
+ 		if (v >= base)
+ 			break;
+-		nn = n * base + (neg ? -v : v);
+-		if ((!neg && nn < n) || (neg && nn > n))
++		v = neg ? -v : v;
++		if (n > INT64_MAX / base || n < INT64_MIN / base) {
+ 			ovfl = 1;
+-		n = nn;
++			/* Keep on iterating until the end of this number */
++			continue;
++		}
++		nn = n * base;
++		if ((v > 0 && nn > INT64_MAX - v) ||
++		    (v < 0 && nn < INT64_MIN - v)) {
++			ovfl = 1;
++			/* Keep on iterating until the end of this number */
++			continue;
++		}
++		n = nn + v;
+ 	}
+ 
+ Return:
+
+From ea19efc19fa683d632af3e172868bc4350724813 Mon Sep 17 00:00:00 2001
+From: Patrick Steinhardt <ps@pks.im>
+Date: Thu, 18 Oct 2018 15:08:56 +0200
+Subject: [PATCH 11/11] util: fix out of bounds read in error message
+
+When an integer that is parsed with `git__strntol32` is too big to fit
+into an int32, we will generate an error message that includes the
+actual string that failed to parse. This does not acknowledge the fact
+that the string may either not be NUL terminated or alternative include
+additional characters after the number that is to be parsed. We may thus
+end up printing characters into the buffer that aren't the number or,
+worse, read out of bounds.
+
+Fix the issue by utilizing the `endptr` that was set by
+`git__strntol64`. This pointer is guaranteed to be set to the first
+character following the number, and we can thus use it to compute the
+width of the number that shall be printed. Create a test to verify that
+we correctly truncate the number.
+---
+ src/util.c          | 10 +++++++---
+ tests/core/strtol.c |  7 +++++++
+ 2 files changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/src/util.c b/src/util.c
+index a1336f3a507..20c88a1d3a9 100644
+--- a/src/util.c
++++ b/src/util.c
+@@ -162,20 +162,24 @@ int git__strntol64(int64_t *result, const char *nptr, size_t nptr_len, const cha
+ 
+ int git__strntol32(int32_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+ {
+-	int error;
++	const char *tmp_endptr;
+ 	int32_t tmp_int;
+ 	int64_t tmp_long;
++	int error;
+ 
+-	if ((error = git__strntol64(&tmp_long, nptr, nptr_len, endptr, base)) < 0)
++	if ((error = git__strntol64(&tmp_long, nptr, nptr_len, &tmp_endptr, base)) < 0)
+ 		return error;
+ 
+ 	tmp_int = tmp_long & 0xFFFFFFFF;
+ 	if (tmp_int != tmp_long) {
+-		giterr_set(GITERR_INVALID, "failed to convert: '%s' is too large", nptr);
++		int len = tmp_endptr - nptr;
++		giterr_set(GITERR_INVALID, "failed to convert: '%.*s' is too large", len, nptr);
+ 		return -1;
+ 	}
+ 
+ 	*result = tmp_int;
++	if (endptr)
++		*endptr = tmp_endptr;
+ 
+ 	return error;
+ }
+diff --git a/tests/core/strtol.c b/tests/core/strtol.c
+index 3d284b350e8..ba79fba5108 100644
+--- a/tests/core/strtol.c
++++ b/tests/core/strtol.c
+@@ -75,3 +75,10 @@ void test_core_strtol__buffer_length_truncates(void)
+ 	cl_git_pass(git__strntol64(&i64, "11", 1, NULL, 10));
+ 	cl_assert_equal_i(i64, 1);
+ }
++
++void test_core_strtol__error_message_cuts_off(void)
++{
++	assert_l32_fails("2147483657foobar", 10);
++	cl_assert(strstr(giterr_last()->message, "2147483657") != NULL);
++	cl_assert(strstr(giterr_last()->message, "foobar") == NULL);
++}

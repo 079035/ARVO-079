@@ -1,7 +1,12 @@
-Vulnerability: The vulnerability in the code is a typo in the error message. The error message "invlid contact uri" should be "invalid contact uri".
+1. Vulnerability:
+The vulnerability in the code is related to the parsing of contact information. The function `skip_name()` was not properly updating the length of the string when encountering a semicolon (;) character. This could potentially lead to incorrect parsing of contact information, which could be exploited to cause unexpected behavior in the application.
 
-Summary of the fix: The fix corrects the typo in the error message to properly indicate "invalid contact uri".
+2. Short Summary of the Fix:
+The fix involves updating the `skip_name()` function to correctly handle the semicolon (;) character. The function now stops walking the name when it encounters an unquoted semicolon, and properly updates the length of the string.
 
-Detailed description of the fix:
-1. In the diff, the line `LM_ERR("invlid contact uri\n");` is changed to `LM_ERR("invalid contact uri\n");`.
-2. This fix corrects the typo in the error message when handling an invalid contact uri.
+3. Detailed Description of the Fix:
+In the `skip_name()` function, the condition for stopping the walk through the name string has been updated. Previously, the function would only stop if it encountered a colon (:). With the fix, the function will also stop if it encounters a semicolon (;). This is done by changing the condition in the if statement from `if (*p == ':')` to `if (*p == ':' || *p == ';')`.
+
+Additionally, the order of operations in the if block has been changed. Previously, the length of the string was updated before the start of the string was updated. This could potentially lead to incorrect calculations. With the fix, the length of the string is updated first, and then the start of the string is updated. This is done by moving the line `_s->s = last_wsp;` to after the line `_s->len -= last_wsp - _s->s + 1;`.
+
+Finally, a small typo in an error message has been corrected, changing "invlid" to "invalid".

@@ -1,0 +1,424 @@
+From 3ba2ab6f43e2d474e8b831abfc4728238aef131d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Sat, 11 Jun 2022 07:37:57 +0200
+Subject: [PATCH 01/13] trying windows wish me luck
+
+---
+ .github/workflows/Windows.yml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.github/workflows/Windows.yml b/.github/workflows/Windows.yml
+index 84e5d051df2..b8e3ab5344d 100644
+--- a/.github/workflows/Windows.yml
++++ b/.github/workflows/Windows.yml
+@@ -238,5 +238,6 @@ jobs:
+          post_install: choco uninstall openssl -y --force
+          treat_warn_as_error: 0
+          static_link_build: 1
++         out_of_tree_ext: 1
+          s3_id: ${{ secrets.S3_ID }}
+          s3_key: ${{ secrets.S3_KEY }}
+
+From c4b570d5a3e269dd3e4061bd63d07a19840d6761 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Sat, 11 Jun 2022 08:02:39 +0200
+Subject: [PATCH 02/13] python binary name?
+
+---
+ .github/actions/build_extensions/action.yml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.github/actions/build_extensions/action.yml b/.github/actions/build_extensions/action.yml
+index 368a0dd6d76..045b7921153 100644
+--- a/.github/actions/build_extensions/action.yml
++++ b/.github/actions/build_extensions/action.yml
+@@ -95,7 +95,7 @@ runs:
+       shell: bash
+       run: |
+         mkdir -p build/release/extension/out_of_tree
+-        python3.7 scripts/build_out_of_tree_extensions.py --output build/release/extension/out_of_tree
++        python scripts/build_out_of_tree_extensions.py --output build/release/extension/out_of_tree
+ 
+     - name: Run post-install scripts
+       if: ${{ inputs.post_install != '' }}
+
+From 8b1ee0b562bae733795a315c7589b9ea837542d8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Wed, 15 Jun 2022 10:12:28 +0200
+Subject: [PATCH 03/13] this may work
+
+---
+ .github/actions/build_extensions/action.yml | 2 +-
+ .github/workflows/extensions.csv            | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/.github/actions/build_extensions/action.yml b/.github/actions/build_extensions/action.yml
+index 045b7921153..679dca97529 100644
+--- a/.github/actions/build_extensions/action.yml
++++ b/.github/actions/build_extensions/action.yml
+@@ -57,7 +57,7 @@ inputs:
+   excel:
+     description: 'Build Excel'
+     default: 1
+-  oote:
++  out_of_tree_ext:
+     description: 'Build Out-Of-Tree Extensions'
+     default: 0
+ 
+diff --git a/.github/workflows/extensions.csv b/.github/workflows/extensions.csv
+index 50e4e1036e4..f622abc12c5 100644
+--- a/.github/workflows/extensions.csv
++++ b/.github/workflows/extensions.csv
+@@ -1,2 +1,2 @@
+ sqlite_scanner,https://github.com/duckdblabs/sqlitescanner,f671de2cb6f0d1bba58f300262b81cfeb745197d
+-postgres_scanner,https://github.com/duckdblabs/postgresscanner,d64fae3c381d823884532da4fca9b8234e248d12
++postgres_scanner,https://github.com/duckdblabs/postgresscanner,901d648fcdfeadb35455e897387b9a7cbe7be256
+
+From 9ae3fb38f8f6e17a99d1777c5468baad494955a9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Wed, 15 Jun 2022 10:48:36 +0200
+Subject: [PATCH 04/13] works on stones (TM)
+
+---
+ .github/workflows/extensions.csv | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.github/workflows/extensions.csv b/.github/workflows/extensions.csv
+index f622abc12c5..2de7be24c31 100644
+--- a/.github/workflows/extensions.csv
++++ b/.github/workflows/extensions.csv
+@@ -1,2 +1,2 @@
+ sqlite_scanner,https://github.com/duckdblabs/sqlitescanner,f671de2cb6f0d1bba58f300262b81cfeb745197d
+-postgres_scanner,https://github.com/duckdblabs/postgresscanner,901d648fcdfeadb35455e897387b9a7cbe7be256
++postgres_scanner,https://github.com/duckdblabs/postgresscanner,dfc07166ccbaf2a5b8158647dc89ebc16fe0135e
+
+From 92eeaf789d4f0abb1ae5197a325dbbac395f2c11 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Wed, 15 Jun 2022 12:29:50 +0200
+Subject: [PATCH 05/13] using make directly to avoid double builds
+
+---
+ .github/actions/build_extensions/action.yml |  2 +-
+ Makefile                                    |  3 +++
+ scripts/build_out_of_tree_extensions.py     | 16 ++--------------
+ 3 files changed, 6 insertions(+), 15 deletions(-)
+
+diff --git a/.github/actions/build_extensions/action.yml b/.github/actions/build_extensions/action.yml
+index 679dca97529..d16fe5d38d1 100644
+--- a/.github/actions/build_extensions/action.yml
++++ b/.github/actions/build_extensions/action.yml
+@@ -95,7 +95,7 @@ runs:
+       shell: bash
+       run: |
+         mkdir -p build/release/extension/out_of_tree
+-        python scripts/build_out_of_tree_extensions.py --output build/release/extension/out_of_tree
++        python scripts/build_out_of_tree_extensions.py
+ 
+     - name: Run post-install scripts
+       if: ${{ inputs.post_install != '' }}
+diff --git a/Makefile b/Makefile
+index d6f8228c0ea..a3bc0296e9b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -132,6 +132,9 @@ endif
+ ifneq ("${FORCE_QUERY_LOG}a", "a")
+ 	EXTENSIONS:=${EXTENSIONS} -DFORCE_QUERY_LOG=${FORCE_QUERY_LOG}
+ endif
++ifneq ($(BUILD_OUT_OF_TREE_EXTENSION),)
++	EXTENSIONS:=${EXTENSIONS} -DEXTERNAL_EXTENSION_DIRECTORY=$(BUILD_OUT_OF_TREE_EXTENSION)
++endif
+ 
+ clean:
+ 	rm -rf build
+diff --git a/scripts/build_out_of_tree_extensions.py b/scripts/build_out_of_tree_extensions.py
+index ac0fb67ba2a..12ca546ca30 100644
+--- a/scripts/build_out_of_tree_extensions.py
++++ b/scripts/build_out_of_tree_extensions.py
+@@ -13,11 +13,6 @@
+ parser.add_argument('--extensions', action='store',
+                     help='CSV file with DuckDB extensions to build', default=".github/workflows/extensions.csv")
+ 
+-parser.add_argument('--build', action='store',
+-                    help='Build directory', default="build/release")
+-
+-parser.add_argument('--output', action='store',
+-                    help='Folder to store the created extensions', required=True)
+ 
+ args = parser.parse_args()
+ 
+@@ -58,13 +53,6 @@ def exec(cmd):
+     os.chdir(clonedir)
+     exec('git checkout %s' % (task['commit']))
+     os.chdir(basedir)
+-    exec('cmake -S . -DEXTERNAL_EXTENSION_DIRECTORY=%s -B %s ' % (clonedir, args.build))
+-    exec('cmake --build %s --parallel' % (args.build))
+-    outpath = pathlib.Path(args.build, 'external_extension_build')
+-    for path in outpath.rglob('*.duckdb_extension'):
+-        res_path = os.path.join(args.output, path.name)
+-        shutil.copyfile(path, res_path)
+-        print(res_path)
+-    shutil.rmtree(outpath)
+-
++    os.environ['BUILD_OUT_OF_TREE_EXTENSION'] = clonedir
++    exec('make')
+ print("done")
+\ No newline at end of file
+
+From f98d878298835fcff5eea1406a5b801bd74fe830 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Wed, 15 Jun 2022 12:50:39 +0200
+Subject: [PATCH 06/13] re-enable dependency
+
+---
+ .github/workflows/Windows.yml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.github/workflows/Windows.yml b/.github/workflows/Windows.yml
+index b8e3ab5344d..57674365110 100644
+--- a/.github/workflows/Windows.yml
++++ b/.github/workflows/Windows.yml
+@@ -217,7 +217,7 @@ jobs:
+  win-extensions-64:
+    name: Windows Extensions (64-bit)
+    runs-on: windows-latest
+-#   needs: win-release-64
++   needs: win-release-64
+    steps:
+      - uses: actions/checkout@v3
+        with:
+
+From 9cdc03ae60f27aeb51623ca5dc756fd9187aac5f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Wed, 15 Jun 2022 16:12:20 +0200
+Subject: [PATCH 07/13] yay python binary names being different everywhere
+
+---
+ .github/actions/build_extensions/action.yml | 2 +-
+ .github/actions/ubuntu_16_setup/action.yml  | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/.github/actions/build_extensions/action.yml b/.github/actions/build_extensions/action.yml
+index d16fe5d38d1..12b1b7b16e0 100644
+--- a/.github/actions/build_extensions/action.yml
++++ b/.github/actions/build_extensions/action.yml
+@@ -59,7 +59,7 @@ inputs:
+     default: 1
+   out_of_tree_ext:
+     description: 'Build Out-Of-Tree Extensions'
+-    default: 0
++    default: 1
+ 
+ runs:
+   using: "composite"
+diff --git a/.github/actions/ubuntu_16_setup/action.yml b/.github/actions/ubuntu_16_setup/action.yml
+index 8c5a79ef20b..52069bc2c64 100644
+--- a/.github/actions/ubuntu_16_setup/action.yml
++++ b/.github/actions/ubuntu_16_setup/action.yml
+@@ -43,6 +43,7 @@ runs:
+         python3.7 --version
+         python3.7 -m pip install pip
+         python3.7 -m pip install requests awscli
++        (cd /usr/local/bin; ln -s python python3)
+ 
+     - name: Install CMake 3.21
+       shell: bash
+
+From 31b808e64ab67d31b89bf289329bbd1b0dbca924 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Wed, 15 Jun 2022 16:41:14 +0200
+Subject: [PATCH 08/13] grr
+
+---
+ .github/actions/ubuntu_16_setup/action.yml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.github/actions/ubuntu_16_setup/action.yml b/.github/actions/ubuntu_16_setup/action.yml
+index 52069bc2c64..5ce6ce79a71 100644
+--- a/.github/actions/ubuntu_16_setup/action.yml
++++ b/.github/actions/ubuntu_16_setup/action.yml
+@@ -43,7 +43,7 @@ runs:
+         python3.7 --version
+         python3.7 -m pip install pip
+         python3.7 -m pip install requests awscli
+-        (cd /usr/local/bin; ln -s python python3)
++        (cd /usr/local/bin; ln -s python3.7 python)
+ 
+     - name: Install CMake 3.21
+       shell: bash
+
+From 333353cde84eb6882ef8b8ae6631f658990f10ac Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Thu, 16 Jun 2022 07:20:26 +0200
+Subject: [PATCH 09/13] yay python3
+
+---
+ .github/actions/build_extensions/action.yml | 5 ++++-
+ .github/actions/ubuntu_16_setup/action.yml  | 1 -
+ .github/workflows/Windows.yml               | 1 +
+ 3 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/.github/actions/build_extensions/action.yml b/.github/actions/build_extensions/action.yml
+index 12b1b7b16e0..29b7c5e2098 100644
+--- a/.github/actions/build_extensions/action.yml
++++ b/.github/actions/build_extensions/action.yml
+@@ -60,6 +60,9 @@ inputs:
+   out_of_tree_ext:
+     description: 'Build Out-Of-Tree Extensions'
+     default: 1
++  python_name:
++    description: 'Python binary name because wtf Python'
++    default: 'python3'
+ 
+ runs:
+   using: "composite"
+@@ -95,7 +98,7 @@ runs:
+       shell: bash
+       run: |
+         mkdir -p build/release/extension/out_of_tree
+-        python scripts/build_out_of_tree_extensions.py
++        ${{ inputs.python_name}} scripts/build_out_of_tree_extensions.py
+ 
+     - name: Run post-install scripts
+       if: ${{ inputs.post_install != '' }}
+diff --git a/.github/actions/ubuntu_16_setup/action.yml b/.github/actions/ubuntu_16_setup/action.yml
+index 5ce6ce79a71..8c5a79ef20b 100644
+--- a/.github/actions/ubuntu_16_setup/action.yml
++++ b/.github/actions/ubuntu_16_setup/action.yml
+@@ -43,7 +43,6 @@ runs:
+         python3.7 --version
+         python3.7 -m pip install pip
+         python3.7 -m pip install requests awscli
+-        (cd /usr/local/bin; ln -s python3.7 python)
+ 
+     - name: Install CMake 3.21
+       shell: bash
+diff --git a/.github/workflows/Windows.yml b/.github/workflows/Windows.yml
+index 57674365110..5acdb43ba00 100644
+--- a/.github/workflows/Windows.yml
++++ b/.github/workflows/Windows.yml
+@@ -241,3 +241,4 @@ jobs:
+          out_of_tree_ext: 1
+          s3_id: ${{ secrets.S3_ID }}
+          s3_key: ${{ secrets.S3_KEY }}
++         python_name: python
+
+From 87479be7ca6e4287ce181f6ced1b211e827a38ae Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Fri, 17 Jun 2022 09:00:25 +0200
+Subject: [PATCH 10/13] moving external extensions
+
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index d599c0a527c..4f4a06b446e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -807,5 +807,5 @@ endif()
+ 
+ # build out-of-tree extensions on demand
+ if(NOT "${EXTERNAL_EXTENSION_DIRECTORY}" STREQUAL "")
+-  add_subdirectory(${EXTERNAL_EXTENSION_DIRECTORY} external_extension_build)
++  add_subdirectory(${EXTERNAL_EXTENSION_DIRECTORY} extension/external)
+ endif()
+\ No newline at end of file
+
+From c837e2ce6f232fe0f64443a25e5d33fd2ead4a41 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Fri, 17 Jun 2022 09:52:34 +0200
+Subject: [PATCH 11/13] mc
+
+---
+ CMakeLists.txt | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4f4a06b446e..fcbe9e571ea 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -807,5 +807,7 @@ endif()
+ 
+ # build out-of-tree extensions on demand
+ if(NOT "${EXTERNAL_EXTENSION_DIRECTORY}" STREQUAL "")
+-  add_subdirectory(${EXTERNAL_EXTENSION_DIRECTORY} extension/external)
++  # the build path seems to get ignored on windows in just the right way. no idea why.
++  get_filename_component(EXTERNAL_EXTENSION_NAME ${EXTERNAL_EXTENSION_DIRECTORY} NAME)
++  add_subdirectory(${EXTERNAL_EXTENSION_DIRECTORY} "extension/${EXTERNAL_EXTENSION_NAME}")
+ endif()
+\ No newline at end of file
+
+From 41aee996c0a581c6fcd2535562bb11f2da13347d Mon Sep 17 00:00:00 2001
+From: Mark Raasveldt <mark.raasveldt@gmail.com>
+Date: Fri, 17 Jun 2022 10:06:54 +0200
+Subject: [PATCH 12/13] Fix TreeRenderer crash on invalid UTF8
+
+---
+ src/common/tree_renderer.cpp                                  | 4 ++++
+ ...z-testcase-minimized-parse_fuzz_test-5082369452802048.fuzz | 1 +
+ 2 files changed, 5 insertions(+)
+ create mode 100644 test/ossfuzz/cases/clusterfuzz-testcase-minimized-parse_fuzz_test-5082369452802048.fuzz
+
+diff --git a/src/common/tree_renderer.cpp b/src/common/tree_renderer.cpp
+index 5c6eac71e17..86b72475092 100644
+--- a/src/common/tree_renderer.cpp
++++ b/src/common/tree_renderer.cpp
+@@ -296,6 +296,7 @@ string TreeRenderer::RemovePadding(string l) {
+ }
+ 
+ void TreeRenderer::SplitStringBuffer(const string &source, vector<string> &result) {
++	D_ASSERT(Utf8Proc::IsValid(source.c_str(), source.size()));
+ 	idx_t max_line_render_size = config.NODE_RENDER_WIDTH - 2;
+ 	// utf8 in prompt, get render width
+ 	idx_t cpos = 0;
+@@ -330,6 +331,9 @@ void TreeRenderer::SplitUpExtraInfo(const string &extra_info, vector<string> &re
+ 	if (extra_info.empty()) {
+ 		return;
+ 	}
++	if (!Utf8Proc::IsValid(extra_info.c_str(), extra_info.size())) {
++		return;
++	}
+ 	auto splits = StringUtil::Split(extra_info, "\n");
+ 	if (!splits.empty() && splits[0] != "[INFOSEPARATOR]") {
+ 		result.push_back(ExtraInfoSeparator());
+diff --git a/test/ossfuzz/cases/clusterfuzz-testcase-minimized-parse_fuzz_test-5082369452802048.fuzz b/test/ossfuzz/cases/clusterfuzz-testcase-minimized-parse_fuzz_test-5082369452802048.fuzz
+new file mode 100644
+index 00000000000..4a7cdc94ea5
+--- /dev/null
++++ b/test/ossfuzz/cases/clusterfuzz-testcase-minimized-parse_fuzz_test-5082369452802048.fuzz
+@@ -0,0 +1 @@
++SELECT 3ìÿÿìÿÿn77ìÿÿìÿÿ377í7ÿÿ
+\ No newline at end of file
+
+From 81706fd8b34748a2c91153f86bdd5dcabf9895de Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Hannes=20M=C3=BChleisen?= <hannes@muehleisen.org>
+Date: Fri, 17 Jun 2022 13:28:42 +0200
+Subject: [PATCH 13/13] Update bug_report.md
+
+---
+ .github/ISSUE_TEMPLATE/bug_report.md | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.md b/.github/ISSUE_TEMPLATE/bug_report.md
+index ebbd4198d45..5cacc6ccce7 100644
+--- a/.github/ISSUE_TEMPLATE/bug_report.md
++++ b/.github/ISSUE_TEMPLATE/bug_report.md
+@@ -14,10 +14,17 @@ A short, clear and concise description of what the bug is.
+ Steps to reproduce the behavior. Bonus points if those are only SQL queries.
+ 
+ #### Environment (please complete the following information):
+- - OS: [e.g. iOS]
++ - OS: (e.g. iOS)
+  - DuckDB Version: [e.g. 22]
+  - DuckDB Client: [e.g. Python]
+ 
++#### Identity Disclosure:
++ - Full Name: [e.g. John Doe]
++ - Affiliation: [e.g. Oracle]
++
++If the above is not given and is not obvious from your GitHub profile page, we might close your issue without further review. Please refer to the [reasoning behind this rule](https://berthub.eu/articles/posts/anonymous-help/) if you have questions.
++
++
+ #### Before Submitting
+ 
+ - [ ] **Have you tried this on the latest `master` branch?**

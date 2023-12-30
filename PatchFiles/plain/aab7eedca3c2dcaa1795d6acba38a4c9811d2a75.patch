@@ -1,0 +1,25 @@
+commit aab7eedca3c2dcaa1795d6acba38a4c9811d2a75
+Author: Nick Wellnhofer <wellnhofer@aevum.de>
+Date:   Thu Mar 23 16:31:45 2023 +0100
+
+    malloc-fail: Fix null deref in xsltKeyFunction
+    
+    Found by OSS-Fuzz, see #84.
+
+diff --git a/libxslt/functions.c b/libxslt/functions.c
+index a1484a07..283ff24b 100644
+--- a/libxslt/functions.c
++++ b/libxslt/functions.c
+@@ -383,6 +383,12 @@ xsltKeyFunction(xmlXPathParserContextPtr ctxt, int nargs){
+ 	xmlXPathObjectPtr newobj, ret;
+ 
+ 	ret = xmlXPathNewNodeSet(NULL);
++        if (ret == NULL) {
++            ctxt->error = XPATH_MEMORY_ERROR;
++            xmlXPathFreeObject(obj1);
++            xmlXPathFreeObject(obj2);
++            return;
++        }
+ 
+ 	if (obj2->nodesetval != NULL) {
+ 	    for (i = 0; i < obj2->nodesetval->nodeNr; i++) {

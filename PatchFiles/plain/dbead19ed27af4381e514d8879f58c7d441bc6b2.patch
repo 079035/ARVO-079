@@ -1,0 +1,25 @@
+From dbead19ed27af4381e514d8879f58c7d441bc6b2 Mon Sep 17 00:00:00 2001
+From: Marcus Meissner <marcus@jet.franken.de>
+Date: Sun, 15 Aug 2021 17:47:22 +0200
+Subject: [PATCH] check we can read the entry count (oss-fuzz)
+
+---
+ libexif/apple/exif-mnote-data-apple.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/libexif/apple/exif-mnote-data-apple.c b/libexif/apple/exif-mnote-data-apple.c
+index c29af9f3..bc95cc1b 100644
+--- a/libexif/apple/exif-mnote-data-apple.c
++++ b/libexif/apple/exif-mnote-data-apple.c
+@@ -70,6 +70,11 @@ exif_mnote_data_apple_load(ExifMnoteData *md, const unsigned char *buf, unsigned
+ 
+     /* Start of interesting data */
+     ofs = d->offset + 6;
++    if (ofs > buf_size - 16) {
++        exif_log(md->log, EXIF_LOG_CODE_CORRUPT_DATA,
++                 "ExifMnoteDataApple", "Short MakerNote");
++        return;
++    }
+ 
+     if ((buf[ofs + 12] == 'M') && (buf[ofs + 13] == 'M')) {
+         d->order = EXIF_BYTE_ORDER_MOTOROLA;

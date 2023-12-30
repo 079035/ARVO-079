@@ -1,22 +1,10 @@
-Vulnerability:
-There is a stack-buffer-overflow vulnerability in the `tlsCheckUncommonALPN` function in the `tls.c` file. The vulnerability occurs when the `alpn_len` is greater than or equal to 64, causing a stack buffer overflow in the `strncpy` function.
+1. Vulnerability:
+The vulnerability in the code is a stack-buffer-overflow error. This error occurs when a program writes more data to a buffer located on the stack than what is actually allocated for that buffer. This can lead to overwriting of adjacent memory and can cause erratic program behavior, including memory access errors, incorrect results, a crash, or a breach of system security.
 
-Summary of the fix:
-The fix for the vulnerability avoids zeroing the entire string and ensures that even if `alpn_len` is greater than or equal to 64, the stack buffer overflow will not occur.
+2. Short Summary of the Fix:
+The fix involves changing the way the string 'str' is handled in the function 'tlsCheckUncommonALPN'. Instead of zeroing the entire string and then using strncpy to copy data into it, the fix initializes the string with a null character, calculates the minimum length between the source string and the size of the destination string, and then copies the data. It also ensures that the string is null-terminated.
 
-Detailed description of the fix:
-In the original code, the `str` array is defined with a size of 64 and is zeroed out. Then, the `alpn_start` string is copied to the `str` array using `strncpy`. However, if `alpn_len` is greater than or equal to 64, the `strncpy` function writes past the end of the `str` array, causing the stack buffer overflow.
+3. Detailed Description of the Fix:
+In the original code, the string 'str' was initialized with all zeros and then strncpy was used to copy data from 'alpn_start' to 'str'. This could lead to a buffer overflow if 'alpn_len' was greater than the size of 'str'. 
 
-To fix the vulnerability, the code has been modified as follows:
-
-1. The `str` array is no longer zeroed out during declaration.
-
-2. The `str_len` variable of type `size_t` is introduced to store the length of the string to be copied.
-
-3. The `str_len` is assigned the minimum value between `alpn_len` and the size of the `str` array.
-
-4. If `str_len` is greater than 0, the `alpn_start` string is copied to the `str` array using `strncpy` with `str_len` as the length parameter.
-
-5. The last character of the `str` array is set to '\0' to ensure proper string termination.
-
-By performing these changes, the fix ensures that even if the `alpn_len` is greater than or equal to 64, the stack buffer overflow will not occur. The `strncpy` function is used safely, and the `str` array is properly terminated as a string.
+In the fixed code, the string 'str' is first initialized with a null character. Then, the minimum length between 'alpn_len' and the size of 'str' is calculated and stored in 'str_len'. This ensures that the number of characters copied into 'str' will not exceed its size. The strncpy function is then used to copy 'str_len' characters from 'alpn_start' to 'str'. Finally, the last character of 'str' is explicitly set to the null character to ensure that 'str' is null-terminated, even when 'strncpy' does not do it. This prevents any potential buffer overflow and ensures that the string is properly terminated.

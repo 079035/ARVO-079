@@ -1,5 +1,5 @@
 {
-    "fix": "https://android.googlesource.com/platform/external/libavc/+/f59c3864fe692c0191b40712e1b7a6a05a126c44",
+    "fix": "https://android.googlesource.com/platform/external/libavc/+/f59c3864fe692c0191b40712e1b7a6a05a126c44%5E%21/",
     "verify": "0",
     "localId": 21520,
     "project": "libavc",

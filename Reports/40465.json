@@ -1,5 +1,5 @@
 {
-    "fix": "git://sourceware.org/git/binutils-gdb.git6ef4fa071e2c25b71e81a91646b43378cf957388",
+    "fix": "https://github.com/bminor/binutils-gdb/commit/6ef4fa071e2c25b71e81a91646b43378cf957388",
     "verify": "0",
     "localId": 40465,
     "project": "binutils-gdb",

@@ -1,0 +1,58 @@
+From b36fec348256c49819925b46b13a2737bb370665 Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Sat, 24 Nov 2018 21:43:52 -0500
+Subject: [PATCH] ...
+
+---
+ MagickCore/enhance.c | 22 +++++++++++++---------
+ 1 file changed, 13 insertions(+), 9 deletions(-)
+
+diff --git a/MagickCore/enhance.c b/MagickCore/enhance.c
+index 56497db7dde..c2c5de6e7d9 100644
+--- a/MagickCore/enhance.c
++++ b/MagickCore/enhance.c
+@@ -629,14 +629,14 @@ MagickExport MagickBooleanType CLAHEImage(Image *image,const size_t x_tiles,
+   OffsetInfo
+     tile;
+ 
+-  ssize_t
+-    y;
+-
+   size_t
+     height,
+     n,
+     width;
+ 
++  ssize_t
++    y;
++
+   unsigned short
+     *pixels;
+ 
+@@ -651,16 +651,20 @@ MagickExport MagickBooleanType CLAHEImage(Image *image,const size_t x_tiles,
+   if (TransformImageColorspace(image,LabColorspace,exception) == MagickFalse)
+     return(MagickFalse);
+   status=MagickTrue;
+-  tile.x=(ssize_t) (x_tiles < 2 ? 2 : x_tiles >= MaxCLAHETiles ?
+-    MaxCLAHETiles-1 : x_tiles);
+-  tile.y=(ssize_t) (y_tiles < 2 ? 2 : y_tiles >= MaxCLAHETiles ?
+-    MaxCLAHETiles-1 : y_tiles);
++  tile.x=(ssize_t) (x_tiles < 2 ? 2 : x_tiles >= MaxCLAHETiles ? MaxCLAHETiles-
++    1 : x_tiles);
++  tile.y=(ssize_t) (y_tiles < 2 ? 2 : y_tiles >= MaxCLAHETiles ? MaxCLAHETiles-
++    1 : y_tiles);
+   width=((image->columns+tile.x/2)/tile.x)*tile.x;
+   height=((image->rows+tile.y/2)/tile.y)*tile.y;
+   pixel_cache=AcquireVirtualMemory(width,height*sizeof(*pixels));
+   if (pixel_cache == (MemoryInfo *) NULL)
+-    ThrowBinaryException(ResourceLimitError,"MemoryAllocationFailed",
+-      image->filename);
++    {
++      if (TransformImageColorspace(image,colorspace,exception) == MagickFalse)
++        return(MagickFalse);
++      ThrowBinaryException(ResourceLimitError,"MemoryAllocationFailed",
++        image->filename);
++    }
+   pixels=(unsigned short *) GetVirtualMemoryBlob(pixel_cache);
+   image_view=AcquireVirtualCacheView(image,exception);
+   n=0;

@@ -1,0 +1,26 @@
+commit 5583d5c71495402eeba568b36588cba345f4a623
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Sun Jan 29 14:31:08 2023 +0000
+
+    ofz#55499 output buffer has to at least be the same size as input buffer
+    
+    Change-Id: Ie80b058673c47db11334554189ad878a884e26db
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/146306
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/oox/source/crypto/AgileEngine.cxx b/oox/source/crypto/AgileEngine.cxx
+index 09748e9dfd7b..f7518498171d 100644
+--- a/oox/source/crypto/AgileEngine.cxx
++++ b/oox/source/crypto/AgileEngine.cxx
+@@ -332,7 +332,9 @@ bool AgileEngine::decryptAndCheckVerifierHash(OUString const & rPassword)
+ 
+     std::vector<sal_uInt8>& encryptedHashInput = mInfo.encryptedVerifierHashInput;
+     // SALT - needs to be a multiple of block size (?)
+-    sal_Int32 nSaltSize = roundUp(mInfo.saltSize, mInfo.blockSize);
++    sal_uInt32 nSaltSize = roundUp(mInfo.saltSize, mInfo.blockSize);
++    if (nSaltSize < encryptedHashInput.size())
++        return false;
+     std::vector<sal_uInt8> hashInput(nSaltSize, 0);
+     calculateBlock(constBlock1, hashFinal, encryptedHashInput, hashInput);
+ 

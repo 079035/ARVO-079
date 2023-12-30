@@ -1,0 +1,39 @@
+From 86b1e94ae72bc0e49745ed33d4b923ac8e6b8366 Mon Sep 17 00:00:00 2001
+From: Marcel Raad <Marcel.Raad@teamviewer.com>
+Date: Wed, 22 Aug 2018 12:26:21 +0200
+Subject: [PATCH] Tests: fixes for Windows
+
+- test 1268 requires unix sockets
+- test 2072 must be disabled also for MSYS/MinGW
+---
+ tests/data/test1268 | 3 +++
+ tests/data/test2072 | 2 +-
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/tests/data/test1268 b/tests/data/test1268
+index 7e3ab0fa950d40..c5fe5f7493fb7c 100644
+--- a/tests/data/test1268
++++ b/tests/data/test1268
+@@ -16,6 +16,9 @@ warning
+ <server>
+ none
+ </server>
++<features>
++unix-sockets
++</features>
+  <name>
+ file name argument looks like a flag
+  </name>
+diff --git a/tests/data/test2072 b/tests/data/test2072
+index 0d2489ff15f8e1..cd26f22bd63540 100644
+--- a/tests/data/test2072
++++ b/tests/data/test2072
+@@ -27,7 +27,7 @@ file:// with unix path resolution behavior for the case of extra slashes
+ file:////%PWD/log/test2072.txt
+ </command>
+ <precheck>
+-perl -e "print 'Test requires a unix system' if ( $^O eq 'MSWin32' || $^O eq 'cygwin' || $^O eq 'dos');"
++perl -e "print 'Test requires a unix system' if ( $^O eq 'MSWin32' || $^O eq 'cygwin' || $^O eq 'dos' || $^O eq 'msys');"
+ </precheck>
+ <file name="log/test2072.txt">
+ foo

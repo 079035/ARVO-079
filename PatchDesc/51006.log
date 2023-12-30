@@ -1,12 +1,8 @@
-Vulnerability: Modified macOS build configuration can lead to compatibility issues and unexpected behavior.
+1. Vulnerability:
+The vulnerability in this case is not a security vulnerability but rather a potential performance issue. The original configuration was using a macOS VM with 12 cores, but the new configuration is using a VM with only 4 cores. This could potentially slow down the build process.
 
-Summary of Fix: The fix updates the macOS build configuration to use the AArch64 architecture instead of the previous AMD64 architecture.
+2. Short Summary of the Fix:
+The fix involves changing the macOS VM used in the Cirrus CI pipeline from an AMD64 architecture to an AArch64 architecture. The number of cores used by the VM has also been reduced from 12 to 4.
 
-Detailed Description of Fix: 
-1. In the `.cirrus.yml` file, the `macos_task` section has been modified.
-2. The `name` field has been changed from `macos-amd64` to `macos-aarch64`, indicating a switch from the AMD64 architecture to the AArch64 architecture.
-3. The `image` field has been updated to `ghcr.io/cirruslabs/macos-ventura-xcode:14.1`, specifying a macOS 13 environment with Xcode 14.1.
-4. The `MAKEFLAGS` field has been changed from `'-j 12'` to `'-j 4'`, indicating the number of cores to be used for building on macOS VMs.
-5. The script section remains the same and performs necessary tasks, such as updating Brew and running the `build_matrix.sh` script.
-
-This fix ensures that the macOS build configuration is updated to use the AArch64 architecture and specifies the appropriate macOS environment for the build. The number of cores used for building has also been adjusted.
+3. Detailed Description of the Fix:
+The fix involves several changes to the '.cirrus.yml' file, which is used to configure the Cirrus CI pipeline. The name of the macOS task has been changed from 'macos-amd64' to 'macos-aarch64', indicating a switch in the architecture of the VM. The image used for the macOS instance has also been changed to 'ghcr.io/cirruslabs/macos-ventura-xcode:14.1', which is a macOS 13 image with Xcode 14.1. This image uses the AArch64 architecture. The 'MAKEFLAGS' environment variable, which controls the number of jobs that the 'make' command can run simultaneously, has been changed from '-j 12' to '-j 4', reflecting the reduced number of cores in the new VM. The script that is run in the VM remains the same.

@@ -1,0 +1,35 @@
+commit 27cee81d06fcff87d9c026a571db58c29c489dfa
+Author: Nick Clifton <nickc@redhat.com>
+Date:   Fri Oct 25 16:10:04 2019 +0100
+
+    Fix potential undefined behaviour in the RX disassembler.
+    
+            * rx-dis.c (print_insn_rx): Use parenthesis to ensure correct
+            access to opcodes.op array element.
+
+diff --git a/opcodes/ChangeLog b/opcodes/ChangeLog
+index 4213fba71d6..74f1db2aa6f 100644
+--- a/opcodes/ChangeLog
++++ b/opcodes/ChangeLog
+@@ -1,3 +1,8 @@
++2019-10-25  Nick Clifton  <nickc@redhat.com>
++
++	* rx-dis.c (print_insn_rx): Use parenthesis to ensure correct
++	access to opcodes.op array element.
++
+ 2019-10-23  Nick Clifton  <nickc@redhat.com>
+ 
+ 	* rx-dis.c (get_register_name): Fix spelling typo in error
+diff --git a/opcodes/rx-dis.c b/opcodes/rx-dis.c
+index c84f7c5d603..80144bb6127 100644
+--- a/opcodes/rx-dis.c
++++ b/opcodes/rx-dis.c
+@@ -319,7 +319,7 @@ print_insn_rx (bfd_vma addr, disassemble_info * dis)
+ 	    case '0':
+ 	    case '1':
+ 	    case '2':
+-	      oper = opcode.op + *s - '0';
++	      oper = opcode.op + (*s - '0');
+ 	      if (do_size)
+ 		{
+ 		  if (oper->type == RX_Operand_Indirect || oper->type == RX_Operand_Zero_Indirect)

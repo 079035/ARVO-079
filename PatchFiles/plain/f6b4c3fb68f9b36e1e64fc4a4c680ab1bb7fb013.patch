@@ -1,0 +1,33 @@
+commit f6b4c3fb68f9b36e1e64fc4a4c680ab1bb7fb013
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Mon Dec 19 21:19:40 2022 +0000
+
+    cid#1517796 Out-of-bounds read
+    
+    Change-Id: I930e3888cfa3363b9183619225f0d4cdca197cdd
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/144547
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/hwpfilter/source/hbox.cxx b/hwpfilter/source/hbox.cxx
+index 2e43d0f19691..acf6770ec9ba 100644
+--- a/hwpfilter/source/hbox.cxx
++++ b/hwpfilter/source/hbox.cxx
+@@ -616,7 +616,7 @@ OUString Outline::GetUnicode() const
+                     char dest[80];
+                     int l = 0;
+                     unsigned i = level;
+-                    if( deco[i][0] ){
++                    if (i < std::size(deco) && deco[i][0]) {
+                         buffer[l++] = deco[i][0];
+                     }
+                     if (i < std::size(user_shape))
+@@ -690,7 +690,7 @@ OUString Outline::GetUnicode() const
+                                 break;
+                         }
+                     }
+-                    if( deco[i][1] ){
++                    if (i < std::size(deco) && deco[i][1]) {
+                         buffer[l++] = deco[i][1];
+                     }
+                     buffer[l] = 0;

@@ -25,11 +25,14 @@ class GitTool():
         cmd = ['git','reset','--hard',commit]
         return check_call(cmd,self.repo)
     def listCommits(self,commit1,commit2):
+        
         # commit1 should be elder
-        # return a list includes commits between [commit1, commit2] (included)
+        # return a list includes commits between [commit1, commit2] (including commit1 and commit2)
+        # but not include branch nodes
         tmp_file = tmpFile()
-        cmd = ['git','log',f"^{commit1}",commit2,'--pretty=format:%H']
-        if not check_call(cmd,self.repo,open(tmp_file,'w')):
+        cmd = ['git','log',f"{commit1}..{commit2}",'--pretty=format:%H']
+        print(" ".join(cmd))
+        if not check_call(cmd,self.repo,stdout=open(tmp_file,'w')):
             return False
         with open(tmp_file) as f:
             res = [x.strip() for x in f.readlines()]
@@ -40,17 +43,24 @@ class GitTool():
         # return the path of the diff file
         tmp_file = tmpFile()
         # -W to show the whole function
-        cmd = ['git','show','-W',commit]
-        if not check_call(cmd,self.repo,open(tmp_file,'w')):
-            return False
-        return tmp_file
+        # -m for merged commits
+        # add timeout to avoid spending too much time on merging diff
+        cmd = ['timeout','30','git','show','--diff-merges=first-parent','-W',commit]
+        print(commit)
+        if check_call(cmd,self.repo,stdout=open(tmp_file,'w'),stderr=open("/dev/null",'w')):
+            return tmp_file
+        # cmd = ['timeout','30','git','show','-W',commit]
+        # if check_call(cmd,self.repo,stdout=open(tmp_file,'w')):
+            # return tmp_file
+        return False
+        
     def prevCommit(self,commit=None):
         # reutrn the previous commit hash
         tmp_file = tmpFile()
         cmd = ['git','log','-2','--pretty=format:%H']
         if commit != None:
             cmd.append(commit)
-        if not check_call(cmd,self.repo,open(tmp_file,'w')):
+        if not check_call(cmd,self.repo,stdout=open(tmp_file,'w')):
             return False
         with open(tmp_file) as f:
             res = [x.strip() for x in f.readlines()][-1]

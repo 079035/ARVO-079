@@ -1,0 +1,37 @@
+From a8b31e68c2331a1289e860ce07c8b80b855b7bf4 Mon Sep 17 00:00:00 2001
+From: Nick Wellnhofer <wellnhofer@aevum.de>
+Date: Mon, 21 Nov 2022 21:35:01 +0100
+Subject: [PATCH] parser: Fix progress check when parsing character data
+
+Skip over zero bytes to guarantee progress. Short-lived regression.
+---
+ parser.c          | 2 +-
+ parserInternals.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/parser.c b/parser.c
+index bc3718cdf..0c65ac5d6 100644
+--- a/parser.c
++++ b/parser.c
+@@ -4666,7 +4666,7 @@ xmlParseCharDataComplex(xmlParserCtxtPtr ctxt) {
+ 	    }
+ 	}
+     }
+-    if ((CUR != 0) && (!IS_CHAR(cur))) {
++    if ((ctxt->input->cur < ctxt->input->end) && (!IS_CHAR(cur))) {
+ 	/* Generate the error and skip the offending character */
+         xmlFatalErrMsgInt(ctxt, XML_ERR_INVALID_CHAR,
+                           "PCDATA invalid Char value %d\n",
+diff --git a/parserInternals.c b/parserInternals.c
+index 8af86ba53..c547a207d 100644
+--- a/parserInternals.c
++++ b/parserInternals.c
+@@ -400,7 +400,7 @@ xmlNextChar(xmlParserCtxtPtr ctxt)
+ 	return;
+     }
+ 
+-    if ((*ctxt->input->cur == 0) &&
++    if ((ctxt->input->cur >= ctxt->input->end) &&
+         (xmlParserInputGrow(ctxt->input, INPUT_CHUNK) <= 0)) {
+         return;
+     }

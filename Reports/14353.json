@@ -1,0 +1,137 @@
+{
+    "fix": "https://github.com/guidovranken/cryptofuzz/commit/17edd756cd3cee2d666ff825af592c5acef87eb8",
+    "verify": "0",
+    "localId": 14353,
+    "project": "cryptofuzz",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "msan",
+    "crash_type": "Use-of-uninitialized-value",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1555659796,
+                "content": "Detailed report: https://oss-fuzz.com/testcase?key=5734873723043840\n\nProject: cryptofuzz\nFuzzer: libFuzzer_cryptofuzz_cryptofuzz-openssl-noasm\nFuzz target binary: cryptofuzz-openssl-noasm\nJob Type: libfuzzer_msan_cryptofuzz\nPlatform Id: linux\n\nCrash Type: Use-of-uninitialized-value\nCrash Address: \nCrash State:\n  bool std::__1::equal<std::__1::__wrap_iter<unsigned char const*>, std::__1::__wr\n  bool std::__1::operator==<unsigned char, std::__1::allocator<unsigned char> >\n  std::__1::enable_if<is_convertible_v<decltype\n  \nSanitizer: memory (MSAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_cryptofuzz&range=201904180339:201904190148\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5734873723043840\n\nIssue filed automatically.\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for instructions to reproduce this bug locally.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.\n\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1555660265,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "OS-Linux"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "2408361860",
+                    "displayName": "guido...@gmail.com"
+                },
+                "timestamp": 1555671393,
+                "content": "Kurt, Matt:\n\n#include <openssl/evp.h>\n\n#define CF_CHECK_EQ(expr, res) if ( (expr) != (res) ) { goto end; }\n#define CF_CHECK_NE(expr, res) if ( (expr) == (res) ) { goto end; }\n\nint main(void)\n{\n    const EVP_CIPHER* cipher = NULL;\n    EVP_CIPHER_CTX* ctx = NULL;\n    const unsigned char cleartext[16] = {0};\n    const unsigned char key[16] = {0};\n    const unsigned char iv[8] = {0};\n    const unsigned char aad[0];\n    unsigned char mac_key[32] = {0};\n    unsigned char out[1024];\n    unsigned char tag[1024];\n    int len = 0;\n\n    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);\n\n    CF_CHECK_NE(cipher = EVP_aria_128_ccm(), NULL);\n    CF_CHECK_NE(ctx = EVP_CIPHER_CTX_new(), NULL);\n    CF_CHECK_EQ(EVP_EncryptInit_ex(ctx, cipher, NULL, NULL, NULL), 1);\n\n    CF_CHECK_EQ(EVP_EncryptInit_ex(ctx, NULL, NULL, key, iv), 1);\n\n    {\n        int len;\n        CF_CHECK_EQ(EVP_EncryptUpdate(ctx, NULL, &len, NULL, sizeof(cleartext)), 1);\n    }\n\n    {\n        int len;\n        CF_CHECK_EQ(EVP_EncryptUpdate(ctx, NULL, &len, aad, sizeof(aad)), 1);\n    }\n\n    {\n        int len;\n        CF_CHECK_EQ(EVP_EncryptUpdate(ctx, out, &len, cleartext, sizeof(cleartext)), 1);\n        CF_CHECK_EQ(EVP_EncryptFinal_ex(ctx, out, &len), 1);\n    }\n\n    {\n        CF_CHECK_EQ(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, sizeof(tag), tag), 1);\n        /* tag now partially uninitialized */\n    }\nend:\n    return 0;\n}\n\nThe reason is that in CRYPTO_ccm128_tag(), the output tag length is checked if it is too small, but not if it is too large.\nThis resolves the issue (not necessarily the right fix, but it removes the uninitialized memory)\n\nsize_t CRYPTO_ccm128_tag(CCM128_CONTEXT *ctx, unsigned char *tag, size_t len)\n{\n    unsigned int M = (ctx->nonce.c[0] >> 3) & 7; /* the M parameter */\n\n    M *= 2;\n    M += 2;\n    if (len < M)\n        return 0;\n    /* added */ memset(tag, 0, len);\n    memcpy(tag, ctx->cmac.c, M); \n    return M;\n}"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1651769691",
+                    "displayName": "kurt@roeckx.be"
+                },
+                "timestamp": 1555868424,
+                "content": "I think that check should probably be if (len != M), it's always writing M bytes."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "2408361860",
+                    "displayName": "guido...@gmail.com"
+                },
+                "timestamp": 1555869110,
+                "content": "Yes"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1556287857,
+                "content": "ClusterFuzz has detected this issue as fixed in range 201904250146:201904260145.\n\nDetailed report: https://oss-fuzz.com/testcase?key=5734873723043840\n\nProject: cryptofuzz\nFuzzer: libFuzzer_cryptofuzz_cryptofuzz-openssl-noasm\nFuzz target binary: cryptofuzz-openssl-noasm\nJob Type: libfuzzer_msan_cryptofuzz\nPlatform Id: linux\n\nCrash Type: Use-of-uninitialized-value\nCrash Address: \nCrash State:\n  bool std::__1::equal<std::__1::__wrap_iter<unsigned char const*>, std::__1::__wr\n  bool std::__1::operator==<unsigned char, std::__1::allocator<unsigned char> >\n  std::__1::enable_if<is_convertible_v<decltype\n  \nSanitizer: memory (MSAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_cryptofuzz&range=201904180339:201904190148\nFixed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_cryptofuzz&range=201904250146:201904260145\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5734873723043840\n\nSee https://github.com/google/oss-fuzz/blob/master/docs/reproducing.md for instructions to reproduce this bug locally.\n\nIf you suspect that the result above is incorrect, try re-doing that job on the test case report page."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "sequenceNum": 6,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1556288926,
+                "content": "ClusterFuzz testcase 5734873723043840 is verified as fixed, so closing issue as verified.\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "sequenceNum": 7,
+                "commenter": {
+                    "userId": "71439148",
+                    "displayName": "kcc@google.com"
+                },
+                "timestamp": 1558459789,
+                "content": "For bookkeeping: the fix was https://github.com/openssl/openssl/commit/514c9da48b860153079748b0d588cd42191f0b6a"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 14353,
+                "sequenceNum": 8,
+                "commenter": {
+                    "userId": "4164592774",
+                    "displayName": "sheriffbot@chromium.org"
+                },
+                "timestamp": 1558884260,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "17edd756cd3cee2d666ff825af592c5acef87eb8",
+    "repo_addr": "https://github.com/guidovranken/cryptofuzz"
+}

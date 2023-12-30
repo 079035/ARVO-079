@@ -1,5 +1,5 @@
 {
-    "fix": "https://gitlab.gnome.org/GNOME/libxslt.gitc401ed2166493eeaf5d00dc47fe139a6f47fd5cf",
+    "fix": "https://github.com/GNOME/libxslt/commit/c401ed2166493eeaf5d00dc47fe139a6f47fd5cf",
     "verify": "0",
     "localId": 57078,
     "project": "libxslt",

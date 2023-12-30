@@ -1,0 +1,23 @@
+commit ac9d752240d399db1d7c09f2ef4008200a272c8c
+Author: Nick Wellnhofer <wellnhofer@aevum.de>
+Date:   Wed Mar 15 14:28:14 2023 +0100
+
+    malloc-fail: Fix double free in xsltCompMatchAdd
+    
+    Found by OSS-Fuzz, see #84.
+
+diff --git a/libxslt/pattern.c b/libxslt/pattern.c
+index 81655660..00298392 100644
+--- a/libxslt/pattern.c
++++ b/libxslt/pattern.c
+@@ -311,10 +311,6 @@ xsltCompMatchAdd(xsltParserContextPtr ctxt, xsltCompMatchPtr comp,
+ 	     "xsltCompMatchAdd: memory re-allocation failure.\n");
+ 	    if (ctxt->style != NULL)
+ 		ctxt->style->errors++;
+-	    if (value)
+-	        xmlFree(value);
+-	    if (value2)
+-	        xmlFree(value2);
+ 	    return (-1);
+ 	}
+         comp->maxStep *= 2;

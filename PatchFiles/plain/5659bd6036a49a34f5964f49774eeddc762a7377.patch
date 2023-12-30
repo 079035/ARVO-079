@@ -1,0 +1,46 @@
+From 5659bd6036a49a34f5964f49774eeddc762a7377 Mon Sep 17 00:00:00 2001
+From: tim-weller-wolfssl <tim.weller@wolfssl.com>
+Date: Wed, 8 Mar 2023 12:24:36 -0600
+Subject: [PATCH] Prevent out-of-bound read in ASN parsing logic by erroring
+ out.
+
+---
+ wolfcrypt/src/asn.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/wolfcrypt/src/asn.c b/wolfcrypt/src/asn.c
+index 63ba52da076..97f45610dca 100644
+--- a/wolfcrypt/src/asn.c
++++ b/wolfcrypt/src/asn.c
+@@ -33274,6 +33274,9 @@ static int DecodeSingleResponse(byte* source, word32* ioIndex, word32 size,
+             return ASN_PARSE_E;
+     }
+ 
++    if (idx >= size)
++        return BUFFER_E;
++
+ #if defined(OPENSSL_ALL) || defined(WOLFSSL_NGINX) || defined(WOLFSSL_HAPROXY)
+     single->status->thisDateAsn = source + idx;
+     localIdx = 0;
+@@ -33281,6 +33284,10 @@ static int DecodeSingleResponse(byte* source, word32* ioIndex, word32 size,
+                     (byte*)&single->status->thisDateParsed.type,
+                     &single->status->thisDateParsed.length, size) < 0)
+         return ASN_PARSE_E;
++
++    if (idx + localIdx >= size)
++        return BUFFER_E;
++
+     XMEMCPY(single->status->thisDateParsed.data,
+             single->status->thisDateAsn + localIdx - single->status->thisDateParsed.length,
+             single->status->thisDateParsed.length);
+@@ -33313,6 +33320,10 @@ static int DecodeSingleResponse(byte* source, word32* ioIndex, word32 size,
+                         (byte*)&single->status->nextDateParsed.type,
+                         &single->status->nextDateParsed.length, size) < 0)
+             return ASN_PARSE_E;
++
++        if (idx + localIdx >= size)
++            return BUFFER_E;
++
+         XMEMCPY(single->status->nextDateParsed.data,
+                 single->status->nextDateAsn + localIdx - single->status->nextDateParsed.length,
+                 single->status->nextDateParsed.length);

@@ -1,0 +1,60 @@
+From aeb96554f3aafdb9a8693010946110b5d36b80f0 Mon Sep 17 00:00:00 2001
+From: Thomas Van Lenten <thomasvl@google.com>
+Date: Wed, 8 Sep 2021 15:01:15 -0400
+Subject: [PATCH] Handle writing out json when the value is empty/zero bytes
+ and no type.
+
+---
+ ...tcase-minimized-FuzzJSON_release-4929034878844928 |  1 +
+ Sources/SwiftProtobuf/AnyMessageStorage.swift        | 12 ++++++++++++
+ Tests/SwiftProtobufTests/Test_FuzzTests.swift        |  5 +++++
+ 3 files changed, 18 insertions(+)
+ create mode 100644 FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzJSON_release-4929034878844928
+
+diff --git a/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzJSON_release-4929034878844928 b/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzJSON_release-4929034878844928
+new file mode 100644
+index 000000000..e0013991d
+--- /dev/null
++++ b/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzJSON_release-4929034878844928
+@@ -0,0 +1 @@
++   {"wktAny":	{}}	
+\ No newline at end of file
+diff --git a/Sources/SwiftProtobuf/AnyMessageStorage.swift b/Sources/SwiftProtobuf/AnyMessageStorage.swift
+index 2f9be74b6..754a3f065 100644
+--- a/Sources/SwiftProtobuf/AnyMessageStorage.swift
++++ b/Sources/SwiftProtobuf/AnyMessageStorage.swift
+@@ -410,6 +410,18 @@ extension AnyMessageStorage {
+   func encodedJSONString(options: JSONEncodingOptions) throws -> String {
+     switch state {
+     case .binary(let valueData):
++      // Follow the C++ protostream_objectsource.cc's
++      // ProtoStreamObjectSource::RenderAny() special casing of an empty value.
++      guard !valueData.isEmpty else {
++        if _typeURL.isEmpty {
++          return "{}"
++        }
++        var jsonEncoder = JSONEncoder()
++        jsonEncoder.startField(name: "@type")
++        jsonEncoder.putStringValue(value: _typeURL)
++        jsonEncoder.endObject()
++        return jsonEncoder.stringResult
++      }
+       // Transcode by decoding the binary data to a message object
+       // and then recode back into JSON.
+       guard let messageType = Google_Protobuf_Any.messageType(forTypeURL: _typeURL) else {
+diff --git a/Tests/SwiftProtobufTests/Test_FuzzTests.swift b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+index ec9ef3c93..b8ea0919d 100644
+--- a/Tests/SwiftProtobufTests/Test_FuzzTests.swift
++++ b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+@@ -96,6 +96,11 @@ class Test_FuzzTests: XCTestCase {
+ 
+     // FailCases/JSON-Any
+     assertJSONFails(" {\"wktAny\":{\"ny\":{")
++
++    // FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzJSON_release-4929034878844928
++    // This actually fails when the fuzzer was trying to write it back out again.
++    let msg = try! Fuzz_Testing_Message(jsonString: "   {\"wktAny\":  {}}  ")
++    XCTAssertEqual(try! msg.jsonString(), "{\"wktAny\":{}}")
+   }
+ 
+   func test_TextFormat() {

@@ -1,0 +1,63 @@
+commit 44283f701359c7b0bcf5e0b5466591c7442d081a
+Author: L. Pereira <l@tia.mat.br>
+Date:   Sat Apr 9 22:02:06 2022 -0700
+
+    Address out-of-bounds read in huffman decoder for HTTP/2
+    
+    Since this code isn't being used at the moment, this is perfectly fine.
+    It just means that the fuzzer is doing its job.
+    
+    This still needs to be optimized later, but let's not worry about that
+    for now.  Let's just leave the fuzzer do its thing and find all the
+    corner cases we'll need to think about when it's actually time to use
+    this.
+    
+    Credits to oss-fuzz:
+        https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=46506
+
+diff --git a/fuzz/regression/clusterfuzz-testcase-minimized-h2_huffman_fuzzer-4703583657918464 b/fuzz/regression/clusterfuzz-testcase-minimized-h2_huffman_fuzzer-4703583657918464
+new file mode 100644
+index 00000000..790cc272
+--- /dev/null
++++ b/fuzz/regression/clusterfuzz-testcase-minimized-h2_huffman_fuzzer-4703583657918464
+@@ -0,0 +1 @@
++ ÿ    
+\ No newline at end of file
+diff --git a/src/lib/lwan-h2-huffman.c b/src/lib/lwan-h2-huffman.c
+index 70cf23d6..c2c33848 100644
+--- a/src/lib/lwan-h2-huffman.c
++++ b/src/lib/lwan-h2-huffman.c
+@@ -301,8 +301,14 @@ static inline bool consume(struct bit_reader *reader, int count)
+     assert(count > 0);
+     reader->bitbuf <<= count;
+     reader->bitcount -= count;
+-    return !__builtin_sub_overflow(reader->total_bitcount, count,
+-                                   &reader->total_bitcount);
++    if (__builtin_sub_overflow(reader->total_bitcount, count,
++                               &reader->total_bitcount)) {
++        return false;
++    }
++    if (reader->total_bitcount == 0) {
++        return false;
++    }
++    return true;
+ }
+ 
+ static inline size_t output_size(size_t input_size)
+diff --git a/src/scripts/gentables.py b/src/scripts/gentables.py
+index e957f367..ad5387a6 100755
+--- a/src/scripts/gentables.py
++++ b/src/scripts/gentables.py
+@@ -187,7 +187,11 @@ static inline bool consume(struct bit_reader *reader, int count)
+     assert(count > 0);
+     reader->bitbuf <<= count;
+     reader->bitcount -= count;
+-    return !__builtin_sub_overflow(reader->total_bitcount, count, &reader->total_bitcount);
++    if (__builtin_sub_overflow(reader->total_bitcount, count, &reader->total_bitcount))
++        return false;
++    if (reader->total_bitcount == 0)
++        return false;
++    return true;
+ }
+ """)
+   

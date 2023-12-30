@@ -1,0 +1,21 @@
+From 0e75f0a50fe4a9df75068c0eabaaf2a9e83dffe9 Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Mon, 2 Jul 2018 20:20:26 -0400
+Subject: [PATCH] ...
+
+---
+ ChangeLog | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/ChangeLog b/ChangeLog
+index ef374170201..469a9687bb5 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,5 +1,5 @@
+-2018-07-01  7.0.8-4 Cristy  <quetzlzacatenango@image...>
+-  * Release ImageMagick version 7.0.8-4, GIT revision 14501:19ce13c07:20180701.
++2018-07-02  7.0.8-4 Cristy  <quetzlzacatenango@image...>
++  * Release ImageMagick version 7.0.8-4, GIT revision 14505:4613eed4a:20180702.
+ 
+ 2018-06-28  7.0.8-4 Cristy  <quetzlzacatenango@image...>
+   * Small tweaks to compile under Cygwin.

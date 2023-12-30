@@ -1,0 +1,93 @@
+commit 17bfe554b9a8c57c4d377bce930046138298fd8b
+Author: Christian Biesinger <cbiesinger@google.com>
+Date:   Tue Oct 15 10:02:33 2019 -0500
+
+    Allow not saving the signal state in SIGSETJMP
+    
+    Saving the signal state is very slow (this patch is a 14% speedup).  The
+    reason we need this code is because signal handler will leave the
+    signal blocked when we longjmp out of it.  But in this case we can
+    just manually unblock the signal instead of taking the unconditional
+    perf hit.
+    
+    gdb/ChangeLog:
+    
+    2019-10-16  Christian Biesinger  <cbiesinger@google.com>
+    
+            * gdbsupport/gdb_setjmp.h (SIGSETJMP): Allow passing in the value to
+            pass on to sigsetjmp's second argument.
+            * cp-support.c (gdb_demangle): Unblock SIGSEGV if we caught a crash.
+    
+    Change-Id: Ib3010966050c64b4cc8b47d8cb45871652b0b3ea
+
+diff --git a/gdb/ChangeLog b/gdb/ChangeLog
+index d11dbfbfcfd..ba028ed230f 100644
+--- a/gdb/ChangeLog
++++ b/gdb/ChangeLog
+@@ -1,3 +1,9 @@
++2019-10-16  Christian Biesinger  <cbiesinger@google.com>
++
++	* gdbsupport/gdb_setjmp.h (SIGSETJMP): Allow passing in the value to
++	pass on to sigsetjmp's second argument.
++	* cp-support.c (gdb_demangle): Unblock SIGSEGV if we caught a crash.
++
+ 2019-10-16  Keith Seitz  <keiths@redhat.com>
+ 
+ 	PR gdb/23567
+diff --git a/gdb/cp-support.c b/gdb/cp-support.c
+index cd732b60e7d..253369b1efe 100644
+--- a/gdb/cp-support.c
++++ b/gdb/cp-support.c
+@@ -1539,7 +1539,16 @@ gdb_demangle (const char *name, int options)
+       ofunc = signal (SIGSEGV, gdb_demangle_signal_handler);
+ #endif
+ 
+-      crash_signal = SIGSETJMP (gdb_demangle_jmp_buf);
++      /* The signal handler may keep the signal blocked when we longjmp out
++         of it.  If we have sigprocmask, we can use it to unblock the signal
++	 afterwards and we can avoid the performance overhead of saving the
++	 signal mask just in case the signal gets triggered.  Otherwise, just
++	 tell sigsetjmp to save the mask.  */
++#ifdef HAVE_SIGPROCMASK
++      crash_signal = SIGSETJMP (gdb_demangle_jmp_buf, 0);
++#else
++      crash_signal = SIGSETJMP (gdb_demangle_jmp_buf, 1);
++#endif
+     }
+ #endif
+ 
+@@ -1559,6 +1568,14 @@ gdb_demangle (const char *name, int options)
+ 	{
+ 	  static int error_reported = 0;
+ 
++#ifdef HAVE_SIGPROCMASK
++	  /* If we got the signal, SIGSEGV may still be blocked; restore it.  */
++	  sigset_t segv_sig_set;
++	  sigemptyset (&segv_sig_set);
++	  sigaddset (&segv_sig_set, SIGSEGV);
++	  sigprocmask (SIG_UNBLOCK, &segv_sig_set, NULL);
++#endif
++
+ 	  if (!error_reported)
+ 	    {
+ 	      std::string short_msg
+diff --git a/gdb/gdbsupport/gdb_setjmp.h b/gdb/gdbsupport/gdb_setjmp.h
+index d4ebbfa8f2a..499597085b8 100644
+--- a/gdb/gdbsupport/gdb_setjmp.h
++++ b/gdb/gdbsupport/gdb_setjmp.h
+@@ -23,11 +23,13 @@
+ 
+ #ifdef HAVE_SIGSETJMP
+ #define SIGJMP_BUF		sigjmp_buf
+-#define SIGSETJMP(buf)		sigsetjmp((buf), 1)
++#define SIGSETJMP(buf,val)	sigsetjmp((buf), val)
+ #define SIGLONGJMP(buf,val)	siglongjmp((buf), (val))
+ #else
+ #define SIGJMP_BUF		jmp_buf
+-#define SIGSETJMP(buf)		setjmp(buf)
++/* We ignore val here because that's safer and avoids having to check
++   whether _setjmp exists.  */
++#define SIGSETJMP(buf,val)	setjmp(buf)
+ #define SIGLONGJMP(buf,val)	longjmp((buf), (val))
+ #endif
+ 

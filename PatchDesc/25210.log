@@ -1,10 +1,19 @@
-Vulnerability: Double Free
-Summary of the fix: The fix patches a double free vulnerability that occurs when processing an XInclude with an empty fallback.
-Detailed description of the fix: Previously, if an XInclude with an empty fallback was encountered, it could lead to a double free in the xmlTextReaderRead function. The fix addresses this vulnerability by adding a check to ensure that the old node being freed is not set as the current node before sending it to be freed. The fix adds the following lines of code:
+1. Vulnerability:
+The vulnerability in the code is a double free vulnerability. This occurs when the application tries to free a memory location that has already been freed. This can lead to a variety of security issues, including arbitrary code execution, system crashes, and information leaks. In this case, the vulnerability is in the XML reader when handling XIncludes with empty fallbacks.
+
+2. Short Summary of the Fix:
+The fix involves adding a check before unlinking and freeing a node to ensure that the node has not already been freed. This is done by comparing the node to be freed with the old node. If they are the same, the old node is set to NULL to prevent it from being freed again.
+
+3. Detailed Description of the Fix:
+The fix is implemented in the section of the code that handles the cleanup of the old node. Before the node is unlinked and freed, a check is added to compare the node to be freed (`tmp`) with the old node (`oldnode`). If they are the same, `oldnode` is set to NULL. This prevents `oldnode` from being freed again later in the code, which would result in a double free. The relevant code changes are as follows:
 
 ```c
-if (oldnode == tmp)
-    oldnode = NULL;
+if ((tmp->extra & NODE_IS_PRESERVED) == 0) {
++   if (oldnode == tmp)
++       oldnode = NULL;
+    xmlUnlinkNode(tmp);
+    xmlTextReaderFreeNode(reader, tmp);
+}
 ```
 
-This check ensures that the old node is set to NULL if it is equal to the temporary node being freed. This prevents a double free from occurring.
+This change ensures that a node is not freed twice, thus preventing the double free vulnerability.

@@ -1,0 +1,26 @@
+From 55b265a4a70a6b0a020f7cd59dfd0a02ed725747 Mon Sep 17 00:00:00 2001
+From: DavidKorczynski <david@adalogics.com>
+Date: Tue, 23 Feb 2021 23:13:44 +0000
+Subject: [PATCH] sds: fix length check. OSS-Fuzz 6227554268741632 (#3116)
+
+* sds: fix length check. OSS-Fuzz 6227554268741632
+
+Signed-off-by: davkor <david@adalogics.com>
+---
+ src/flb_sds.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/flb_sds.c b/src/flb_sds.c
+index 179a2c01a6f..1430089eb75 100644
+--- a/src/flb_sds.c
++++ b/src/flb_sds.c
+@@ -284,6 +284,9 @@ flb_sds_t flb_sds_cat_utf8 (flb_sds_t *sds, const char *str, int str_len)
+         }
+         else if (c >= 0x80) {
+             hex_bytes = flb_utf8_len(str + i);
++            if (hex_bytes + i >= str_len) {
++                return NULL;
++            }
+             state = FLB_UTF8_ACCEPT;
+             cp = 0;
+             for (b = 0; b < hex_bytes; b++) {

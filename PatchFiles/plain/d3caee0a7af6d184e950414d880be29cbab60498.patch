@@ -1,0 +1,34 @@
+commit d3caee0a7af6d184e950414d880be29cbab60498
+Author: Noel Grandin <noel.grandin@collabora.co.uk>
+Date:   Mon Oct 31 06:47:29 2022 +0100
+
+    Revert "tdf#126788 replace dynamic_cast with static_cast"
+    
+    This reverts commit 32b0b79c3f71e4aca995aa92ee519d93a3ca2b3b.
+    
+    Reason for revert: apparently sometimes we can have a regular SwPaM here?
+    
+    Change-Id: Ib09028a8ca565cea35defba5783ca4f869c59c55
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/141924
+    Tested-by: Jenkins
+    Reviewed-by: Noel Grandin <noel.grandin@collabora.co.uk>
+
+diff --git a/sw/inc/swcrsr.hxx b/sw/inc/swcrsr.hxx
+index e2b5ad10966a..486507b23c4e 100644
+--- a/sw/inc/swcrsr.hxx
++++ b/sw/inc/swcrsr.hxx
+@@ -216,10 +216,10 @@ public:
+ 
+     sal_Int32 GetCursorRowSpanOffset() const { return m_nRowSpanOffset; }
+ 
+-    SwCursor* GetNext()             { return static_cast<SwCursor *>(GetNextInRing()); }
+-    const SwCursor* GetNext() const { return static_cast<SwCursor const *>(GetNextInRing()); }
+-    SwCursor* GetPrev()             { return static_cast<SwCursor *>(GetPrevInRing()); }
+-    const SwCursor* GetPrev() const { return static_cast<SwCursor const *>(GetPrevInRing()); }
++    SwCursor* GetNext()             { return dynamic_cast<SwCursor *>(GetNextInRing()); }
++    const SwCursor* GetNext() const { return dynamic_cast<SwCursor const *>(GetNextInRing()); }
++    SwCursor* GetPrev()             { return dynamic_cast<SwCursor *>(GetPrevInRing()); }
++    const SwCursor* GetPrev() const { return dynamic_cast<SwCursor const *>(GetPrevInRing()); }
+ };
+ 
+ /**

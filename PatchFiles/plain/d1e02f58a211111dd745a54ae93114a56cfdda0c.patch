@@ -1,0 +1,51 @@
+commit d1e02f58a211111dd745a54ae93114a56cfdda0c
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Wed Nov 9 09:12:59 2022 +0000
+
+    ofz#53151 Abrt
+    
+    Change-Id: I2ccc6cbee28da9f91698b470449fb76b7729f634
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/142475
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/drawinglayer/Library_drawinglayercore.mk b/drawinglayer/Library_drawinglayercore.mk
+index 7ec954416a23..2eb24a40182d 100644
+--- a/drawinglayer/Library_drawinglayercore.mk
++++ b/drawinglayer/Library_drawinglayercore.mk
+@@ -37,6 +37,7 @@ $(eval $(call gb_Library_use_libraries,drawinglayercore,\
+     salhelper \
+     svl \
+     tl \
++    utl \
+ ))
+ 
+ $(eval $(call gb_Library_use_custom_headers,drawinglayercore,\
+diff --git a/drawinglayer/source/geometry/viewinformation2d.cxx b/drawinglayer/source/geometry/viewinformation2d.cxx
+index d23dda648bed..7e0240690a68 100644
+--- a/drawinglayer/source/geometry/viewinformation2d.cxx
++++ b/drawinglayer/source/geometry/viewinformation2d.cxx
+@@ -26,6 +26,7 @@
+ #include <com/sun/star/geometry/AffineMatrix2D.hpp>
+ #include <com/sun/star/geometry/RealRectangle2D.hpp>
+ #include <officecfg/Office/Common.hxx>
++#include <unotools/configmgr.hxx>
+ #include <utility>
+ 
+ using namespace com::sun::star;
+@@ -224,9 +225,12 @@ ViewInformation2D::ViewInformation2D()
+     if (!bForwardsAreInitialized)
+     {
+         bForwardsAreInitialized = true;
+-        bForwardedAntiAliasing = officecfg::Office::Common::Drawinglayer::AntiAliasing::get();
+-        bForwardPixelSnapHairline
+-            = officecfg::Office::Common::Drawinglayer::SnapHorVerLinesToDiscrete::get();
++        if (!utl::ConfigManager::IsFuzzing())
++        {
++            bForwardedAntiAliasing = officecfg::Office::Common::Drawinglayer::AntiAliasing::get();
++            bForwardPixelSnapHairline
++                = officecfg::Office::Common::Drawinglayer::SnapHorVerLinesToDiscrete::get();
++        }
+     }
+ 
+     setUseAntiAliasing(bForwardedAntiAliasing);

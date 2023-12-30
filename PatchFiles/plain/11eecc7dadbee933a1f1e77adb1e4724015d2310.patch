@@ -1,0 +1,130 @@
+commit 11eecc7dadbee933a1f1e77adb1e4724015d2310
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Mon Jan 10 19:58:20 2022 +0000
+
+    ofz#43509 use std::vector and at()
+    
+    Change-Id: Id0c5e4ccc22b41caee95ca5f53f6ae7cf70490f6
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/128263
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/lotuswordpro/source/filter/lwpdrawobj.cxx b/lotuswordpro/source/filter/lwpdrawobj.cxx
+index 877cf4623872..dfaa84b02217 100644
+--- a/lotuswordpro/source/filter/lwpdrawobj.cxx
++++ b/lotuswordpro/source/filter/lwpdrawobj.cxx
+@@ -1129,16 +1129,8 @@ LwpDrawTextArt::LwpDrawTextArt(SvStream* pStream, DrawingOffsetAndScale* pTransD
+ 
+ LwpDrawTextArt::~LwpDrawTextArt()
+ {
+-    if (m_aTextArtRec.aPath[0].pPts)
+-    {
+-        delete [] m_aTextArtRec.aPath[0].pPts;
+-        m_aTextArtRec.aPath[0].pPts = nullptr;
+-    }
+-    if (m_aTextArtRec.aPath[1].pPts)
+-    {
+-        delete [] m_aTextArtRec.aPath[1].pPts;
+-        m_aTextArtRec.aPath[1].pPts = nullptr;
+-    }
++    m_aTextArtRec.aPath[0].aPts.clear();
++    m_aTextArtRec.aPath[1].aPts.clear();
+     if (m_aTextArtRec.pTextString)
+     {
+         delete [] m_aTextArtRec.pTextString;
+@@ -1150,8 +1142,8 @@ LwpDrawTextArt::~LwpDrawTextArt()
+ void LwpDrawTextArt::CreateFWPath(XFDrawPath* pPath)
+ {
+     sal_Int16 nX, nY;
+-    nX = (m_aTextArtRec.aPath[0].pPts[0].x + m_aTextArtRec.aPath[1].pPts[0].x) / 2;
+-    nY = (m_aTextArtRec.aPath[0].pPts[0].y + m_aTextArtRec.aPath[1].pPts[0].y) / 2;
++    nX = (m_aTextArtRec.aPath[0].aPts[0].x + m_aTextArtRec.aPath[1].aPts[0].x) / 2;
++    nY = (m_aTextArtRec.aPath[0].aPts[0].y + m_aTextArtRec.aPath[1].aPts[0].y) / 2;
+     XFPoint aStart(static_cast<double>(nX)/TWIPS_PER_CM * m_pTransData->fScaleX,
+         static_cast<double>(nY)/TWIPS_PER_CM * m_pTransData->fScaleY);
+     pPath->MoveTo(aStart);
+@@ -1159,20 +1151,20 @@ void LwpDrawTextArt::CreateFWPath(XFDrawPath* pPath)
+     sal_uInt8 nPtIndex = 1;
+     for (sal_uInt16 nC = 1; nC <= m_aTextArtRec.aPath[0].n; nC++)
+     {
+-        nX = (m_aTextArtRec.aPath[0].pPts[nPtIndex].x + m_aTextArtRec.aPath[1].pPts[nPtIndex].x) / 2;
+-        nY = (m_aTextArtRec.aPath[0].pPts[nPtIndex].y + m_aTextArtRec.aPath[1].pPts[nPtIndex].y) / 2;
++        nX = (m_aTextArtRec.aPath[0].aPts.at(nPtIndex).x + m_aTextArtRec.aPath[1].aPts.at(nPtIndex).x) / 2;
++        nY = (m_aTextArtRec.aPath[0].aPts.at(nPtIndex).y + m_aTextArtRec.aPath[1].aPts.at(nPtIndex).y) / 2;
+         XFPoint aCtrl1(static_cast<double>(nX)/TWIPS_PER_CM * m_pTransData->fScaleX,
+             static_cast<double>(nY)/TWIPS_PER_CM * m_pTransData->fScaleY);
+ 
+         nPtIndex++;
+-        nX = (m_aTextArtRec.aPath[0].pPts[nPtIndex].x + m_aTextArtRec.aPath[1].pPts[nPtIndex].x) / 2;
+-        nY = (m_aTextArtRec.aPath[0].pPts[nPtIndex].y + m_aTextArtRec.aPath[1].pPts[nPtIndex].y) / 2;
++        nX = (m_aTextArtRec.aPath[0].aPts.at(nPtIndex).x + m_aTextArtRec.aPath[1].aPts.at(nPtIndex).x) / 2;
++        nY = (m_aTextArtRec.aPath[0].aPts.at(nPtIndex).y + m_aTextArtRec.aPath[1].aPts.at(nPtIndex).y) / 2;
+         XFPoint aCtrl2(static_cast<double>(nX)/TWIPS_PER_CM * m_pTransData->fScaleX,
+             static_cast<double>(nY)/TWIPS_PER_CM * m_pTransData->fScaleY);
+ 
+         nPtIndex++;
+-        nX = (m_aTextArtRec.aPath[0].pPts[nPtIndex].x + m_aTextArtRec.aPath[1].pPts[nPtIndex].x) / 2;
+-        nY = (m_aTextArtRec.aPath[0].pPts[nPtIndex].y + m_aTextArtRec.aPath[1].pPts[nPtIndex].y) / 2;
++        nX = (m_aTextArtRec.aPath[0].aPts.at(nPtIndex).x + m_aTextArtRec.aPath[1].aPts.at(nPtIndex).x) / 2;
++        nY = (m_aTextArtRec.aPath[0].aPts.at(nPtIndex).y + m_aTextArtRec.aPath[1].aPts.at(nPtIndex).y) / 2;
+         XFPoint aDest(static_cast<double>(nX)/TWIPS_PER_CM * m_pTransData->fScaleX,
+             static_cast<double>(nY)/TWIPS_PER_CM * m_pTransData->fScaleY);
+ 
+@@ -1203,13 +1195,13 @@ void LwpDrawTextArt::Read()
+         throw BadRead();
+ 
+     m_aTextArtRec.aPath[0].n = nPointNumber;
+-    m_aTextArtRec.aPath[0].pPts = new SdwPoint[nPoints];
++    m_aTextArtRec.aPath[0].aPts.resize(nPoints);
+     for (size_t nPt = 0; nPt < nPoints; ++nPt)
+     {
+         m_pStream->ReadInt16( nX );
+         m_pStream->ReadInt16( nY );
+-        m_aTextArtRec.aPath[0].pPts[nPt].x = nX;
+-        m_aTextArtRec.aPath[0].pPts[nPt].y = nY;
++        m_aTextArtRec.aPath[0].aPts[nPt].x = nX;
++        m_aTextArtRec.aPath[0].aPts[nPt].y = nY;
+     }
+ 
+     m_pStream->ReadUInt16( nPointNumber );
+@@ -1219,13 +1211,13 @@ void LwpDrawTextArt::Read()
+         throw BadRead();
+ 
+     m_aTextArtRec.aPath[1].n = nPointNumber;
+-    m_aTextArtRec.aPath[1].pPts = new SdwPoint[nPoints];
++    m_aTextArtRec.aPath[1].aPts.resize(nPoints);
+     for (size_t nPt = 0; nPt < nPoints; ++nPt)
+     {
+         m_pStream->ReadInt16( nX );
+         m_pStream->ReadInt16( nY );
+-        m_aTextArtRec.aPath[1].pPts[nPt].x = nX;
+-        m_aTextArtRec.aPath[1].pPts[nPt].y = nY;
++        m_aTextArtRec.aPath[1].aPts[nPt].x = nX;
++        m_aTextArtRec.aPath[1].aPts[nPt].y = nY;
+     }
+ 
+     m_pStream->SeekRel(1);
+diff --git a/lotuswordpro/source/filter/lwpsdwdrawheader.hxx b/lotuswordpro/source/filter/lwpsdwdrawheader.hxx
+index 13696f453a74..85318afbfb19 100644
+--- a/lotuswordpro/source/filter/lwpsdwdrawheader.hxx
++++ b/lotuswordpro/source/filter/lwpsdwdrawheader.hxx
+@@ -64,6 +64,7 @@
+ 
+ #include <config_lgpl.h>
+ #include <sal/types.h>
++#include <vector>
+ 
+ const sal_uInt8 DRAW_FACESIZE = 32;
+ const double THRESHOLD = 0.0001;
+@@ -288,10 +289,9 @@ struct SdwTextBoxRecord
+ struct SdwFMPATH
+ {
+     sal_uInt16 n;
+-    SdwPoint* pPts;
++    std::vector<SdwPoint> aPts;
+     SdwFMPATH()
+         : n(0)
+-        , pPts(nullptr)
+     {
+     }
+ };

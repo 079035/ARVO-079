@@ -1,0 +1,102 @@
+From ebd3a210021ec3b8f210822f0c69ee8f3132f1dc Mon Sep 17 00:00:00 2001
+From: Nikita Popov <nikita.ppv@gmail.com>
+Date: Thu, 15 Jul 2021 09:29:08 +0200
+Subject: [PATCH] Undef slot before destroying in unset_property
+
+We need to make sure that destructors can't access the partially
+destroyed property. Do the same we do in HTs.
+
+Fixes oss-fuzz #36205.
+---
+ Zend/tests/unset_prop_recursion.phpt | 65 ++++++++++++++++++++++++++++
+ Zend/zend_object_handlers.c          |  4 +-
+ 2 files changed, 68 insertions(+), 1 deletion(-)
+ create mode 100644 Zend/tests/unset_prop_recursion.phpt
+
+diff --git a/Zend/tests/unset_prop_recursion.phpt b/Zend/tests/unset_prop_recursion.phpt
+new file mode 100644
+index 0000000000000..afb1929424f8c
+--- /dev/null
++++ b/Zend/tests/unset_prop_recursion.phpt
+@@ -0,0 +1,65 @@
++--TEST--
++Unset property where unset will recursively access property again
++--FILE--
++<?php
++class Node {
++    public $parent = null;
++    public $children = [];
++    function insert(Node $node) {
++        $node->parent = $this;
++        $this->children[] = $node;
++    }
++    function __destruct() {
++        var_dump($this);
++        unset($this->children);
++    }
++}
++
++$a = new Node;
++$a->insert(new Node);
++$a->insert(new Node);
++?>
++--EXPECT--
++object(Node)#1 (2) {
++  ["parent"]=>
++  NULL
++  ["children"]=>
++  array(2) {
++    [0]=>
++    object(Node)#2 (2) {
++      ["parent"]=>
++      *RECURSION*
++      ["children"]=>
++      array(0) {
++      }
++    }
++    [1]=>
++    object(Node)#3 (2) {
++      ["parent"]=>
++      *RECURSION*
++      ["children"]=>
++      array(0) {
++      }
++    }
++  }
++}
++object(Node)#2 (2) {
++  ["parent"]=>
++  object(Node)#1 (2) {
++    ["parent"]=>
++    NULL
++  }
++  ["children"]=>
++  array(0) {
++  }
++}
++object(Node)#3 (2) {
++  ["parent"]=>
++  object(Node)#1 (2) {
++    ["parent"]=>
++    NULL
++  }
++  ["children"]=>
++  array(0) {
++  }
++}
+diff --git a/Zend/zend_object_handlers.c b/Zend/zend_object_handlers.c
+index 7c2bd139c5f37..e61a5af2f434b 100644
+--- a/Zend/zend_object_handlers.c
++++ b/Zend/zend_object_handlers.c
+@@ -1137,8 +1137,10 @@ ZEND_API void zend_std_unset_property(zval *object, zval *member, void **cache_s
+ 					ZEND_REF_DEL_TYPE_SOURCE(Z_REF_P(slot), prop_info);
+ 				}
+ 			}
+-			zval_ptr_dtor(slot);
++			zval tmp;
++			ZVAL_COPY_VALUE(&tmp, slot);
+ 			ZVAL_UNDEF(slot);
++			zval_ptr_dtor(&tmp);
+ 			if (zobj->properties) {
+ 				HT_FLAGS(zobj->properties) |= HASH_FLAG_HAS_EMPTY_IND;
+ 			}

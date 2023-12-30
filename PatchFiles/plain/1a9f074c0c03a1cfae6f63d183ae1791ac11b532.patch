@@ -1,0 +1,58 @@
+From 1a9f074c0c03a1cfae6f63d183ae1791ac11b532 Mon Sep 17 00:00:00 2001
+From: Peter Wu <peter@lekensteyn.nl>
+Date: Tue, 9 Oct 2018 21:25:35 +0200
+Subject: [PATCH] OSITP: do not call subdissector if there is no data
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+None of the current heuristics dissectors for "cotp" accept the packet,
+so just skip calling subdissectors if the packet is empty.
+
+Change-Id: Ie26f05d472b4d184d5229ceab8b143a88cc921fc
+Reviewed-on: https://code.wireshark.org/review/30103
+Petri-Dish: Peter Wu <peter@lekensteyn.nl>
+Reviewed-by: Émilio Gonzalez <egg997@gmail.com>
+Tested-by: Petri Dish Buildbot
+Reviewed-by: Anders Broman <a.broman58@gmail.com>
+---
+ epan/dissectors/packet-ositp.c | 24 +++++++++++++-----------
+ 1 file changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/epan/dissectors/packet-ositp.c b/epan/dissectors/packet-ositp.c
+index 47c691d5302..1c3c7381e00 100644
+--- a/epan/dissectors/packet-ositp.c
++++ b/epan/dissectors/packet-ositp.c
+@@ -1576,19 +1576,21 @@ static int ositp_decode_CR_CC(tvbuff_t *tvb, int offset, guint8 li, guint8 tpdu,
+    * XXX - tell the subdissector that this is user data in a CR or
+    * CC packet rather than a DT packet?
+    */
+-  next_tvb = tvb_new_subset_remaining(tvb, offset);
+-  if (!uses_inactive_subset){
+-    if (dissector_try_heuristic(cotp_heur_subdissector_list, next_tvb, pinfo,
+-                                tree, &hdtbl_entry, NULL)) {
+-      *subdissector_found = TRUE;
+-    } else {
+-      call_data_dissector(next_tvb, pinfo, tree);
++  if (tvb_captured_length_remaining(tvb, offset)) {
++    next_tvb = tvb_new_subset_remaining(tvb, offset);
++    if (!uses_inactive_subset){
++      if (dissector_try_heuristic(cotp_heur_subdissector_list, next_tvb, pinfo,
++                                  tree, &hdtbl_entry, NULL)) {
++        *subdissector_found = TRUE;
++      } else {
++        call_data_dissector(next_tvb, pinfo, tree);
++      }
+     }
++    else
++      call_data_dissector( next_tvb, pinfo, tree);
++    offset += tvb_captured_length_remaining(tvb, offset);
++    /* we dissected all of the containing PDU */
+   }
+-  else
+-    call_data_dissector( next_tvb, pinfo, tree);
+-  offset += tvb_captured_length_remaining(tvb, offset);
+-  /* we dissected all of the containing PDU */
+ 
+   return offset;
+ 

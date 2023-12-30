@@ -1,0 +1,49 @@
+commit 505797b458bbab394b0c94ce6457c89170b1d626
+Author: Krishna Rao <kcrao@codeaurora.org>
+Date:   Tue Jan 14 18:16:55 2020 +0530
+
+    Add a vendor attribute for RTPL instance primary frequency
+    
+    Add an attribute QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY_FREQUENCY for
+    primary channel center frequency in the definition for Representative
+    Tx Power List (RTPL) list entry instance. This is required for 6 GHz
+    support, since the 6 GHz channel numbers overlap with existing 2.4 GHz
+    and 5 GHz channel numbers thus requiring frequency values to uniquely
+    identify channels.
+    
+    Mark QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY as deprecated if both the
+    driver and user space application support 6 GHz. For backward
+    compatibility, QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY is still used if
+    either the driver or user space application or both do not support the
+    6 GHz band.
+    
+    Signed-off-by: Jouni Malinen <jouni@codeaurora.org>
+
+diff --git a/src/common/qca-vendor.h b/src/common/qca-vendor.h
+index c24708f7b..12b4bcfaa 100644
+--- a/src/common/qca-vendor.h
++++ b/src/common/qca-vendor.h
+@@ -5786,12 +5786,22 @@ enum qca_wlan_vendor_attr_rrop_info {
+ enum qca_wlan_vendor_attr_rtplinst {
+ 	QCA_WLAN_VENDOR_ATTR_RTPLINST_INVALID = 0,
+ 
+-	/* Primary channel number (u8) */
++	/* Primary channel number (u8).
++	 * Note: If both the driver and user space application support the
++	 * 6 GHz band, this attribute is deprecated and
++	 * QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY_FREQUENCY should be used. To
++	 * maintain backward compatibility,
++	 * QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY is still used if either the
++	 * driver or user space application or both do not support the 6 GHz
++	 * band.
++	 */
+ 	QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY = 1,
+ 	/* Representative Tx power in dBm (s32) with emphasis on throughput. */
+ 	QCA_WLAN_VENDOR_ATTR_RTPLINST_TXPOWER_THROUGHPUT = 2,
+ 	/* Representative Tx power in dBm (s32) with emphasis on range. */
+ 	QCA_WLAN_VENDOR_ATTR_RTPLINST_TXPOWER_RANGE = 3,
++	/* Primary channel center frequency (u32) in MHz */
++	QCA_WLAN_VENDOR_ATTR_RTPLINST_PRIMARY_FREQUENCY = 4,
+ 
+ 	QCA_WLAN_VENDOR_ATTR_RTPLINST_AFTER_LAST,
+ 	QCA_WLAN_VENDOR_ATTR_RTPLINST_MAX =

@@ -1,5 +1,5 @@
 {
-    "fix": "git://sourceware.org/git/elfutils.gited42e7cf11ddb11ffcce9e17276476e0c3d14c71",
+    "fix": "https://github.com/bminor/binutils-gdb/commit/ed42e7cf11ddb11ffcce9e17276476e0c3d14c71",
     "verify": "0",
     "localId": 45636,
     "project": "elfutils",

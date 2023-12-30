@@ -1,0 +1,139 @@
+From af0facad9fbe5b22b547df4d861917905e21f4c1 Mon Sep 17 00:00:00 2001
+From: David Garske <david@wolfssl.com>
+Date: Thu, 22 Jun 2023 14:49:31 -0700
+Subject: [PATCH] Fix for `--enable-wpas=small`.
+
+---
+ src/ssl_asn1.c               | 19 ++++++++++++-------
+ src/x509.c                   |  8 +++++++-
+ wolfssl/wolfcrypt/settings.h |  6 ++++++
+ 3 files changed, 25 insertions(+), 8 deletions(-)
+
+diff --git a/src/ssl_asn1.c b/src/ssl_asn1.c
+index fb33a254859..e9ece79df3f 100644
+--- a/src/ssl_asn1.c
++++ b/src/ssl_asn1.c
+@@ -1630,7 +1630,7 @@ WOLFSSL_ASN1_OBJECT* wolfSSL_ASN1_OBJECT_dup(WOLFSSL_ASN1_OBJECT* obj)
+ #endif /* OPENSSL_EXTRA || OPENSSL_EXTRA_X509_SMALL */
+ #endif /* !NO_ASN */
+ 
+-#ifdef OPENSSL_EXTRA
++#if defined(OPENSSL_EXTRA) || defined(WOLFSSL_WPAS_SMALL)
+ 
+ /**
+  * Parse DER encoding and return header information.
+@@ -1859,6 +1859,10 @@ WOLFSSL_ASN1_OBJECT *wolfSSL_c2i_ASN1_OBJECT(WOLFSSL_ASN1_OBJECT **a,
+     return ret;
+ }
+ 
++#endif /* OPENSSL_EXTRA || WOLFSSL_WPAS_SMALL */
++
++#ifdef OPENSSL_EXTRA
++
+ /* Write at most buf_len bytes of textual representation of ASN.1 OBJECT_ID.
+  *
+  * @param [in, out] buf      Buffer to write to.
+@@ -3227,7 +3231,7 @@ static int wolfssl_asn1_time_to_secs(const WOLFSSL_ASN1_TIME* t,
+ /* Calculate difference in time of two ASN.1 TIME objects.
+  *
+  * @param [out] days  Number of whole days between from and to.
+- * @param [out] secs  Number of serconds less than a day between from and to.
++ * @param [out] secs  Number of seconds less than a day between from and to.
+  * @param [in]  from  ASN.1 TIME object as start time.
+  * @param [in]  to    ASN.1 TIME object as end time.
+  * @return  1 on success.
+@@ -3918,7 +3922,7 @@ int wolfSSL_ASN1_UTCTIME_print(WOLFSSL_BIO* bio, const WOLFSSL_ASN1_UTCTIME* a)
+  * ASN1_TYPE APIs
+  ******************************************************************************/
+ 
+-#ifdef OPENSSL_EXTRA
++#if defined(OPENSSL_EXTRA) || defined(WOLFSSL_WPAS_SMALL)
+ 
+ /**
+  * Allocate a new ASN.1 TYPE object.
+@@ -3954,12 +3958,12 @@ static void wolfssl_asn1_type_free_value(WOLFSSL_ASN1_TYPE* at)
+             wolfSSL_ASN1_OBJECT_free(at->value.object);
+             break;
+         case V_ASN1_UTCTIME:
+-        #ifndef NO_ASN_TIME
++        #if !defined(NO_ASN_TIME) && defined(OPENSSL_EXTRA)
+             wolfSSL_ASN1_TIME_free(at->value.utctime);
+         #endif
+             break;
+         case V_ASN1_GENERALIZEDTIME:
+-        #ifndef NO_ASN_TIME
++        #if !defined(NO_ASN_TIME) && defined(OPENSSL_EXTRA)
+             wolfSSL_ASN1_TIME_free(at->value.generalizedtime);
+         #endif
+             break;
+@@ -3991,9 +3995,10 @@ void wolfSSL_ASN1_TYPE_free(WOLFSSL_ASN1_TYPE* at)
+     XFREE(at, NULL, DYNAMIC_TYPE_OPENSSL);
+ }
+ 
+-#endif /* OPENSSL_EXTRA */
++#endif /* OPENSSL_EXTRA || WOLFSSL_WPAS_SMALL */
+ 
+-#if defined(OPENSSL_ALL) || defined(OPENSSL_EXTRA) || defined(WOLFSSL_WPAS)
++#if defined(OPENSSL_ALL) || defined(OPENSSL_EXTRA) || defined(WOLFSSL_WPAS) || \
++    defined(WOLFSSL_WPAS_SMALL)
+ /**
+  * Set ASN.1 TYPE object with a type and value.
+  *
+diff --git a/src/x509.c b/src/x509.c
+index bc1c48992ac..860eea185c1 100644
+--- a/src/x509.c
++++ b/src/x509.c
+@@ -541,6 +541,10 @@ int wolfSSL_X509_get_ext_by_OBJ(const WOLFSSL_X509 *x,
+     return -1;
+ }
+ 
++#endif /* OPENSSL_ALL || OPENSSL_EXTRA */
++
++#if defined(OPENSSL_ALL) || defined(OPENSSL_EXTRA) || \
++    defined(WOLFSSL_WPAS_SMALL)
+ /* Set a general name from the DNS entry data.
+  *
+  * @param [in]      dns  DNS entry.
+@@ -650,7 +654,9 @@ static int wolfssl_dns_entry_othername_to_gn(DNS_entry* dns,
+ err:
+     return ret;
+ }
++#endif /* OPENSSL_ALL || WOLFSSL_WPAS_SMALL */
+ 
++#if defined(OPENSSL_ALL) || defined(OPENSSL_EXTRA)
+ static int wolfssl_x509_alt_names_to_gn(WOLFSSL_X509* x509,
+     WOLFSSL_X509_EXTENSION* ext)
+ {
+@@ -2118,7 +2124,7 @@ int wolfSSL_X509_get_ext_by_NID(const WOLFSSL_X509* x509, int nid, int lastPos)
+     return found ? extCount : WOLFSSL_FATAL_ERROR;
+ }
+ 
+-#endif /* OPENSSL_ALL */
++#endif /* OPENSSL_ALL || OPENSSL_EXTRA */
+ 
+ #if defined(OPENSSL_EXTRA) || defined(WOLFSSL_WPAS_SMALL)
+ /* Looks for the extension matching the passed in nid
+diff --git a/wolfssl/wolfcrypt/settings.h b/wolfssl/wolfcrypt/settings.h
+index 9497fc86087..a14364d4d15 100644
+--- a/wolfssl/wolfcrypt/settings.h
++++ b/wolfssl/wolfcrypt/settings.h
+@@ -2608,6 +2608,11 @@ extern void uITRON4_free(void *p) ;
+     #endif
+ #endif
+ 
++/* Make sure setting OPENSSL_ALL also sets OPENSSL_EXTRA. */
++#if defined(OPENSSL_ALL) && !defined(OPENSSL_EXTRA)
++    #define OPENSSL_EXTRA
++#endif
++
+ #ifdef HAVE_SNI
+     #define SSL_CTRL_SET_TLSEXT_HOSTNAME 55
+ #endif
+@@ -3099,6 +3104,7 @@ extern void uITRON4_free(void *p) ;
+     /* Ciphersuite check done in internal.h */
+ #endif
+ 
++
+ #ifdef __cplusplus
+     }   /* extern "C" */
+ #endif

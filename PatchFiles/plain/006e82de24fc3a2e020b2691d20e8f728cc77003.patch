@@ -1,0 +1,139 @@
+From 006e82de24fc3a2e020b2691d20e8f728cc77003 Mon Sep 17 00:00:00 2001
+From: Abtin Keshavarzian <abtink@google.com>
+Date: Tue, 9 Oct 2018 14:16:55 -0700
+Subject: [PATCH] Add feature to control auto-addition of SLAAC address by
+ wpantund (#356)
+
+This commit adds a new feature and a related configuration property
+"Daemon:IPv6:AutoAddSLAACAddress". This boolean property indicates
+whether wpantund would generate and add an SLAAC address when an an
+on-mesh prefix with the SLAAC flag is added. The SLAAC address is
+added only if there is no existing address with the same prefix. By
+default this feature is enabled (i.e. SLAAC addresses are added). It
+can be changed using the above property during run-time or from
+`wpantund.conf` file.
+---
+ src/wpantund/NCPInstanceBase-Addresses.cpp |  2 +-
+ src/wpantund/NCPInstanceBase.cpp           | 16 ++++++++++++++++
+ src/wpantund/NCPInstanceBase.h             | 10 ++++++++++
+ src/wpantund/wpan-properties.h             |  2 ++
+ 4 files changed, 29 insertions(+), 1 deletion(-)
+
+diff --git a/src/wpantund/NCPInstanceBase-Addresses.cpp b/src/wpantund/NCPInstanceBase-Addresses.cpp
+index bc413c98..692a3584 100644
+--- a/src/wpantund/NCPInstanceBase-Addresses.cpp
++++ b/src/wpantund/NCPInstanceBase-Addresses.cpp
+@@ -873,7 +873,7 @@ NCPInstanceBase::on_mesh_prefix_was_added(Origin origin, const struct in6_addr &
+ 		cb(kWPANTUNDStatus_Ok);
+ 	}
+ 
+-	if (entry.is_on_mesh() && entry.is_slaac() && prefix.get_length() == kSLAACPrefixLength
++	if (mAutoAddSLAACAddress && entry.is_on_mesh() && entry.is_slaac() && prefix.get_length() == kSLAACPrefixLength
+ 		&& !has_address_with_prefix(prefix)
+ 	) {
+ 		struct in6_addr address = make_slaac_addr_from_eui64(prefix.get_prefix().s6_addr, mMACAddress);
+diff --git a/src/wpantund/NCPInstanceBase.cpp b/src/wpantund/NCPInstanceBase.cpp
+index 39c79d95..f62c5992 100644
+--- a/src/wpantund/NCPInstanceBase.cpp
++++ b/src/wpantund/NCPInstanceBase.cpp
+@@ -75,6 +75,7 @@ NCPInstanceBase::NCPInstanceBase(const Settings& settings):
+ 	mNodeTypeSupportsLegacy = false;
+ 	mAutoUpdateInterfaceIPv6AddrsOnNCP = true;
+ 	mFilterUserAddedLinkLocalIPv6Address = true;
++	mAutoAddSLAACAddress = true;
+ 	mSetDefaultRouteForAutoAddedPrefix = false;
+ 	mSetSLAACForAutoAddedPrefix = false;
+ 	mAutoAddOffMeshRoutesOnInterface = true;
+@@ -366,6 +367,7 @@ NCPInstanceBase::regsiter_all_get_handlers(void)
+ 	REGISTER_GET_HANDLER(DaemonTerminateOnFault);
+ 	REGISTER_GET_HANDLER(DaemonIPv6AutoUpdateIntfaceAddrOnNCP);
+ 	REGISTER_GET_HANDLER(DaemonIPv6FilterUserAddedLinkLocal);
++	REGISTER_GET_HANDLER(DaemonIPv6AutoAddSLAACAddress);
+ 	REGISTER_GET_HANDLER(DaemonSetDefRouteForAutoAddedPrefix);
+ 	REGISTER_GET_HANDLER(NestLabs_NetworkPassthruPort);
+ 	REGISTER_GET_HANDLER(NCPMACAddress);
+@@ -542,6 +544,12 @@ NCPInstanceBase::get_prop_DaemonIPv6FilterUserAddedLinkLocal(CallbackWithStatusA
+ 	cb(kWPANTUNDStatus_Ok, boost::any(mFilterUserAddedLinkLocalIPv6Address));
+ }
+ 
++void
++NCPInstanceBase::get_prop_DaemonIPv6AutoAddSLAACAddress(CallbackWithStatusArg1 cb)
++{
++	cb(kWPANTUNDStatus_Ok, boost::any(mAutoAddSLAACAddress));
++}
++
+ void
+ NCPInstanceBase::get_prop_DaemonSetDefRouteForAutoAddedPrefix(CallbackWithStatusArg1 cb)
+ {
+@@ -783,6 +791,7 @@ NCPInstanceBase::regsiter_all_set_handlers(void)
+ 	REGISTER_SET_HANDLER(DaemonTerminateOnFault);
+ 	REGISTER_SET_HANDLER(DaemonIPv6AutoUpdateIntfaceAddrOnNCP);
+ 	REGISTER_SET_HANDLER(DaemonIPv6FilterUserAddedLinkLocal);
++	REGISTER_SET_HANDLER(DaemonIPv6AutoAddSLAACAddress);
+ 	REGISTER_SET_HANDLER(DaemonSetDefRouteForAutoAddedPrefix);
+ 	REGISTER_SET_HANDLER(IPv6SetSLAACForAutoAddedPrefix);
+ 	REGISTER_SET_HANDLER(DaemonOffMeshRouteAutoAddOnInterface);
+@@ -920,6 +929,13 @@ NCPInstanceBase::set_prop_DaemonIPv6FilterUserAddedLinkLocal(const boost::any &v
+ 	cb(kWPANTUNDStatus_Ok);
+ }
+ 
++void
++NCPInstanceBase::set_prop_DaemonIPv6AutoAddSLAACAddress(const boost::any &value, CallbackWithStatus cb)
++{
++	mAutoAddSLAACAddress = any_to_bool(value);
++	cb(kWPANTUNDStatus_Ok);
++}
++
+ void
+ NCPInstanceBase::set_prop_DaemonSetDefRouteForAutoAddedPrefix(const boost::any &value, CallbackWithStatus cb)
+ {
+diff --git a/src/wpantund/NCPInstanceBase.h b/src/wpantund/NCPInstanceBase.h
+index fc996980..b9dade44 100644
+--- a/src/wpantund/NCPInstanceBase.h
++++ b/src/wpantund/NCPInstanceBase.h
+@@ -318,6 +318,7 @@ class NCPInstanceBase : public NCPInstance, public EventHandler {
+ 	void get_prop_DaemonTerminateOnFault(CallbackWithStatusArg1 cb);
+ 	void get_prop_DaemonIPv6AutoUpdateIntfaceAddrOnNCP(CallbackWithStatusArg1 cb);
+ 	void get_prop_DaemonIPv6FilterUserAddedLinkLocal(CallbackWithStatusArg1 cb);
++	void get_prop_DaemonIPv6AutoAddSLAACAddress(CallbackWithStatusArg1 cb);
+ 	void get_prop_DaemonSetDefRouteForAutoAddedPrefix(CallbackWithStatusArg1 cb);
+ 	void get_prop_NestLabs_NetworkPassthruPort(CallbackWithStatusArg1 cb);
+ 	void get_prop_NCPMACAddress(CallbackWithStatusArg1 cb);
+@@ -349,6 +350,7 @@ class NCPInstanceBase : public NCPInstance, public EventHandler {
+ 	void set_prop_DaemonTerminateOnFault(const boost::any &value, CallbackWithStatus cb);
+ 	void set_prop_DaemonIPv6AutoUpdateIntfaceAddrOnNCP(const boost::any &value, CallbackWithStatus cb);
+ 	void set_prop_DaemonIPv6FilterUserAddedLinkLocal(const boost::any &value, CallbackWithStatus cb);
++	void set_prop_DaemonIPv6AutoAddSLAACAddress(const boost::any &value, CallbackWithStatus cb);
+ 	void set_prop_DaemonSetDefRouteForAutoAddedPrefix(const boost::any &value, CallbackWithStatus cb);
+ 	void set_prop_IPv6SetSLAACForAutoAddedPrefix(const boost::any &value, CallbackWithStatus cb);
+ 	void set_prop_DaemonOffMeshRouteAutoAddOnInterface(const boost::any &value, CallbackWithStatus cb);
+@@ -628,6 +630,14 @@ class NCPInstanceBase : public NCPInstance, public EventHandler {
+ 	// wpantund property "Daemon:IPv6:FilterUserAddedLinkLocal"
+ 	bool mFilterUserAddedLinkLocalIPv6Address;
+ 
++	// This boolean flag indicates whether wpantund would generate and add
++	// an SLAAC address on seeing/adding an on-mesh prefix with SLAAC flag.
++	// Note that the SLAAC address is added only if there is no existing
++	// address with the same prefix. By default this feature is enabled
++	// (i.e., SLAAC addresses are added by wpantund). It can be changed
++	// using the wpantund property "Daemon:IPv6:AutoAddSLAACAddress".
++	bool mAutoAddSLAACAddress;
++
+ 	// When an unicast address is added on interface, the related on-mesh prefix
+ 	// is updated on NCP if `mDefaultRouteForAutoAddedPrefix` is true the prefix
+ 	// is added with flag "DefaultRoute" set.
+diff --git a/src/wpantund/wpan-properties.h b/src/wpantund/wpan-properties.h
+index cad59eb2..cde5d736 100644
+--- a/src/wpantund/wpan-properties.h
++++ b/src/wpantund/wpan-properties.h
+@@ -48,8 +48,10 @@
+ #define kWPANTUNDProperty_DaemonAutoDeepSleep                   "Daemon:AutoDeepSleep"
+ #define kWPANTUNDProperty_DaemonFaultReason                     "Daemon:FaultReason"
+ #define kWPANTUNDProperty_DaemonTickleOnHostDidWake             "Daemon:TickleOnHostDidWake"
++
+ #define kWPANTUNDProperty_DaemonIPv6AutoUpdateIntfaceAddrOnNCP  "Daemon:IPv6:AutoUpdateInterfaceAddrsOnNCP"
+ #define kWPANTUNDProperty_DaemonIPv6FilterUserAddedLinkLocal    "Daemon:IPv6:FilterUserAddedLinkLocal"
++#define kWPANTUNDProperty_DaemonIPv6AutoAddSLAACAddress         "Daemon:IPv6:AutoAddSLAACAddress"
+ #define kWPANTUNDProperty_DaemonSetDefRouteForAutoAddedPrefix   "Daemon:SetDefaultRouteForAutoAddedPrefix"
+ #define kWPANTUNDProperty_DaemonOffMeshRouteAutoAddOnInterface  "Daemon:OffMeshRoute:AutoAddOnInterface"
+ #define kWPANTUNDProperty_DaemonOffMeshRouteFilterSelfAutoAdded "Daemon:OffMeshRoute:FilterSelfAutoAdded"

@@ -1,0 +1,64 @@
+commit 4d630a05c30c8d178dd1de0d1cf309e9c4e5bcca
+Author: Nick Wellnhofer <wellnhofer@aevum.de>
+Date:   Sun Mar 19 13:12:10 2023 +0100
+
+    malloc-fail: Fix memory leak in xsltCompileAttr
+    
+    Also report malloc failures.
+    
+    Found by OSS-Fuzz, see #84.
+
+diff --git a/libxslt/attrvt.c b/libxslt/attrvt.c
+index 3d51feda..6157fcdf 100644
+--- a/libxslt/attrvt.c
++++ b/libxslt/attrvt.c
+@@ -180,6 +180,7 @@ xsltCompileAttr(xsltStylesheetPtr style, xmlAttrPtr attr) {
+     const xmlChar *cur;
+     xmlChar *ret = NULL;
+     xmlChar *expr = NULL;
++    xmlXPathCompExprPtr comp = NULL;
+     xsltAttrVTPtr avt;
+     int i = 0, lastavt = 0;
+ 
+@@ -278,8 +279,6 @@ xsltCompileAttr(xsltStylesheetPtr style, xmlAttrPtr attr) {
+ 	        XSLT_TODO
+ 		goto error;
+ 	    } else {
+-		xmlXPathCompExprPtr comp;
+-
+ 		comp = xsltXPathCompile(style, expr);
+ 		if (comp == NULL) {
+ 		    xsltTransformError(NULL, style, attr->parent,
+@@ -291,14 +290,21 @@ xsltCompileAttr(xsltStylesheetPtr style, xmlAttrPtr attr) {
+ 		if (avt->nb_seg == 0)
+ 		    avt->strstart = 0;
+ 		if (lastavt == 1) {
+-		    if ((avt = xsltSetAttrVTsegment(avt, NULL)) == NULL)
++		    if ((avt = xsltSetAttrVTsegment(avt, NULL)) == NULL) {
++                        xsltTransformError(NULL, style, attr->parent,
++                                           "out of memory\n");
+ 		        goto error;
++                    }
+ 		}
+-		if ((avt = xsltSetAttrVTsegment(avt, (void *) comp)) == NULL)
++		if ((avt = xsltSetAttrVTsegment(avt, (void *) comp)) == NULL) {
++                    xsltTransformError(NULL, style, attr->parent,
++                                       "out of memory\n");
+ 		    goto error;
++                }
+ 		lastavt = 1;
+ 		xmlFree(expr);
+ 		expr = NULL;
++                comp = NULL;
+ 	    }
+ 	    cur++;
+ 	    str = cur;
+@@ -348,6 +354,8 @@ error:
+ 	xmlFree(ret);
+     if (expr != NULL)
+ 	xmlFree(expr);
++    if (comp != NULL)
++        xmlXPathFreeCompExpr(comp);
+ }
+ 
+ 

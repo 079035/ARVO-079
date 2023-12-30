@@ -1,0 +1,28 @@
+commit 2e681052b313ed547189d95d58d73081c028d604
+Author: Antonio Maiorano <amaiorano@google.com>
+Date:   Wed May 18 19:55:18 2022 +0000
+
+    tint: Fix use-after-free
+    
+    Bug: chromium:1324533
+    Bug: chromium:1326749
+    Bug: oss-fuzz:47516
+    Change-Id: I0fd2db8997beaeaedc867bd27ee8866ace4e7cf0
+    Reviewed-on: https://dawn-review.googlesource.com/c/dawn/+/90820
+    Commit-Queue: Antonio Maiorano <amaiorano@google.com>
+    Reviewed-by: Dan Sinclair <dsinclair@chromium.org>
+    Reviewed-by: Ben Clayton <bclayton@google.com>
+
+diff --git a/src/tint/ast/traverse_expressions.h b/src/tint/ast/traverse_expressions.h
+index cd9c86c0a5..59b00e9829 100644
+--- a/src/tint/ast/traverse_expressions.h
++++ b/src/tint/ast/traverse_expressions.h
+@@ -94,7 +94,7 @@ bool TraverseExpressions(const ast::Expression* root, diag::List& diags, CALLBAC
+     };
+ 
+     while (!to_visit.empty()) {
+-        auto& p = to_visit.back();
++        auto p = to_visit.back();
+         to_visit.pop_back();
+         const ast::Expression* expr = p.expr;
+ 

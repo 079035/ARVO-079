@@ -1,0 +1,21 @@
+commit c0572443dcfe544071ef2f66f0059ebd7b01311b
+Author: Jon Shallow <supjps-libcoap@jpshallow.com>
+Date:   Fri Sep 23 09:40:10 2022 +0100
+
+    uri.c: Fix oss-fuzz issue 48362
+    
+    Introduced by fix #818 Feb 7 2022.
+
+diff --git a/src/uri.c b/src/uri.c
+index d66038c0..21b8a53d 100644
+--- a/src/uri.c
++++ b/src/uri.c
+@@ -61,7 +61,7 @@ coap_split_uri_sub(const uint8_t *str_var,
+   int is_http_proxy_scheme = 0;
+   size_t keep_len = len;
+ 
+-  if (!str_var || !uri)
++  if (!str_var || !uri || len == 0)
+     return -1;
+ 
+   memset(uri, 0, sizeof(coap_uri_t));

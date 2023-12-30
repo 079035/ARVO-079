@@ -1,0 +1,34 @@
+From 413b0d171d6366424e570d5260ccfdcf58ad5e96 Mon Sep 17 00:00:00 2001
+From: John Safranek <john@wolfssl.com>
+Date: Tue, 6 Oct 2020 17:00:15 -0700
+Subject: [PATCH] TFM Read Radix 16 OOB Read Change the location of the update
+ of the write index when in fp_read_radix_16(). It will do multiple writes
+ into a word, and update the index when the word is full and there is more to
+ write. If there isn't more to write, the index isn't incremented. This
+ ensures the used value in the mp_digit is correct, and not off-by-one when
+ the last word is full.
+
+---
+ wolfcrypt/src/tfm.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/wolfcrypt/src/tfm.c b/wolfcrypt/src/tfm.c
+index bdc99cf2ae9..c211deb411e 100644
+--- a/wolfcrypt/src/tfm.c
++++ b/wolfcrypt/src/tfm.c
+@@ -5296,13 +5296,13 @@ static int fp_read_radix_16(fp_int *a, const char *str)
+       else
+           return FP_VAL;
+ 
++      k += j == DIGIT_BIT;
++      j &= DIGIT_BIT - 1;
+       if (k >= FP_SIZE)
+           return FP_VAL;
+ 
+       a->dp[k] |= ((fp_digit)ch) << j;
+       j += 4;
+-      k += j == DIGIT_BIT;
+-      j &= DIGIT_BIT - 1;
+   }
+ 
+   a->used = k + 1;

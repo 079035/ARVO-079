@@ -1,0 +1,24 @@
+commit d2756dbd9b11bdfbf1d576381b8f9846a6fb7070
+Author: Caolán McNamara <caolan.mcnamara@collabora.com>
+Date:   Mon May 15 10:19:26 2023 +0100
+
+    ofz#58991 Heap-buffer-overflow
+    
+    Change-Id: I44661cb2f9b2f44118140ae2fbcf86fe12cd282c
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/151760
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolan.mcnamara@collabora.com>
+
+diff --git a/emfio/source/reader/emfreader.cxx b/emfio/source/reader/emfreader.cxx
+index dcb8a2379148..73a082eae2e8 100644
+--- a/emfio/source/reader/emfreader.cxx
++++ b/emfio/source/reader/emfreader.cxx
+@@ -1009,7 +1009,7 @@ namespace emfio
+                             }
+                             else if (aPointTypes[i] & PT_BEZIERTO)
+                             {
+-                                if (aPoints.size() - i < 3)
++                                if (nPointsCount - i < 3)
+                                 {
+                                     SAL_WARN("emfio", "EMF file error: Not enough Bezier points.");
+                                     break;

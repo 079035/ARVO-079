@@ -1,0 +1,43 @@
+From 149fced0d5bfa638dd9540f44526b456775634b0 Mon Sep 17 00:00:00 2001
+From: Thomas Van Lenten <thomasvl@google.com>
+Date: Tue, 13 Apr 2021 13:47:00 -0400
+Subject: [PATCH] Fixes to decoding of groups/unknown fields.
+
+- Assert that when decoding a message, unknown fields is empty.
+- Remove assert in decoding groups, and ensure when copying the Decoder we don't
+  duplicate any existing unknowns from the part to the child.
+---
+ Sources/SwiftProtobuf/BinaryDecoder.swift | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/Sources/SwiftProtobuf/BinaryDecoder.swift b/Sources/SwiftProtobuf/BinaryDecoder.swift
+index 86a52e783..a1ed3a4be 100644
+--- a/Sources/SwiftProtobuf/BinaryDecoder.swift
++++ b/Sources/SwiftProtobuf/BinaryDecoder.swift
+@@ -919,6 +919,7 @@ internal struct BinaryDecoder: Decoder {
+     }
+ 
+     internal mutating func decodeFullMessage<M: Message>(message: inout M) throws {
++      assert(unknownData == nil)
+       try incrementRecursionDepth()
+       try message.decodeMessage(decoder: &self)
+       decrementRecursionDepth()
+@@ -950,8 +951,6 @@ internal struct BinaryDecoder: Decoder {
+         guard fieldWireFormat == WireFormat.startGroup else {
+             return false
+         }
+-        assert(unknownData == nil)
+-
+         try incrementRecursionDepth()
+ 
+         // This works by making a clone of the current decoder state and
+@@ -965,6 +964,9 @@ internal struct BinaryDecoder: Decoder {
+         // startGroup was read, so current tag/data is done (otherwise the
+         // startTag will end up in the unknowns of the first thing decoded).
+         subDecoder.consumed = true
++        // The group (message) doesn't get any existing unknown fields from
++        // the parent.
++        subDecoder.unknownData = nil
+         try group.decodeMessage(decoder: &subDecoder)
+         guard subDecoder.fieldNumber == fieldNumber && subDecoder.fieldWireFormat == .endGroup else {
+             throw BinaryDecodingError.truncated

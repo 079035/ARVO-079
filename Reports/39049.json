@@ -1,0 +1,103 @@
+{
+    "fix": "https://github.com/apple/swift-protobuf/commit/fcb2b042a2142f5f2c6cc06f4f96662f66c23526",
+    "verify": "0",
+    "localId": 39049,
+    "project": "swift-protobuf",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Invalid-free",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 39049,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1632178532,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5207244346621952\n\nProject: swift-protobuf\nFuzzing Engine: libFuzzer\nFuzz Target: FuzzJSON_debug\nJob Type: libfuzzer_asan_swift-protobuf\nPlatform Id: linux\n\nCrash Type: Invalid-free\nCrash Address: 0x559e73f5a510\nCrash State:\n  generic specialization <Swift.Int> of Swift.Array.subscript.getter :\n  SwiftProtobuf.\n  SwiftProtobuf.Google_Protobuf_Timestamp.decodeJSON\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_swift-protobuf&range=202104140627:202104150603\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5207244346621952\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 39049,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1502387951",
+                    "displayName": "thomasvl@google.com"
+                },
+                "timestamp": 1632235674,
+                "content": "I think this is fixed with the things that have since landed.  At least running the test case in our CI seems to pass on linux now."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 39049,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1632250477,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2021-12-20"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 39049,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1502387951",
+                    "displayName": "thomasvl@google.com"
+                },
+                "timestamp": 1632323677,
+                "content": "Hm, so looking at the detailed report it says it is fixed, I wonder why this isn't get marked as such."
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 39049,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1632328021,
+                "content": "ClusterFuzz testcase 5207244346621952 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_swift-protobuf&range=202109210606:202109220606\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 39049,
+                "sequenceNum": 5,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1632336148,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "fcb2b042a2142f5f2c6cc06f4f96662f66c23526",
+    "repo_addr": "https://github.com/apple/swift-protobuf.git"
+}

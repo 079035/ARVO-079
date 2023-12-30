@@ -1,0 +1,31 @@
+From ce37e3e4b1776e456d5874845f2b100b5a2d8ff3 Mon Sep 17 00:00:00 2001
+From: pancake <pancake@nopcode.org>
+Date: Thu, 13 Apr 2023 14:44:10 +0200
+Subject: [PATCH] Fix UAF in the p9 parser ##bin
+
+---
+ libr/bin/p/bin_p9.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/libr/bin/p/bin_p9.c b/libr/bin/p/bin_p9.c
+index a3b20ff58c773..33aaa7fd8c6c8 100644
+--- a/libr/bin/p/bin_p9.c
++++ b/libr/bin/p/bin_p9.c
+@@ -321,8 +321,7 @@ static st64 sym_read(RBinFile *bf, Sym *sym, const ut64 offset) {
+ static void sym_fini(void *sym, R_UNUSED void *user) {
+ 	Sym *s = (Sym *)sym;
+ 	if (s && s->name) {
+-		free (s->name);
+-		s->name = NULL;
++		R_FREE (s->name);
+ 	}
+ }
+ 
+@@ -561,7 +560,6 @@ static RList *symbols(RBinFile *bf) {
+ 		}
+ 	}
+ 
+-	sym_fini (&sym, NULL);
+ 	ht_up_free (histories);
+ 	r_pvector_free (names);
+ 	return ret;

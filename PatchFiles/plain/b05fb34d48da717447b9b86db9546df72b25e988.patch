@@ -1,0 +1,25 @@
+commit b05fb34d48da717447b9b86db9546df72b25e988
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Sat Apr 1 22:04:32 2023 +0100
+
+    use the same max size that libtiff defaults to for its own utilities
+    
+    Change-Id: I67a769a6108fb8590d6304390a4f27ef95927c9b
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/149922
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/vcl/source/filter/itiff/itiff.cxx b/vcl/source/filter/itiff/itiff.cxx
+index 47b15724b177..a31a1c384efd 100644
+--- a/vcl/source/filter/itiff/itiff.cxx
++++ b/vcl/source/filter/itiff/itiff.cxx
+@@ -155,7 +155,8 @@ bool ImportTiffGraphicImport(SvStream& rTIFF, Graphic& rGraphic)
+         }
+ 
+         uint32_t nPixelsRequired;
+-        constexpr size_t nMaxPixelsAllowed = SAL_MAX_INT32/4;
++        // use the same max size that libtiff defaults to for its own utilities
++        constexpr size_t nMaxPixelsAllowed = (256 * 1024 * 1024) / 4;
+         // two buffers currently required, so limit further
+         bool bOk = !o3tl::checked_multiply(w, h, nPixelsRequired) && nPixelsRequired <= nMaxPixelsAllowed / 2;
+         SAL_WARN_IF(!bOk, "filter.tiff", "skipping oversized tiff image " << w << " x " << h);

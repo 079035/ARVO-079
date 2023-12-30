@@ -1,0 +1,18 @@
+From 780f3428253bff4b029736fa9f195ca5938203bc Mon Sep 17 00:00:00 2001
+From: Alexander Lohnau <alexander.lohnau@gmx.de>
+Date: Sun, 2 May 2021 12:48:16 +0200
+Subject: [PATCH] GIT_SILENT Add auto generated files to .gitignore
+
+---
+ .gitignore | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.gitignore b/.gitignore
+index 748c9a8..d84c817 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -25,3 +25,4 @@ CMakeLists.txt.user*
+ .clangd
+ .idea
+ /cmake-build*
++.cache

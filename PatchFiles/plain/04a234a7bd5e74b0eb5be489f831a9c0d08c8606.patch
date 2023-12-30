@@ -1,0 +1,43 @@
+From 4f22beed9c575e33b48641d9d4f0f525e8d1f635 Mon Sep 17 00:00:00 2001
+From: Jason Quense <monastic.panic@gmail.com>
+Date: Mon, 16 Sep 2019 11:34:39 -0400
+Subject: [PATCH] unrecognized psuedos with arguments parse as
+ declaration-values
+
+fixes #2424, fixes #2944  I think
+---
+ src/parser.cpp | 21 +++++++++++++++++----
+ 1 file changed, 17 insertions(+), 4 deletions(-)
+
+diff --git a/src/parser.cpp b/src/parser.cpp
+index 7370a8f464..6d2dc75f80 100644
+--- a/src/parser.cpp
++++ b/src/parser.cpp
+@@ -766,10 +766,23 @@ namespace Sass {
+           if (peek_css< exactly<')'>>()  && Util::equalsLiteral("nth-", name.substr(0, 4))) {
+             css_error("Invalid CSS", " after ", ": expected An+B expression, was ");
+           }
+-          if (SelectorListObj wrapped = parseSelectorList(true)) {
+-            if (wrapped && lex_css< exactly<')'> >()) {
+-              Pseudo_Selector* pseudo = SASS_MEMORY_NEW(Pseudo_Selector, p, name, element);
+-              pseudo->selector(wrapped);
++
++          std::string unvendored = Util::unvendor(name);
++
++          if (unvendored == "not" || unvendored == "matches" || unvendored == "current"  || unvendored == "any" || unvendored == "has" || unvendored == "host" || unvendored == "host-context" || unvendored == "slotted") {
++             if (SelectorListObj wrapped = parseSelectorList(true)) {
++                if (wrapped && lex_css< exactly<')'> >()) {
++                  Pseudo_Selector* pseudo = SASS_MEMORY_NEW(Pseudo_Selector, p, name, element);
++                  pseudo->selector(wrapped);
++                  return pseudo;
++                }
++              }
++          } else {
++            String_Schema_Obj arg = parse_css_variable_value();
++            Pseudo_Selector* pseudo = SASS_MEMORY_NEW(Pseudo_Selector, p, name, element);
++            pseudo->argument(arg);
++
++            if (lex_css< exactly<')'> >()) {
+               return pseudo;
+             }
+           }

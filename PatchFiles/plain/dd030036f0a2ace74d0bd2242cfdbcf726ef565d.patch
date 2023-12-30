@@ -1,0 +1,24 @@
+From dd030036f0a2ace74d0bd2242cfdbcf726ef565d Mon Sep 17 00:00:00 2001
+From: Benjamin Kramer <benny.kra@googlemail.com>
+Date: Sat, 28 Mar 2020 22:06:12 +0100
+Subject: [PATCH] Put back initializers that were dropped in
+ 0ab5b5b8581d9f2951575f7245824e6e4fc57dec
+
+Found by msan.
+---
+ llvm/include/llvm/Target/TargetOptions.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/llvm/include/llvm/Target/TargetOptions.h b/llvm/include/llvm/Target/TargetOptions.h
+index b7c5fb26583fe..56ead308da076 100644
+--- a/llvm/include/llvm/Target/TargetOptions.h
++++ b/llvm/include/llvm/Target/TargetOptions.h
+@@ -127,6 +127,8 @@ namespace llvm {
+           EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
+           EmitStackSizeSection(false), EnableMachineOutliner(false),
+           SupportsDefaultOutlining(false), EmitAddrsig(false),
++          EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
++          EnableDebugEntryValues(false), ForceDwarfFrameSection(false),
+           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
+ 
+     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs

@@ -1,0 +1,45 @@
+commit 0a54d331f4fbc2df167b97a92e375dd6cafb5576
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Wed Aug 31 09:52:15 2022 +0100
+
+    ofz#50805 crash seen in fuzzing libreoffice text rendering
+    
+    Change-Id: I8af207ff21399f1bc3f36c01b7d2912692cbb06b
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/139093
+    Tested-by: Caolán McNamara <caolanm@redhat.com>
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/external/cairo/UnpackedTarball_cairo.mk b/external/cairo/UnpackedTarball_cairo.mk
+index e746a48994ab..5824d0bc0f2d 100644
+--- a/external/cairo/UnpackedTarball_cairo.mk
++++ b/external/cairo/UnpackedTarball_cairo.mk
+@@ -22,6 +22,7 @@ $(eval $(call gb_UnpackedTarball_add_patches,cairo,\
+ 	external/cairo/cairo/cairo.oldfreetype.patch \
+ 	external/cairo/cairo/san.patch.0 \
+ 	external/cairo/cairo/cairo.ofz46165.patch.1 \
++	external/cairo/cairo/cairo.ofz50805.patch.1 \
+ 	external/cairo/cairo/0025-libtool-pass-use-ld.patch \
+ ))
+ 
+diff --git a/external/cairo/cairo/cairo.ofz50805.patch.1 b/external/cairo/cairo/cairo.ofz50805.patch.1
+new file mode 100644
+index 000000000000..25bd6bb930df
+--- /dev/null
++++ b/external/cairo/cairo/cairo.ofz50805.patch.1
+@@ -0,0 +1,16 @@
++--- a/src/cairo-ft-font.c	2022-08-31 09:46:52.595160200 +0100
+++++ b/src/cairo-ft-font.c	2022-08-31 09:47:41.623945654 +0100
++@@ -2568,9 +2568,11 @@
++ 	    if (unlikely (status))
++ 		cairo_surface_destroy (&surface->base);
++ 	}
++-	if (unlikely (status))
++-	    return status;
++     }
+++
+++    if (unlikely (status))
+++	return status;
+++
++     if (pixman_image_get_format (surface->pixman_image) == PIXMAN_a8r8g8b8 &&
++ 	!pixman_image_get_component_alpha (surface->pixman_image)) {
++ 	_cairo_scaled_glyph_set_color_surface (scaled_glyph,

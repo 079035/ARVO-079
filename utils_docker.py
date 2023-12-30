@@ -1,6 +1,8 @@
 import re
 import subprocess
-from utils_exec import check_call
+import os
+from base58 import b58encode
+from utils_exec import *
 class DfTool():
     def __init__(self,path) -> None:
         self.path = path
@@ -52,7 +54,6 @@ class DfTool():
     def dump(self):
         print("[+] Dumping the Content")
         print(self.content)
-
 # Docker Options
 def docker_login():
     res = subprocess.run(["docker","login"])
@@ -63,29 +64,60 @@ def docker_run(args,rm=True):
     else:
         cmd = ['docker','run','--privileged']
     cmd.extend(args)
-    print("[+] Docker Run: \n\n"+" ".join(cmd)+"\n\n")
+    print("[+] Docker Run: \n"+" ".join(cmd))
     return check_call(cmd)
 def docker_cp(arg1,arg2):
     cmd = ['docker','cp',arg1,arg2]
     return check_call(cmd)
+def docker_images(name):
+    cmd = ["docker","images","-aq",name]
+    return execute(cmd).decode()
 def docker_rmi(img_name):
-    cmd = ['docker','rmi',img_name]
+    target_hash = docker_images(img_name)
+    if target_hash== "":
+        return True
+    cmd = ['docker','rmi',target_hash]
     return check_call(cmd)
+def docker_ps(container_name):
+    cmd = ["docker", "ps", "-aq", "-f", f"name={container_name}"]
+    return execute(cmd).decode()
 def docker_commit(container_name,image_name):
     cmd = ['docker','commit',container_name,image_name]
     return check_call(cmd)
-def docker_stop_and_rm(container_name):
-    cmd = ['docker','stop',container_name]
-    if check_call(cmd):
-        cmd = ['docker','rm',container_name]
-        return check_call(cmd)
-    else:
-        return False
+def docker_rm(container_name):
+    target_hash = docker_ps(container_name)
+    if target_hash == "":
+        return True
+    cmd = ['docker','stop',target_hash]
+    with open('/dev/null','w') as f:
+        if check_call(cmd,stdout=f,stderr=f):
+            target_hash = docker_ps(container_name)
+            if "\n" in target_hash:
+                target_hash = target_hash.split("\n")
+                cmd = ['docker','rm']+target_hash
+            else:
+                if target_hash == "":
+                    return True
+                cmd = ['docker','rm',target_hash]
+            return check_call(cmd,stdout=f,stderr=f)
+        else:
+            return False
 def docker_save(img_name,output_name):
-    cmd = ['docker','save',"-o", output_name , img_name]
-    return check_call(cmd)
+    output_name = str(output_name)
+    with open('/dev/null','w') as f:
+        cmd = ['docker','save',"-o", output_name , img_name]
+        return check_call(cmd,stdout=f,stderr=f)
 def docker_build(args):
     cmd = ['docker','build']
     cmd.extend(args)
-    print("[+] Docker Build: \n\n"+" ".join(cmd)+"\n\n")
+    print("[+] Docker Build: \n"+" ".join(cmd))
     return check_call(cmd)
+def docker_load(instream):
+    cmd = ['docker','load']
+    print("[+] Docker Load: \n"+" ".join(cmd))
+    return check_call(cmd,stdin=instream)
+def docker_exec(container: str,command: list):
+    cmd = ['docker','exec',container]+command
+    print("[+] Docker Exec: \n"+" ".join(cmd))
+    with open('/dev/null','w') as f:
+        return check_call(cmd,stdout=f,stderr=f)

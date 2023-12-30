@@ -1,0 +1,630 @@
+From 2378f357870c9c24462389ab57e1b211ea2d79a0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A1t=C3=A9=20Kocsis?= <kocsismate@woohoolabs.com>
+Date: Tue, 20 Jul 2021 13:16:41 +0200
+Subject: [PATCH] Use single line phpdoc in stubs where possible
+
+---
+ ext/com_dotnet/com_extension.stub.php   |  4 +--
+ ext/com_dotnet/com_extension_arginfo.h  |  2 +-
+ ext/curl/curl_file.stub.php             |  4 +--
+ ext/curl/curl_file_arginfo.h            |  2 +-
+ ext/ffi/ffi.stub.php                    | 13 +++----
+ ext/ffi/ffi_arginfo.h                   |  2 +-
+ ext/fileinfo/fileinfo.stub.php          |  4 +--
+ ext/fileinfo/fileinfo_arginfo.h         |  2 +-
+ ext/imap/php_imap.stub.php              | 40 +++++----------------
+ ext/imap/php_imap_arginfo.h             |  2 +-
+ ext/intl/formatter/formatter.stub.php   |  4 +--
+ ext/intl/formatter/formatter_arginfo.h  |  2 +-
+ ext/ldap/ldap.stub.php                  |  4 +--
+ ext/ldap/ldap_arginfo.h                 |  2 +-
+ ext/pdo/pdo_dbh.stub.php                |  4 +--
+ ext/pdo/pdo_dbh_arginfo.h               |  2 +-
+ ext/pdo/pdo_stmt.stub.php               |  8 ++---
+ ext/pdo/pdo_stmt_arginfo.h              |  2 +-
+ ext/pgsql/pgsql.stub.php                |  4 +--
+ ext/pgsql/pgsql_arginfo.h               |  2 +-
+ ext/reflection/php_reflection.stub.php  | 48 +++++++------------------
+ ext/reflection/php_reflection_arginfo.h |  2 +-
+ ext/simplexml/simplexml.stub.php        |  4 +--
+ ext/simplexml/simplexml_arginfo.h       |  2 +-
+ ext/sqlite3/sqlite3.stub.php            | 12 ++-----
+ ext/sqlite3/sqlite3_arginfo.h           |  2 +-
+ 26 files changed, 50 insertions(+), 129 deletions(-)
+
+diff --git a/ext/com_dotnet/com_extension.stub.php b/ext/com_dotnet/com_extension.stub.php
+index 3d9fada7fa75a..b0d50c62e0852 100644
+--- a/ext/com_dotnet/com_extension.stub.php
++++ b/ext/com_dotnet/com_extension.stub.php
+@@ -66,9 +66,7 @@ function com_message_pump(int $timeout_milliseconds  = 0): bool {}
+ 
+ function com_load_typelib(string $typelib, bool $case_insensitive = true): bool {}
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class variant
+ {
+     public function __construct(mixed $value = null, int $type = VT_EMPTY, int $codepage = CP_ACP) {}
+diff --git a/ext/com_dotnet/com_extension_arginfo.h b/ext/com_dotnet/com_extension_arginfo.h
+index d7a716635c4b3..78a9cc977e58d 100644
+--- a/ext/com_dotnet/com_extension_arginfo.h
++++ b/ext/com_dotnet/com_extension_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: a2e260364d3f1f0e632b43be1a61294b21eed937 */
++ * Stub hash: 6d32c6c4ed91fb542f6d78de50a4f099b9285614 */
+ 
+ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_variant_set, 0, 2, IS_VOID, 0)
+ 	ZEND_ARG_OBJ_INFO(0, variant, variant, 0)
+diff --git a/ext/curl/curl_file.stub.php b/ext/curl/curl_file.stub.php
+index 26c9e558a498e..6b018dbebc689 100644
+--- a/ext/curl/curl_file.stub.php
++++ b/ext/curl/curl_file.stub.php
+@@ -2,9 +2,7 @@
+ 
+ /** @generate-class-entries */
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class CURLFile
+ {
+     public string $name = "";
+diff --git a/ext/curl/curl_file_arginfo.h b/ext/curl/curl_file_arginfo.h
+index fb16fffe7aad7..fa51249fe956f 100644
+--- a/ext/curl/curl_file_arginfo.h
++++ b/ext/curl/curl_file_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 63d47eac83ee088e8b4c0d1aa469de9ae066146a */
++ * Stub hash: 0d09bd2f3b0a155cef25ca343319ecf470424d71 */
+ 
+ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_CURLFile___construct, 0, 0, 1)
+ 	ZEND_ARG_TYPE_INFO(0, filename, IS_STRING, 0)
+diff --git a/ext/ffi/ffi.stub.php b/ext/ffi/ffi.stub.php
+index 72ae4a7e19266..6ba7b542ef97d 100644
+--- a/ext/ffi/ffi.stub.php
++++ b/ext/ffi/ffi.stub.php
+@@ -4,9 +4,7 @@
+ 
+ namespace {
+ 
+-	/**
+-	 * @not-serializable
+-	 */
++	/** @not-serializable */
+     final class FFI
+     {
+         public static function cdef(string $code = "", ?string $lib = null): FFI {}
+@@ -70,15 +68,12 @@ public static function isNull(FFI\CData $ptr): bool {}
+ }
+ 
+ namespace FFI {
+-	/**
+-	 * @not-serializable
+-	 */
++
++	/** @not-serializable */
+     final class CData {
+     }
+ 
+-	/**
+-	 * @not-serializable
+-	 */
++	/** @not-serializable */
+     final class CType {
+         public function getName(): string {}
+ 
+diff --git a/ext/ffi/ffi_arginfo.h b/ext/ffi/ffi_arginfo.h
+index bee1dbe73f7e3..1438c0283badc 100644
+--- a/ext/ffi/ffi_arginfo.h
++++ b/ext/ffi/ffi_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: a5c742bba32bd234e89268bebfc13f3cb4177719 */
++ * Stub hash: d9dd3b93c0d1623fe61ea0bd8ee9d4c3a359bf78 */
+ 
+ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_class_FFI_cdef, 0, 0, FFI, 0)
+ 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, code, IS_STRING, 0, "\"\"")
+diff --git a/ext/fileinfo/fileinfo.stub.php b/ext/fileinfo/fileinfo.stub.php
+index dea0041f3597c..3a0e41105e88e 100644
+--- a/ext/fileinfo/fileinfo.stub.php
++++ b/ext/fileinfo/fileinfo.stub.php
+@@ -2,9 +2,7 @@
+ 
+ /** @generate-class-entries */
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class finfo
+ {
+     /** @alias finfo_open */
+diff --git a/ext/fileinfo/fileinfo_arginfo.h b/ext/fileinfo/fileinfo_arginfo.h
+index f2e087fecbf1d..8029b6950dfec 100644
+--- a/ext/fileinfo/fileinfo_arginfo.h
++++ b/ext/fileinfo/fileinfo_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 41527cacd680ee2e9657d0a1a39614567d356d83 */
++ * Stub hash: edb72bf1a82a6b2e027caa91c6668c27e36b9c34 */
+ 
+ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_TYPE_MASK_EX(arginfo_finfo_open, 0, 0, finfo, MAY_BE_FALSE)
+ 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, flags, IS_LONG, 0, "FILEINFO_NONE")
+diff --git a/ext/imap/php_imap.stub.php b/ext/imap/php_imap.stub.php
+index c3d8b3322134e..c640e14fafc88 100644
+--- a/ext/imap/php_imap.stub.php
++++ b/ext/imap/php_imap.stub.php
+@@ -37,9 +37,7 @@ function imap_rfc822_parse_adrlist(string $string, string $default_hostname): ar
+ 
+     function imap_body(IMAP\Connection $imap, int $message_num, int $flags = 0): string|false {}
+ 
+-    /**
+-     * @alias imap_body
+-     */
++    /** @alias imap_body */
+     function imap_fetchtext(IMAP\Connection $imap, int $message_num, int $flags = 0): string|false {}
+ 
+     function imap_bodystruct(IMAP\Connection $imap, int $message_num, string $section): \stdClass|false {}
+@@ -48,43 +46,29 @@ function imap_fetchbody(IMAP\Connection $imap, int $message_num, string $section
+ 
+     function imap_fetchmime(IMAP\Connection $imap, int $message_num, string $section, int $flags = 0): string|false {}
+ 
+-    /**
+-     * @param resource|string|int $file
+-     */
++    /** @param resource|string|int $file */
+     function imap_savebody(IMAP\Connection $imap, $file, int $message_num, string $section = "", int $flags = 0): bool {}
+ 
+     function imap_fetchheader(IMAP\Connection $imap, int $message_num, int $flags = 0): string|false {}
+ 
+     function imap_fetchstructure(IMAP\Connection $imap, int $message_num, int $flags = 0): \stdClass|false {}
+ 
+-    /**
+-     */
+     function imap_gc(IMAP\Connection $imap, int $flags): bool {}
+ 
+-    /**
+-     */
+     function imap_expunge(IMAP\Connection $imap): bool {}
+ 
+-    /**
+-     */
+     function imap_delete(IMAP\Connection $imap, string $message_num, int $flags = 0): bool {}
+ 
+-    /**
+-     */
+     function imap_undelete(IMAP\Connection $imap, string $message_num, int $flags = 0): bool {}
+ 
+     function imap_check(IMAP\Connection $imap): \stdClass|false {}
+ 
+     function imap_listscan(IMAP\Connection $imap, string $reference, string $pattern, string $content): array|false {}
+ 
+-    /**
+-     * @alias imap_listscan
+-     */
++    /** @alias imap_listscan */
+     function imap_scan(IMAP\Connection $imap, string $reference, string $pattern, string $content): array|false {}
+ 
+-    /**
+-     * @alias imap_listscan
+-     */
++    /** @alias imap_listscan */
+     function imap_scanmailbox(IMAP\Connection $imap, string $reference, string $pattern, string $content): array|false {}
+ 
+     function imap_mail_copy(IMAP\Connection $imap, string $message_nums, string $mailbox, int $flags = 0): bool {}
+@@ -95,16 +79,12 @@ function imap_mail_compose(array $envelope, array $bodies): string|false {}
+ 
+     function imap_createmailbox(IMAP\Connection $imap, string $mailbox): bool {}
+ 
+-    /**
+-     * @alias imap_createmailbox
+-     */
++    /** @alias imap_createmailbox */
+     function imap_create(IMAP\Connection $imap, string $mailbox): bool {}
+ 
+     function imap_renamemailbox(IMAP\Connection $imap, string $from, string $to): bool {}
+ 
+-    /**
+-     * @alias imap_renamemailbox
+-     */
++    /** @alias imap_renamemailbox */
+     function imap_rename(IMAP\Connection $imap, string $from, string $to): bool {}
+ 
+     function imap_deletemailbox(IMAP\Connection $imap, string $mailbox): bool {}
+@@ -143,16 +123,12 @@ function imap_msgno(IMAP\Connection $imap, int $message_uid): int {}
+ 
+     function imap_list(IMAP\Connection $imap, string $reference, string $pattern): array|false {}
+ 
+-    /**
+-     * @alias imap_list
+-     */
++    /** @alias imap_list */
+     function imap_listmailbox(IMAP\Connection $imap, string $reference, string $pattern): array|false {}
+ 
+     function imap_lsub(IMAP\Connection $imap, string $reference, string $pattern): array|false {}
+ 
+-    /**
+-     * @alias imap_lsub
+-     */
++    /** @alias imap_lsub */
+     function imap_listsubscribed(IMAP\Connection $imap, string $reference, string $pattern): array|false {}
+ 
+     function imap_getsubscribed(IMAP\Connection $imap, string $reference, string $pattern): array|false {}
+diff --git a/ext/imap/php_imap_arginfo.h b/ext/imap/php_imap_arginfo.h
+index ea8607c6d7b52..974b888ab989f 100644
+--- a/ext/imap/php_imap_arginfo.h
++++ b/ext/imap/php_imap_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 706de8c7fbb821b71ad8cfdbbab38fe30fa6590a */
++ * Stub hash: 5f8aa79b08eeca70b934040b8ed3809f249cbef7 */
+ 
+ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_TYPE_MASK_EX(arginfo_imap_open, 0, 3, IMAP\\Connection, MAY_BE_FALSE)
+ 	ZEND_ARG_TYPE_INFO(0, mailbox, IS_STRING, 0)
+diff --git a/ext/intl/formatter/formatter.stub.php b/ext/intl/formatter/formatter.stub.php
+index 68423e1d94b42..6cf101e340694 100644
+--- a/ext/intl/formatter/formatter.stub.php
++++ b/ext/intl/formatter/formatter.stub.php
+@@ -2,9 +2,7 @@
+ 
+ /** @generate-class-entries */
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class NumberFormatter
+ {
+     public function __construct(string $locale, int $style, ?string $pattern = null) {}
+diff --git a/ext/intl/formatter/formatter_arginfo.h b/ext/intl/formatter/formatter_arginfo.h
+index 1f7647c4b11dc..432ced976bdf6 100644
+--- a/ext/intl/formatter/formatter_arginfo.h
++++ b/ext/intl/formatter/formatter_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 3cc95768092e2c6ddfcab9379d1963b58ab94def */
++ * Stub hash: f76ad76b08b7ca47883659fabfcc0882a2820c43 */
+ 
+ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_NumberFormatter___construct, 0, 0, 2)
+ 	ZEND_ARG_TYPE_INFO(0, locale, IS_STRING, 0)
+diff --git a/ext/ldap/ldap.stub.php b/ext/ldap/ldap.stub.php
+index 2aeba0ce21b0c..b49d2efe5caf2 100644
+--- a/ext/ldap/ldap.stub.php
++++ b/ext/ldap/ldap.stub.php
+@@ -125,9 +125,7 @@ function ldap_rename(LDAP\Connection $ldap, string $dn, string $new_rdn, string
+ 
+     function ldap_rename_ext(LDAP\Connection $ldap, string $dn, string $new_rdn, string $new_parent, bool $delete_old_rdn, ?array $controls = null): LDAP\Result|false {}
+ 
+-    /**
+-     * @param array|string|int $value
+-     */
++    /** @param array|string|int $value */
+     function ldap_get_option(LDAP\Connection $ldap, int $option, &$value = null): bool {}
+ 
+     /** @param array|string|int|bool $value */
+diff --git a/ext/ldap/ldap_arginfo.h b/ext/ldap/ldap_arginfo.h
+index c5eb633585408..17f745f8bc9be 100644
+--- a/ext/ldap/ldap_arginfo.h
++++ b/ext/ldap/ldap_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 482ee2b3df6b6f6b9e86e0af890c441d6222356d */
++ * Stub hash: a1beb155767af8500567030b493d9d3ec408270a */
+ 
+ #if defined(HAVE_ORALDAP)
+ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_TYPE_MASK_EX(arginfo_ldap_connect, 0, 0, LDAP\\Connection, MAY_BE_FALSE)
+diff --git a/ext/pdo/pdo_dbh.stub.php b/ext/pdo/pdo_dbh.stub.php
+index f91ed6c218210..c2601ab422713 100644
+--- a/ext/pdo/pdo_dbh.stub.php
++++ b/ext/pdo/pdo_dbh.stub.php
+@@ -2,9 +2,7 @@
+ 
+ /** @generate-class-entries */
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class PDO
+ {
+     public function __construct(string $dsn, ?string $username = null, ?string $password = null, ?array $options = null) {}
+diff --git a/ext/pdo/pdo_dbh_arginfo.h b/ext/pdo/pdo_dbh_arginfo.h
+index 9629b70deb699..834e4177c77e2 100644
+--- a/ext/pdo/pdo_dbh_arginfo.h
++++ b/ext/pdo/pdo_dbh_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 427f534213227208cd0b02c936d526ea08fa008f */
++ * Stub hash: ec880c39e211dbfd4c239292b8cc9e7babab105b */
+ 
+ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_PDO___construct, 0, 0, 1)
+ 	ZEND_ARG_TYPE_INFO(0, dsn, IS_STRING, 0)
+diff --git a/ext/pdo/pdo_stmt.stub.php b/ext/pdo/pdo_stmt.stub.php
+index c008b4e412788..9018077514954 100644
+--- a/ext/pdo/pdo_stmt.stub.php
++++ b/ext/pdo/pdo_stmt.stub.php
+@@ -2,9 +2,7 @@
+ 
+ /** @generate-class-entries */
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class PDOStatement implements IteratorAggregate
+ {
+     public string $queryString;
+@@ -69,9 +67,7 @@ public function setFetchMode(int $mode, mixed ...$args) {} // TODO make return t
+     public function getIterator(): Iterator {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ final class PDORow
+ {
+     public string $queryString;
+diff --git a/ext/pdo/pdo_stmt_arginfo.h b/ext/pdo/pdo_stmt_arginfo.h
+index 716a75337b144..1608e17360614 100644
+--- a/ext/pdo/pdo_stmt_arginfo.h
++++ b/ext/pdo/pdo_stmt_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: f5f2932888bcbffa771092e9a54508d4c51c32ab */
++ * Stub hash: adcbda7b6763141981700bec5d8c5b739f8de767 */
+ 
+ ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(arginfo_class_PDOStatement_bindColumn, 0, 2, _IS_BOOL, 0)
+ 	ZEND_ARG_TYPE_MASK(0, column, MAY_BE_STRING|MAY_BE_LONG, NULL)
+diff --git a/ext/pgsql/pgsql.stub.php b/ext/pgsql/pgsql.stub.php
+index aacfca8138230..fc8ac0039432e 100644
+--- a/ext/pgsql/pgsql.stub.php
++++ b/ext/pgsql/pgsql.stub.php
+@@ -185,9 +185,7 @@ function pg_field_prtlen(PgSql\Result $result, $row, string|int $field = UNKNOWN
+      */
+     function pg_fieldprtlen(PgSql\Result $result, $row, string|int $field = UNKNOWN): int|false {}
+ 
+-    /**
+-     * @param string|int $row
+-     */
++    /** @param string|int $row */
+     function pg_field_is_null(PgSql\Result $result, $row, string|int $field = UNKNOWN): int|false {}
+ 
+     /**
+diff --git a/ext/pgsql/pgsql_arginfo.h b/ext/pgsql/pgsql_arginfo.h
+index 3cf6eb570ba2f..2854873226707 100644
+--- a/ext/pgsql/pgsql_arginfo.h
++++ b/ext/pgsql/pgsql_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 39b3a34ba955184bbfcc7a792fa0ecc2877ac064 */
++ * Stub hash: 37814767f8290b717a4facbdf55ef3bfc1fc24c8 */
+ 
+ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_TYPE_MASK_EX(arginfo_pg_connect, 0, 1, PgSql\\Connection, MAY_BE_FALSE)
+ 	ZEND_ARG_TYPE_INFO(0, connection_string, IS_STRING, 0)
+diff --git a/ext/reflection/php_reflection.stub.php b/ext/reflection/php_reflection.stub.php
+index d980e2d330dee..f26c989328162 100644
+--- a/ext/reflection/php_reflection.stub.php
++++ b/ext/reflection/php_reflection.stub.php
+@@ -16,9 +16,7 @@ interface Reflector extends Stringable
+ {
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ abstract class ReflectionFunctionAbstract implements Reflector
+ {
+     public string $name;
+@@ -135,9 +133,7 @@ public function invokeArgs(array $args): mixed {}
+     public function getClosure(): Closure {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ final class ReflectionGenerator
+ {
+     public function __construct(Generator $generator) {}
+@@ -212,9 +208,7 @@ public function getPrototype(): ReflectionMethod {}
+     public function setAccessible(bool $accessible): void {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class ReflectionClass implements Reflector
+ {
+     public string $name;
+@@ -389,9 +383,7 @@ class ReflectionObject extends ReflectionClass
+     public function __construct(object $object) {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class ReflectionProperty implements Reflector
+ {
+     public string $name;
+@@ -462,9 +454,7 @@ public function getDefaultValue(): mixed {}
+     public function getAttributes(?string $name = null, int $flags = 0): array {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class ReflectionClassConstant implements Reflector
+ {
+     public string $name;
+@@ -509,9 +499,7 @@ public function getAttributes(?string $name = null, int $flags = 0): array {}
+     public function isEnumCase(): bool {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class ReflectionParameter implements Reflector
+ {
+     public string $name;
+@@ -593,9 +581,7 @@ public function isPromoted(): bool {}
+     public function getAttributes(?string $name = null, int $flags = 0): array {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ abstract class ReflectionType implements Stringable
+ {
+     /** @implementation-alias ReflectionClass::__clone */
+@@ -626,9 +612,7 @@ class ReflectionIntersectionType extends ReflectionType
+     public function getTypes(): array {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class ReflectionExtension implements Reflector
+ {
+     public string $name;
+@@ -674,9 +658,7 @@ public function isPersistent(): bool {}
+     public function isTemporary(): bool {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class ReflectionZendExtension implements Reflector
+ {
+     public string $name;
+@@ -704,9 +686,7 @@ public function getURL(): string {}
+     public function getCopyright(): string {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ final class ReflectionReference
+ {
+     public static function fromArrayElement(array $array, int|string $key): ?ReflectionReference {}
+@@ -719,9 +699,7 @@ private function __clone(): void {}
+     private function __construct() {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ final class ReflectionAttribute implements Reflector
+ {
+     public function getName(): string {}
+@@ -772,9 +750,7 @@ public function __construct(object|string $class, string $constant) {}
+     public function getBackingValue(): int|string {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ final class ReflectionFiber
+ {
+     public function __construct(Fiber $fiber) {}
+diff --git a/ext/reflection/php_reflection_arginfo.h b/ext/reflection/php_reflection_arginfo.h
+index 4fc794c64ae7e..1a2b14fca0b97 100644
+--- a/ext/reflection/php_reflection_arginfo.h
++++ b/ext/reflection/php_reflection_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 74eb6f065b43ebd0ccff2510a49ac5c6fe716910 */
++ * Stub hash: aae05073f9a7898d836023183809faa265cb99c3 */
+ 
+ ZEND_BEGIN_ARG_WITH_TENTATIVE_RETURN_TYPE_INFO_EX(arginfo_class_Reflection_getModifierNames, 0, 1, IS_ARRAY, 0)
+ 	ZEND_ARG_TYPE_INFO(0, modifiers, IS_LONG, 0)
+diff --git a/ext/simplexml/simplexml.stub.php b/ext/simplexml/simplexml.stub.php
+index d9e7e8b2bc83a..a115c8b2defeb 100644
+--- a/ext/simplexml/simplexml.stub.php
++++ b/ext/simplexml/simplexml.stub.php
+@@ -8,9 +8,7 @@ function simplexml_load_string(string $data, ?string $class_name = SimpleXMLElem
+ 
+ function simplexml_import_dom(SimpleXMLElement|DOMNode $node, ?string $class_name = SimpleXMLElement::class): ?SimpleXMLElement {}
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class SimpleXMLElement implements Stringable, Countable, RecursiveIterator
+ {
+     /** @tentative-return-type */
+diff --git a/ext/simplexml/simplexml_arginfo.h b/ext/simplexml/simplexml_arginfo.h
+index 1dafd4fced83a..881051514c595 100644
+--- a/ext/simplexml/simplexml_arginfo.h
++++ b/ext/simplexml/simplexml_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: ca12ababd3c69ba80ef25487dde4d7bb67ec3dd4 */
++ * Stub hash: 46da4d24787a5f975eebeaab3872eb29273a9625 */
+ 
+ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_TYPE_MASK_EX(arginfo_simplexml_load_file, 0, 1, SimpleXMLElement, MAY_BE_FALSE)
+ 	ZEND_ARG_TYPE_INFO(0, filename, IS_STRING, 0)
+diff --git a/ext/sqlite3/sqlite3.stub.php b/ext/sqlite3/sqlite3.stub.php
+index 8210d4b7cb1a7..413450739896d 100644
+--- a/ext/sqlite3/sqlite3.stub.php
++++ b/ext/sqlite3/sqlite3.stub.php
+@@ -2,9 +2,7 @@
+ 
+ /** @generate-class-entries */
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class SQLite3
+ {
+     /**
+@@ -87,9 +85,7 @@ public function enableExtendedResultCodes(bool $enable = true): bool {}
+     public function setAuthorizer(?callable $callback): bool {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class SQLite3Stmt
+ {
+     private function __construct(SQLite3 $sqlite3, string $query) {}
+@@ -122,9 +118,7 @@ public function readOnly(): bool {}
+     public function reset(): bool {}
+ }
+ 
+-/**
+- * @not-serializable
+- */
++/** @not-serializable */
+ class SQLite3Result
+ {
+     private function __construct() {}
+diff --git a/ext/sqlite3/sqlite3_arginfo.h b/ext/sqlite3/sqlite3_arginfo.h
+index d0a21e65a5e68..5e973101664fa 100644
+--- a/ext/sqlite3/sqlite3_arginfo.h
++++ b/ext/sqlite3/sqlite3_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 1f1163829fdffd8a4512f3fd9fd9c6c07238ed34 */
++ * Stub hash: c14e6403cfd75718156b409dc476f088aa0b5540 */
+ 
+ ZEND_BEGIN_ARG_INFO_EX(arginfo_class_SQLite3___construct, 0, 0, 1)
+ 	ZEND_ARG_TYPE_INFO(0, filename, IS_STRING, 0)

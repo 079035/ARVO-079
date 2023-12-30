@@ -1,0 +1,92 @@
+From 40e9a9cc24f959336dc81b1b3589b2d9291a8918 Mon Sep 17 00:00:00 2001
+From: chaoqin-li1123 <55518381+chaoqin-li1123@users.noreply.github.com>
+Date: Thu, 10 Jun 2021 08:35:33 -0500
+Subject: [PATCH] [fuzz]: Fix oss fuxx 34689,  close both locally and remotely
+ after response decoder has been closed (#16823)
+
+* close local and remote after response stream closed
+
+Signed-off-by: chaoqin-li1123 <chaoqinli@google.com>
+---
+ .../send_request_after_response_closed        | 38 +++++++++++++++++++
+ test/common/http/codec_impl_fuzz_test.cc      | 13 +++++--
+ 2 files changed, 48 insertions(+), 3 deletions(-)
+ create mode 100644 test/common/http/codec_impl_corpus/send_request_after_response_closed
+
+diff --git a/test/common/http/codec_impl_corpus/send_request_after_response_closed b/test/common/http/codec_impl_corpus/send_request_after_response_closed
+new file mode 100644
+index 0000000000000..98183d850e7c3
+--- /dev/null
++++ b/test/common/http/codec_impl_corpus/send_request_after_response_closed
+@@ -0,0 +1,38 @@
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: ":method"
++        value: "HEAD"
++      }
++      headers {
++        key: ":path"
++        value: "/"
++      }
++    }
++  }
++}
++actions {
++  quiesce_drain {
++  }
++}
++actions {
++  stream_action {
++    response {
++      headers {
++      }
++    }
++  }
++}
++actions {
++  server_drain {
++  }
++}
++actions {
++  stream_action {
++    request {
++      trailers {
++      }
++    }
++  }
++}
+diff --git a/test/common/http/codec_impl_fuzz_test.cc b/test/common/http/codec_impl_fuzz_test.cc
+index 41453259059a3..61e8bbd736ce6 100644
+--- a/test/common/http/codec_impl_fuzz_test.cc
++++ b/test/common/http/codec_impl_fuzz_test.cc
+@@ -135,6 +135,13 @@ class HttpStream : public LinkedObject<HttpStream> {
+         stream_state_ = StreamState::Closed;
+       }
+     }
++
++    void closeLocalAndRemote() {
++      remote_closed_ = true;
++      local_closed_ = true;
++      stream_state_ = StreamState::Closed;
++    }
++
+   } request_, response_;
+ 
+   HttpStream(ClientConnection& client, const TestRequestHeaderMapImpl& request_headers,
+@@ -176,11 +183,11 @@ class HttpStream : public LinkedObject<HttpStream> {
+       request_.closeRemote();
+     }));
+     ON_CALL(response_.response_decoder_, decodeHeaders_(_, true))
+-        .WillByDefault(InvokeWithoutArgs([this] { response_.closeRemote(); }));
++        .WillByDefault(InvokeWithoutArgs([this] { response_.closeLocalAndRemote(); }));
+     ON_CALL(response_.response_decoder_, decodeData(_, true))
+-        .WillByDefault(InvokeWithoutArgs([this] { response_.closeRemote(); }));
++        .WillByDefault(InvokeWithoutArgs([this] { response_.closeLocalAndRemote(); }));
+     ON_CALL(response_.response_decoder_, decodeTrailers_(_))
+-        .WillByDefault(InvokeWithoutArgs([this] { response_.closeRemote(); }));
++        .WillByDefault(InvokeWithoutArgs([this] { response_.closeLocalAndRemote(); }));
+     if (!end_stream) {
+       request_.request_encoder_->getStream().addCallbacks(request_.stream_callbacks_);
+     }

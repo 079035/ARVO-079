@@ -1,14 +1,16 @@
-Vulnerability:
-The vulnerability in the code is that the function `buffer->merge_out_clusters` is being called, which is incorrect. This function does not exist and therefore leads to a compilation error or undefined behavior.
+1. Vulnerability:
+The vulnerability in the code is related to the incorrect merging of clusters in the Arabic shaping complex. This could potentially lead to incorrect rendering of Arabic text, which could be exploited to cause visual inconsistencies or misrepresentations.
 
-Summary of the fix:
-The fix removes the incorrect function `merge_out_clusters`, and replaces it with the correct function `merge_clusters`.
+2. Short Summary of the Fix:
+The fix involves changing the method used to merge clusters from `merge_out_clusters` to `merge_clusters`. This change ensures that the clusters are merged correctly, preventing the potential rendering issues.
 
-Detailed description of the fix:
-In the given code, the function `buffer->merge_out_clusters` is used to merge clusters of glyphs. However, this function does not exist in the codebase, which means it would result in a compilation error or undefined behavior.
+3. Detailed Description of the Fix:
+In the original code, the `merge_out_clusters` function was used to merge clusters. However, this function was not correctly merging the clusters, leading to potential rendering issues. 
 
-To fix this, the correct function `buffer->merge_clusters` is used instead. This function merges clusters of glyphs, which is the intended behavior of the code. The function call is updated to `buffer->merge_clusters(start, j)`.
+The fix replaces the `merge_out_clusters` function with the `merge_clusters` function. This function correctly merges the clusters, ensuring that the Arabic text is rendered correctly. 
 
-Additionally, the code makes use of the `memmove` function to re-order the glyph information after merging the clusters. This ensures that the glyphs are shifted correctly after the merge operation.
+Additionally, the fix also includes a change in the way the `memmove` function is used to move the memory blocks. The `memmove` function is used to move the blocks of memory that contain the glyph information. The fix ensures that the memory blocks are moved correctly, further ensuring that the clusters are merged correctly. 
 
-Overall, the fix corrects the function call to use the existing `merge_clusters` function and ensures the proper re-ordering of glyph information. This resolves the vulnerability and allows the code to compile and run correctly.
+The fix also includes a change in the way the `start` variable is updated. The `start` variable is used to keep track of the start of the cluster. The fix ensures that the `start` variable is updated correctly, ensuring that the clusters are merged correctly. 
+
+Overall, the fix ensures that the clusters are merged correctly, preventing potential rendering issues and ensuring that the Arabic text is rendered correctly.

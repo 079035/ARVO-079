@@ -1,0 +1,51 @@
+From 957ef09138326c40c68cd7d008481898f78f36c2 Mon Sep 17 00:00:00 2001
+From: Mark Raasveldt <mark.raasveldt@gmail.com>
+Date: Thu, 15 Sep 2022 14:18:07 +0200
+Subject: [PATCH 1/2] Fix #4562: generate table index for dummy scan generated
+ from VALUES clause
+
+---
+ src/planner/binder/tableref/plan_expressionlistref.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/planner/binder/tableref/plan_expressionlistref.cpp b/src/planner/binder/tableref/plan_expressionlistref.cpp
+index a2c84110f63..d0678769988 100644
+--- a/src/planner/binder/tableref/plan_expressionlistref.cpp
++++ b/src/planner/binder/tableref/plan_expressionlistref.cpp
+@@ -6,7 +6,7 @@
+ namespace duckdb {
+ 
+ unique_ptr<LogicalOperator> Binder::CreatePlan(BoundExpressionListRef &ref) {
+-	auto root = make_unique_base<LogicalOperator, LogicalDummyScan>(0);
++	auto root = make_unique_base<LogicalOperator, LogicalDummyScan>(GenerateTableIndex());
+ 	// values list, first plan any subqueries in the list
+ 	for (auto &expr_list : ref.values) {
+ 		for (auto &expr : expr_list) {
+
+From 2544b71691e23ec0e2386e94e960c9737136e695 Mon Sep 17 00:00:00 2001
+From: Mark Raasveldt <mark.raasveldt@gmail.com>
+Date: Thu, 15 Sep 2022 14:19:07 +0200
+Subject: [PATCH 2/2] Add test
+
+---
+ test/fuzzer/pedro/subquery_assertion_error.test | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+ create mode 100644 test/fuzzer/pedro/subquery_assertion_error.test
+
+diff --git a/test/fuzzer/pedro/subquery_assertion_error.test b/test/fuzzer/pedro/subquery_assertion_error.test
+new file mode 100644
+index 00000000000..5b145d12fce
+--- /dev/null
++++ b/test/fuzzer/pedro/subquery_assertion_error.test
+@@ -0,0 +1,11 @@
++# name: test/fuzzer/pedro/subquery_assertion_error.test
++# description: Issue #4562: Subquery error
++# group: [pedro]
++
++statement ok
++PRAGMA enable_verification
++
++query I
++SELECT (VALUES(1 != ALL(SELECT 2)));
++----
++true

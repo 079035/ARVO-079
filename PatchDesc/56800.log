@@ -1,3 +1,14 @@
-Vulnerability: Out-of-memory Access Issue
-Summary of the fix: The fix addresses an out-of-memory access issue in the code.
-Detailed description of the fix: The fix modifies the `subset` function in the `gvar` struct. In the original code, the variable `glyph_count` is assigned the value of `c->plan->source->get_num_glyphs()`, which could lead to an out-of-memory access if `version.to_int()` is false. The fix adds a condition to set `glyph_count` to 0 if `version.to_int()` is false, preventing the out-of-memory access issue.
+1. Vulnerability:
+The vulnerability in the code is an out-of-memory access issue. This issue arises when the code tries to access memory that is beyond the allocated memory limit. This can lead to unexpected behavior, crashes, or even security vulnerabilities if the out-of-bounds memory contains sensitive information.
+
+2. Short Summary of the Fix:
+The fix involves adding a check to ensure that the glyph count is only retrieved if the version is valid. This is done by changing the glyph count assignment to a conditional assignment that checks if the version is valid before retrieving the glyph count. If the version is not valid, the glyph count is set to 0.
+
+3. Detailed Description of the Fix:
+The fix is implemented in two places in the code. 
+
+In the `subset` function, the line `unsigned glyph_count = c->plan->source->get_num_glyphs ();` is replaced with `unsigned glyph_count = version.to_int () ? c->plan->source->get_num_glyphs () : 0;`. This checks if the version is valid (i.e., `version.to_int()` is true) before retrieving the glyph count. If the version is not valid, the glyph count is set to 0.
+
+Similarly, in the `accelerator_t` constructor, the line `glyphCount = face->get_num_glyphs ();` is replaced with `glyphCount = table->version.to_int () ? face->get_num_glyphs () : 0;`. This also checks if the version is valid before retrieving the glyph count. If the version is not valid, the glyph count is set to 0.
+
+These changes prevent the code from trying to access more glyphs than are available, which in turn prevents out-of-memory access.

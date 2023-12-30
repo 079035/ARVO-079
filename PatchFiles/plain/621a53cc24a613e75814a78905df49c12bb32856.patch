@@ -1,0 +1,32 @@
+commit 621a53cc24a613e75814a78905df49c12bb32856
+Author: Noel Grandin <noel.grandin@collabora.co.uk>
+Date:   Mon Oct 31 12:11:24 2022 +0200
+
+    ofz#52898 bad cast to SwXMLImport
+    
+    fallout from
+        commit 2c4aabb220ad1e8f1cbc75f2361fe17893d7cc29
+        Author: Noel Grandin <noel.grandin@collabora.co.uk>
+        Date:   Sat Oct 29 11:11:36 2022 +0200
+        tdf#126788 speed up GetDocFromXMLImport
+    where the prior UNO_QUERY code was hiding this problem
+    
+    Change-Id: I21efc27f4b04acb38138d2d44e207d5a6b9cb9ea
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/142066
+    Tested-by: Jenkins
+    Reviewed-by: Noel Grandin <noel.grandin@collabora.co.uk>
+
+diff --git a/sw/source/filter/xml/xmlimp.cxx b/sw/source/filter/xml/xmlimp.cxx
+index 024531cedd44..01c22fa9ec30 100644
+--- a/sw/source/filter/xml/xmlimp.cxx
++++ b/sw/source/filter/xml/xmlimp.cxx
+@@ -337,6 +337,9 @@ SwXMLImport::~SwXMLImport() noexcept
+         ClearShapeImport();
+     }
+     FinitItemImport();
++    // Call cleanup() here because the destruction of some stuff like XMLRedlineImportHelper will cast
++    // to cast their mrImport to SwXMLImport and that is illegal after this destructor is done.
++    cleanup();
+ }
+ 
+ void SwXMLImport::setTextInsertMode(

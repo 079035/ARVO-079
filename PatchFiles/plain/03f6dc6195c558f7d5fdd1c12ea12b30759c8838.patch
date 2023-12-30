@@ -1,0 +1,191 @@
+commit 03f6dc6195c558f7d5fdd1c12ea12b30759c8838
+Author: Hsin-Yu Chao <hychao@google.com>
+Date:   Mon Sep 5 12:00:22 2022 +0800
+
+    CRAS: a2dp_manager - Restrict selectable capability to single value
+    
+    We're seeing a bug that when CRAS request A2DP stream in mono but
+    Bluetooth stack stuck in interpreting pcm in stereo.
+    
+    The underlying problem we found out is that first at headset connect
+    it reports channel mode capability [mono, stereo] and CRAS stores
+    these value. When A2DP stream is established in stereo later, the
+    headset changes its mind to support only [stereo]. This new capability
+    however isn't propogated to CRAS so when a mono stream connects later
+    and CRAS matches with the previously stored capabilities, it will
+    request Bluetooth stack to use [mono] but the SBC encoder stuck in
+    using [stereo] and therefore the final audio sounds garbled and
+    with lots of underrun.
+    
+    This change fixes the problem by adopting how cras_a2dp_iodev was
+    implemented when interacting with BlueZ - pick only the "best"
+    value of audio format that Bluetooth stack reports as selectable
+    capabilities and use this format settings for all streams.
+    
+    BUG=b:241179969
+    TEST=Connect with Bose QC35, prepare audio data in mono, stereo
+    separately. After headset connect, first play stereo audio, stop
+    for 10 seconds, then mono audio and repeat several times to make
+    sure audio doesn't become garbled.
+    
+    Change-Id: I478db20631e39c7e2dd2469012e0c7d96b153806
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/adhd/+/3874072
+    Reviewed-by: Jeremy Wu <jrwu@google.com>
+    Tested-by: Hsinyu Chao <hychao@chromium.org>
+    Commit-Queue: Hsinyu Chao <hychao@chromium.org>
+
+diff --git a/cras/src/server/cras_a2dp_manager.c b/cras/src/server/cras_a2dp_manager.c
+index 997576df..b31ac39e 100644
+--- a/cras/src/server/cras_a2dp_manager.c
++++ b/cras/src/server/cras_a2dp_manager.c
+@@ -268,29 +268,31 @@ int cras_floss_a2dp_fill_format(int sample_rate, int bits_per_sample,
+ 				snd_pcm_format_t **formats,
+ 				size_t **channel_counts)
+ {
+-	int i;
+ 	*rates = (size_t *)calloc(FL_SAMPLE_RATES + 1, sizeof(**rates));
+ 	if (!*rates)
+ 		return -ENOMEM;
+ 
+-	i = 0;
+-	if (sample_rate & FL_RATE_44100)
+-		(*rates)[i++] = 44100;
+-	if (sample_rate & FL_RATE_48000)
+-		(*rates)[i++] = 48000;
+-	if (sample_rate & FL_RATE_88200)
+-		(*rates)[i++] = 88200;
+-	if (sample_rate & FL_RATE_96000)
+-		(*rates)[i++] = 96000;
+-	if (sample_rate & FL_RATE_176400)
+-		(*rates)[i++] = 176400;
+-	if (sample_rate & FL_RATE_192000)
+-		(*rates)[i++] = 192000;
+-	if (sample_rate & FL_RATE_16000)
+-		(*rates)[i++] = 16000;
+-	if (sample_rate & FL_RATE_24000)
+-		(*rates)[i++] = 24000;
+-	(*rates)[i] = 0;
++	if (sample_rate & FL_RATE_44100) {
++		(*rates)[0] = 44100;
++	} else if (sample_rate & FL_RATE_48000) {
++		(*rates)[0] = 48000;
++	} else if (sample_rate & FL_RATE_88200) {
++		(*rates)[0] = 88200;
++	} else if (sample_rate & FL_RATE_96000) {
++		(*rates)[0] = 96000;
++	} else if (sample_rate & FL_RATE_176400) {
++		(*rates)[0] = 176400;
++	} else if (sample_rate & FL_RATE_192000) {
++		(*rates)[0] = 192000;
++	} else if (sample_rate & FL_RATE_16000) {
++		(*rates)[0] = 16000;
++	} else if (sample_rate & FL_RATE_24000) {
++		(*rates)[0] = 24000;
++	} else {
++		syslog(LOG_ERR, "No supported sample rate");
++		return -EINVAL;
++	}
++	(*rates)[1] = 0;
+ 
+ 	*formats = (snd_pcm_format_t *)calloc(FL_SAMPLE_SIZES + 1,
+ 					      sizeof(**formats));
+@@ -298,14 +300,18 @@ int cras_floss_a2dp_fill_format(int sample_rate, int bits_per_sample,
+ 		free(*rates);
+ 		return -ENOMEM;
+ 	}
+-	i = 0;
+-	if (bits_per_sample & FL_SAMPLE_16)
+-		(*formats)[i++] = SND_PCM_FORMAT_S16_LE;
+-	if (bits_per_sample & FL_SAMPLE_24)
+-		(*formats)[i++] = SND_PCM_FORMAT_S24_LE;
+-	if (bits_per_sample & FL_SAMPLE_32)
+-		(*formats)[i++] = SND_PCM_FORMAT_S32_LE;
+-	(*formats)[i] = 0;
++
++	if (bits_per_sample & FL_SAMPLE_16) {
++		(*formats)[0] = SND_PCM_FORMAT_S16_LE;
++	} else if (bits_per_sample & FL_SAMPLE_24) {
++		(*formats)[0] = SND_PCM_FORMAT_S24_LE;
++	} else if (bits_per_sample & FL_SAMPLE_32) {
++		(*formats)[0] = SND_PCM_FORMAT_S32_LE;
++	} else {
++		syslog(LOG_ERR, "No supported bits per sample");
++		return -EINVAL;
++	}
++	(*formats)[1] = 0;
+ 
+ 	*channel_counts =
+ 		(size_t *)calloc(FL_NUM_CHANNELS + 1, sizeof(**channel_counts));
+@@ -314,12 +320,16 @@ int cras_floss_a2dp_fill_format(int sample_rate, int bits_per_sample,
+ 		free(*formats);
+ 		return -ENOMEM;
+ 	}
+-	i = 0;
+-	if (channel_mode & FL_MODE_MONO)
+-		(*channel_counts)[i++] = 1;
+-	if (channel_mode & FL_MODE_STEREO)
+-		(*channel_counts)[i++] = 2;
+-	(*channel_counts)[i] = 0;
++
++	if (channel_mode & FL_MODE_STEREO) {
++		(*channel_counts)[0] = 2;
++	} else if (channel_mode & FL_MODE_MONO) {
++		(*channel_counts)[0] = 1;
++	} else {
++		syslog(LOG_ERR, "No supported channel mode");
++		return -EINVAL;
++	}
++	(*channel_counts)[1] = 0;
+ 
+ 	return 0;
+ }
+diff --git a/cras/src/tests/a2dp_manager_unittest.cc b/cras/src/tests/a2dp_manager_unittest.cc
+index 7411233b..4e656865 100644
+--- a/cras/src/tests/a2dp_manager_unittest.cc
++++ b/cras/src/tests/a2dp_manager_unittest.cc
+@@ -173,17 +173,19 @@ TEST_F(A2dpManagerTestSuite, DelaySync) {
+ TEST(A2dpManager, FillFormat) {
+   size_t *supported_channel_counts, *supported_rates;
+   snd_pcm_format_t* supported_formats;
+-  int num_expected_rates = 3;
+-  size_t expected_rates[] = {16000, 44100, 48000};
+-  int num_unexpected_rates = 2;
+-  size_t unexpected_rates[] = {96000, 192000};
+-  int num_expected_formats = 2;
+-  snd_pcm_format_t expected_formats[] = {SND_PCM_FORMAT_S16_LE,
+-                                         SND_PCM_FORMAT_S24_LE};
+-  int num_unexpected_formats = 1;
+-  snd_pcm_format_t unexpected_formats[] = {SND_PCM_FORMAT_S32_LE};
+-  int num_expected_channel_counts = 2;
+-  size_t expected_channel_counts[] = {1, 2};
++  int num_expected_rates = 1;
++  size_t expected_rates[] = {44100};
++  int num_unexpected_rates = 3;
++  size_t unexpected_rates[] = {48000, 96000, 192000};
++  int num_expected_formats = 1;
++  snd_pcm_format_t expected_formats[] = {SND_PCM_FORMAT_S16_LE};
++  int num_unexpected_formats = 2;
++  snd_pcm_format_t unexpected_formats[] = {SND_PCM_FORMAT_S24_LE,
++                                           SND_PCM_FORMAT_S32_LE};
++  int num_expected_channel_counts = 1;
++  size_t expected_channel_counts[] = {2};
++  int num_unexpected_channel_counts = 1;
++  size_t unexpected_channel_counts[] = {1};
+ 
+   /* Expect Floss defined bitmap converts to supported formats array. */
+   cras_floss_a2dp_fill_format(FL_RATE_44100 | FL_RATE_48000 | FL_RATE_16000,
+@@ -230,6 +232,14 @@ TEST(A2dpManager, FillFormat) {
+     }
+     EXPECT_EQ(found, 1);
+   }
++  for (int n = 0; n < num_unexpected_channel_counts; n++) {
++    int found = 0;
++    for (int i = 0; supported_channel_counts[i]; i++) {
++      if (supported_channel_counts[i] == unexpected_channel_counts[n])
++        found = 1;
++    }
++    EXPECT_EQ(found, 0);
++  }
+   free(supported_channel_counts);
+   free(supported_rates);
+   free(supported_formats);

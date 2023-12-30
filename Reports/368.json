@@ -1,5 +1,5 @@
 {
-    "fix": "git://git.sv.nongnu.org/freetype/freetype2.gitbdec162d921d69f63b992a74b32542b973a6c117",
+    "fix": "https://github.com/Mojang/freetype2/commit/bdec162d921d69f63b992a74b32542b973a6c117",
     "verify": "0",
     "localId": 368,
     "project": "freetype2",

@@ -1,0 +1,20 @@
+From 4c62b10ebf3c45de5724cbeabf2f0ac455e58686 Mon Sep 17 00:00:00 2001
+From: Cristy <mikayla-grace@urban-warrior.org>
+Date: Sun, 17 Oct 2021 16:59:35 -0400
+Subject: [PATCH] test release
+
+---
+ ChangeLog | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ChangeLog b/ChangeLog
+index 4e12a7c2775..4cf399afad5 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,5 +1,5 @@
+ 2021-10-11  7.1.0-11  <quetzlzacatenango@image...>
+-  * Release ImageMagick version 7.1.0-11 GIT revision 19...
++  * Release ImageMagick version 7.1.0-11 GIT revision 19....
+ 
+ 2021-10-11  7.1.0-11  <quetzlzacatenango@image...>
+   * fix connected component abort trap (reference

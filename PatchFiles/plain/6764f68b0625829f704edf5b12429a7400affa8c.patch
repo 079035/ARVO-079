@@ -1,0 +1,22 @@
+From 6764f68b0625829f704edf5b12429a7400affa8c Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Tue, 19 Oct 2021 13:36:28 +0200
+Subject: [PATCH] host: bounds check for ipv6 address as a host
+
+---
+ htp/htp_util.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/htp/htp_util.c b/htp/htp_util.c
+index 321e4a94..86157c61 100644
+--- a/htp/htp_util.c
++++ b/htp/htp_util.c
+@@ -2454,7 +2454,7 @@ int htp_validate_hostname(bstr *hostname) {
+ 
+     if (data[0] == '[') {
+         // only ipv6 possible
+-        if (len < 2) {
++        if (len < 2 || len - 2 >= INET6_ADDRSTRLEN) {
+             return 0;
+         }
+         char dst[sizeof(struct in6_addr)];

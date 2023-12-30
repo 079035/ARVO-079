@@ -1,0 +1,200 @@
+From eddcf0c0ee55017bd82c7294d3d302e9cb6445b7 Mon Sep 17 00:00:00 2001
+From: Sean Parkinson <sean@wolfssl.com>
+Date: Mon, 17 Apr 2023 11:34:27 +1000
+Subject: [PATCH] ECC, ASN.1: DecodeECC_DSA_Sig didn't handle r and s being
+ initialized
+
+New creation of mp_ints r and s to be minimal size must not be
+re-initialized.
+Changes to ASN.1 code to handle r and s being initialized and to not
+initialize again.
+---
+ wolfcrypt/src/asn.c     | 44 +++++++++++++++++++++++++++++++++--------
+ wolfcrypt/src/ecc.c     |  7 ++++++-
+ wolfssl/wolfcrypt/asn.h | 20 +++++++++++++++++--
+ 3 files changed, 60 insertions(+), 11 deletions(-)
+
+diff --git a/wolfcrypt/src/asn.c b/wolfcrypt/src/asn.c
+index 440976c0bdd..c31866ef62a 100644
+--- a/wolfcrypt/src/asn.c
++++ b/wolfcrypt/src/asn.c
+@@ -1202,6 +1202,8 @@ static int GetASN_StoreData(const ASNItem* asn, ASNGetData* data,
+             #endif
+                 return MP_INIT_E;
+             }
++            FALL_THROUGH;
++        case ASN_DATA_TYPE_MP_INITED:
+             err = mp_read_unsigned_bin(data->data.mp, (byte*)input + idx,
+                                        (word32)len);
+             if (err != 0) {
+@@ -1532,7 +1534,8 @@ int GetASN_Items(const ASNItem* asn, ASNGetData *data, int count, int complete,
+         if (asn[i].tag == ASN_INTEGER) {
+             /* Check validity of first byte. */
+             err = GetASN_Integer(input, idx, len,
+-                    data[i].dataType == ASN_DATA_TYPE_MP);
++                    data[i].dataType == ASN_DATA_TYPE_MP ||
++                    data[i].dataType == ASN_DATA_TYPE_MP_INITED);
+             if (err != 0)
+                 return err;
+             if (len > 1 && input[idx] == 0) {
+@@ -1864,6 +1867,17 @@ void GetASN_MP(ASNGetData *dataASN, mp_int* num)
+     dataASN->data.mp  = num;
+ }
+ 
++/* Setup ASN data item to get a number into an mp_int that is initialized.
++ *
++ * @param [in] dataASN  Dynamic ASN data item.
++ * @param [in] num      Multi-precision number object.
++ */
++void GetASN_MP_Inited(ASNGetData *dataASN, mp_int* num)
++{
++    dataASN->dataType = ASN_DATA_TYPE_MP_INITED;
++    dataASN->data.mp  = num;
++}
++
+ /* Setup ASN data item to get a positive or negative number into an mp_int.
+  *
+  * @param [in] dataASN  Dynamic ASN data item.
+@@ -3239,7 +3253,7 @@ int GetInt(mp_int* mpi, const byte* input, word32* inOutIdx, word32 maxIdx)
+ 
+ #if (defined(HAVE_ECC) || !defined(NO_DSA)) && !defined(WOLFSSL_ASN_TEMPLATE)
+ static int GetIntPositive(mp_int* mpi, const byte* input, word32* inOutIdx,
+-    word32 maxIdx)
++    word32 maxIdx, int initNum)
+ {
+     word32 idx = *inOutIdx;
+     int    ret;
+@@ -3252,8 +3266,10 @@ static int GetIntPositive(mp_int* mpi, const byte* input, word32* inOutIdx,
+     if (((input[idx] & 0x80) == 0x80) && (input[idx - 1] != 0x00))
+         return MP_INIT_E;
+ 
+-    if (mp_init(mpi) != MP_OKAY)
+-        return MP_INIT_E;
++    if (initNum) {
++        if (mp_init(mpi) != MP_OKAY)
++            return MP_INIT_E;
++    }
+ 
+     if (mp_read_unsigned_bin(mpi, input + idx, (word32)length) != 0) {
+         mp_clear(mpi);
+@@ -31206,6 +31222,12 @@ int DecodeECC_DSA_Sig_Bin(const byte* sig, word32 sigLen, byte* r, word32* rLen,
+ }
+ 
+ int DecodeECC_DSA_Sig(const byte* sig, word32 sigLen, mp_int* r, mp_int* s)
++{
++    return DecodeECC_DSA_Sig_Ex(sig, sigLen, r, s, 1);
++}
++
++int DecodeECC_DSA_Sig_Ex(const byte* sig, word32 sigLen, mp_int* r, mp_int* s,
++    int init)
+ {
+ #ifndef WOLFSSL_ASN_TEMPLATE
+     word32 idx = 0;
+@@ -31227,11 +31249,11 @@ int DecodeECC_DSA_Sig(const byte* sig, word32 sigLen, mp_int* r, mp_int* s)
+     }
+ #endif
+ 
+-    if (GetIntPositive(r, sig, &idx, sigLen) < 0) {
++    if (GetIntPositive(r, sig, &idx, sigLen, init) < 0) {
+         return ASN_ECC_KEY_E;
+     }
+ 
+-    if (GetIntPositive(s, sig, &idx, sigLen) < 0) {
++    if (GetIntPositive(s, sig, &idx, sigLen, init) < 0) {
+         mp_clear(r);
+         return ASN_ECC_KEY_E;
+     }
+@@ -31254,8 +31276,14 @@ int DecodeECC_DSA_Sig(const byte* sig, word32 sigLen, mp_int* r, mp_int* s)
+ 
+     /* Clear dynamic data and set mp_ints to put r and s into. */
+     XMEMSET(dataASN, 0, sizeof(dataASN));
+-    GetASN_MP(&dataASN[DSASIGASN_IDX_R], r);
+-    GetASN_MP(&dataASN[DSASIGASN_IDX_S], s);
++    if (init) {
++        GetASN_MP(&dataASN[DSASIGASN_IDX_R], r);
++        GetASN_MP(&dataASN[DSASIGASN_IDX_S], s);
++    }
++    else {
++        GetASN_MP_Inited(&dataASN[DSASIGASN_IDX_R], r);
++        GetASN_MP_Inited(&dataASN[DSASIGASN_IDX_S], s);
++    }
+ 
+     /* Decode the DSA signature. */
+     ret = GetASN_Items(dsaSigASN, dataASN, dsaSigASN_Length, 0, sig, &idx,
+diff --git a/wolfcrypt/src/ecc.c b/wolfcrypt/src/ecc.c
+index 1fa6370eea9..6742799e31a 100644
+--- a/wolfcrypt/src/ecc.c
++++ b/wolfcrypt/src/ecc.c
+@@ -8034,12 +8034,17 @@ int wc_ecc_verify_hash(const byte* sig, word32 siglen, const byte* hash,
+             /* default to invalid signature */
+             *res = 0;
+ 
++            /* Decode ASN.1 ECDSA signature. */
++        #if defined(WOLFSSL_ASYNC_CRYPT) && defined(WC_ASYNC_ENABLE_ECC)
+             /* Note, DecodeECC_DSA_Sig() calls mp_init() on r and s.
+              * If either of those don't allocate correctly, none of
+              * the rest of this function will execute, and everything
+              * gets cleaned up at the end. */
+-            /* decode DSA header */
+             err = DecodeECC_DSA_Sig(sig, siglen, r, s);
++        #else
++            /* r and s are initialized. */
++            err = DecodeECC_DSA_Sig_Ex(sig, siglen, r, s, 0);
++        #endif
+             if (err < 0) {
+                 break;
+             }
+diff --git a/wolfssl/wolfcrypt/asn.h b/wolfssl/wolfcrypt/asn.h
+index 13631843001..39a95096bc8 100644
+--- a/wolfssl/wolfcrypt/asn.h
++++ b/wolfssl/wolfcrypt/asn.h
+@@ -185,10 +185,12 @@ enum ASNItem_DataType {
+     ASN_DATA_TYPE_REPLACE_BUFFER = 7,
+     /* Big number as an mp_int. */
+     ASN_DATA_TYPE_MP             = 8,
++    /* Big number as an mp_int that has already been initialized. */
++    ASN_DATA_TYPE_MP_INITED      = 9,
+     /* Big number as a positive or negative mp_int. */
+-    ASN_DATA_TYPE_MP_POS_NEG     = 9,
++    ASN_DATA_TYPE_MP_POS_NEG     = 10,
+     /* ASN.1 CHOICE. A 0 terminated list of tags that are valid. */
+-    ASN_DATA_TYPE_CHOICE         = 10
++    ASN_DATA_TYPE_CHOICE         = 11
+ };
+ 
+ /* A template entry describing an ASN.1 item. */
+@@ -311,6 +313,7 @@ WOLFSSL_LOCAL void GetASN_Buffer(ASNGetData *dataASN, byte* data,
+ WOLFSSL_LOCAL void GetASN_ExpBuffer(ASNGetData *dataASN, const byte* data,
+     word32 length);
+ WOLFSSL_LOCAL void GetASN_MP(ASNGetData *dataASN, mp_int* num);
++WOLFSSL_LOCAL void GetASN_MP_Inited(ASNGetData *dataASN, mp_int* num);
+ WOLFSSL_LOCAL void GetASN_MP_PosNeg(ASNGetData *dataASN, mp_int* num);
+ WOLFSSL_LOCAL void GetASN_Choice(ASNGetData *dataASN, const byte* options);
+ WOLFSSL_LOCAL void GetASN_Boolean(ASNGetData *dataASN, byte* num);
+@@ -401,6 +404,17 @@ WOLFSSL_LOCAL void SetASN_OID(ASNSetData *dataASN, int oid, int oidType);
+         (dataASN)->data.mp  = num;                                     \
+     } while (0)
+ 
++/* Setup ASN data item to get a number into an mp_int that is initialized.
++ *
++ * @param [in] dataASN  Dynamic ASN data item.
++ * @param [in] num      Multi-precision number object.
++ */
++#define GetASN_MP_Inited(dataASN, num)                                 \
++    do {                                                               \
++        (dataASN)->dataType = ASN_DATA_TYPE_MP_INITED;                 \
++        (dataASN)->data.mp  = num;                                     \
++    } while (0)
++
+ /* Setup ASN data item to get a positive or negative number into an mp_int.
+  *
+  * @param [in] dataASN  Dynamic ASN data item.
+@@ -2201,6 +2215,8 @@ WOLFSSL_LOCAL int wc_EncodeNameCanonical(EncodedName* name, const char* nameStr,
+         byte* r, word32* rLen, byte* s, word32* sLen);
+     WOLFSSL_LOCAL int DecodeECC_DSA_Sig(const byte* sig, word32 sigLen,
+                                        mp_int* r, mp_int* s);
++    WOLFSSL_LOCAL int DecodeECC_DSA_Sig_Ex(const byte* sig, word32 sigLen,
++                                       mp_int* r, mp_int* s, int init);
+ #endif
+ #ifndef NO_DSA
+ WOLFSSL_LOCAL int StoreDSAParams(byte*, word32*, const mp_int*, const mp_int*,

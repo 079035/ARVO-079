@@ -1,0 +1,68 @@
+From dc5b4cbde0b7988ae562cbe2c36f5286554b3a61 Mon Sep 17 00:00:00 2001
+From: Luca Deri <deri@ntop.org>
+Date: Sun, 31 May 2020 18:50:25 +0200
+Subject: [PATCH] Reworked ndpi_strncasestr
+
+---
+ src/include/ndpi_api.h.in |  2 +-
+ src/lib/ndpi_main.c       | 32 +++++++++++++-------------------
+ 2 files changed, 14 insertions(+), 20 deletions(-)
+
+diff --git a/src/include/ndpi_api.h.in b/src/include/ndpi_api.h.in
+index e0dc36e941..40e716e950 100644
+--- a/src/include/ndpi_api.h.in
++++ b/src/include/ndpi_api.h.in
+@@ -137,7 +137,7 @@ extern "C" {
+    *         NULL if the substring is not found
+    *
+    */
+-  char* ndpi_strncasestr(const char *s, const char *find, size_t slen);
++  const char* ndpi_strncasestr(const char *s, const char *find, size_t slen);
+ 
+   /**
+    * Returns the nDPI protocol id for IP-based protocol detection
+diff --git a/src/lib/ndpi_main.c b/src/lib/ndpi_main.c
+index 65600b74f4..3cc5544812 100644
+--- a/src/lib/ndpi_main.c
++++ b/src/lib/ndpi_main.c
+@@ -5906,27 +5906,21 @@ char *ndpi_strnstr(const char *s, const char *find, size_t slen) {
+ /*
+  * Same as ndpi_strnstr but case-insensitive
+  */
+-char *ndpi_strncasestr(const char *s, const char *find, size_t slen) {
+-  char c;
+-  size_t len;
++const char * ndpi_strncasestr(const char *str1, const char *str2, size_t len) {
++  size_t str1_len = strnlen(str1, len);
++  size_t str2_len = strlen(str2);
++  size_t i;
+ 
+-  if((c = *find++) != '\0') {
+-    len = strlen(find);
+-    do {
+-      char sc;
+-
+-      do {
+-	if(slen-- < 1 || (sc = *s++) == '\0')
+-	  return(NULL);
+-      } while (sc != c);
+-
+-      if(len > slen)
+-	return(NULL);
+-    } while (strncasecmp(s, find, len) != 0);
+-
+-    s--;
++  for(i = 0; i < (str1_len - str2_len + 1); i++){
++    if(str1[0] == '\0')
++      return NULL;    
++    else if(strncasecmp(str1, str2, str2_len) == 0)
++      return(str1);
++    
++    str1++;
+   }
+-  return((char *) s);
++
++  return NULL;
+ }
+ 
+ /* ****************************************************** */

@@ -1,0 +1,22 @@
+From 25a8d72c9aa1a71f5e1d5d8d1ab3eeb193548ce2 Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Sun, 11 Feb 2018 11:43:09 -0500
+Subject: [PATCH] ...
+
+---
+ PerlMagick/quantum/quantum.xs.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/PerlMagick/quantum/quantum.xs.in b/PerlMagick/quantum/quantum.xs.in
+index 1e70c9aaf7d..a982bf1f397 100644
+--- a/PerlMagick/quantum/quantum.xs.in
++++ b/PerlMagick/quantum/quantum.xs.in
+@@ -3978,7 +3978,7 @@ EvaluateImages(ref,...)
+     AV
+       *av;
+ 
+-    ,...char
++    char
+       *attribute,
+       *p;
+ 

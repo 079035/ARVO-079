@@ -1,8 +1,8 @@
-Vulnerability: The vulnerability in the code is that the build configuration for `ap-mgmt-fuzzer` does not have the `CONFIG_AIRTIME_POLICY` flag enabled.
+1. Vulnerability:
+The vulnerability in this case was a misconfiguration in the build process of the 'ap-mgmt-fuzzer' test suite. This misconfiguration led to a mismatch in the offset of the 'prev_wmm' structure member of 'hostapd_iface' between 'libap.a' and 'ap-mgmt-fuzzer.o'. This mismatch resulted in unexpected fuzzing failures due to a 'memcpy' operation writing over 'ctx.hapd' and specifically, over the 'ctx.hapd.iface' pointer.
 
-Summary of the fix: The fix for this vulnerability is to add `CFLAGS += -DCONFIG_AIRTIME_POLICY` to the `Makefile` for `ap-mgmt-fuzzer`.
+2. Short Summary of the Fix:
+The fix for this vulnerability was to add the 'CONFIG_AIRTIME_POLICY' flag to the 'CFLAGS' in the Makefile for the 'ap-mgmt-fuzzer' test suite. This ensures that the 'prev_wmm' structure member of 'hostapd_iface' has the same offset in both 'libap.a' and 'ap-mgmt-fuzzer.o', preventing the 'memcpy' operation from writing over 'ctx.hapd' and the 'ctx.hapd.iface' pointer.
 
-Detailed description of the fix: 
-The fix adds the `CONFIG_AIRTIME_POLICY` flag to the build configuration for `ap-mgmt-fuzzer`. Previously, this flag was missing, causing a mismatch in the offset of the `struct hostapd_iface::prev_wmm` between `libap.a` and `ap-mgmt-fuzzer.o`. This resulted in failures when fuzzing due to a `memcpy` operation writing on top of the `ctx.iface->prev_wmm` and overwriting the `ctx.hapd` and `ctx.hapd.iface` pointer.
-
-By adding the `CFLAGS += -DCONFIG_AIRTIME_POLICY` to the `Makefile`, the correct offset is maintained and the memory corruption issue is fixed. This ensures that the `memcpy` operation writes to the correct location without any unintended overwrites. The fix was provided as a response to multiple reported issues by OSS-Fuzz.
+3. Detailed Description of the Fix:
+The fix involved modifying the Makefile for the 'ap-mgmt-fuzzer' test suite. The 'CONFIG_AIRTIME_POLICY' flag was added to the 'CFLAGS' in the Makefile. This flag ensures that when the 'ap-mgmt-fuzzer' test suite and the 'libap.a' library are built, the 'prev_wmm' structure member of 'hostapd_iface' has the same offset in both. This prevents the 'memcpy' operation from writing over 'ctx.hapd' and the 'ctx.hapd.iface' pointer, which was causing unexpected fuzzing failures. This fix ensures that the 'ap-mgmt-fuzzer' test suite and the 'libap.a' library are built with the same configuration, preventing this type of error from occurring.

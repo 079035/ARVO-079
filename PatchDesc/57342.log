@@ -1,15 +1,8 @@
-Vulnerability:
+1. Vulnerability:
+The vulnerability in the original code was a buffer overflow. This could occur when the `old_axis_idx` variable was used as an index to access the `normalized_coords` array. If `old_axis_idx` was greater than the size of the `normalized_coords` array, it would result in a buffer overflow, which could lead to unexpected behavior or crashes.
 
-The vulnerability being patched in this diff file is a buffer overflow. 
+2. Short Summary of the Fix:
+The fix involves ensuring that the `old_axis_idx` variable does not exceed the size of the `normalized_coords` array. This is done by checking the value of `old_axis_idx` against the `avar_axis_count` before using it as an index to access the `normalized_coords` array.
 
-Summary of the Fix:
-
-The fix in this diff file addresses the buffer overflow issue reported by the fuzzer. 
-
-Detailed Description of the Fix:
-
-In the `_normalize_axes_location` function, the fix introduces a new variable `avar_axis_count` to store the number of axes in the `avar` table of the font. It initializes this variable to the return value of the `get_axis_count` function on the `avar` table. 
-
-The fix then modifies the code within the loop that iterates over the axes of the font. It replaces the usage of `face->table.avar->get_axis_count()` with the new `avar_axis_count` variable. This change ensures that the loop does not access the `seg_maps` variable beyond the actual number of axes in the `avar` table, preventing a buffer overflow. 
-
-Overall, the fix prevents the buffer overflow vulnerability by correctly handling the number of axes in the `avar` table during the iteration process.
+3. Detailed Description of the Fix:
+The fix introduces a new variable `avar_axis_count` which is set to the number of axes in the `avar` table if it exists. This variable is then used to check if `old_axis_idx` is less than `avar_axis_count` before using it as an index to access the `normalized_coords` array. This ensures that `old_axis_idx` does not exceed the size of the `normalized_coords` array, preventing a buffer overflow. Additionally, the `seg_maps` pointer is updated only if `old_axis_idx` is less than `avar_axis_count`, ensuring that it does not point to an invalid memory location. The assignment of `normalized_v` to `normalized_coords` is also updated to use `old_axis_idx` instead of `i`, ensuring that the correct index is used.

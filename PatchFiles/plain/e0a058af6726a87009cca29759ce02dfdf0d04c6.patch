@@ -1,0 +1,46 @@
+From b287dccecfecd32f114b043f395019eb3b000791 Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Fri, 14 Feb 2020 14:02:19 +0100
+Subject: [PATCH 1/2] Checks l4 size against l3 size
+
+---
+ example/reader_util.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/example/reader_util.c b/example/reader_util.c
+index ae132fcff4..eca4d12d5c 100644
+--- a/example/reader_util.c
++++ b/example/reader_util.c
+@@ -676,6 +676,8 @@ static struct ndpi_flow_info *get_ndpi_flow_info(struct ndpi_workflow * workflow
+ 
+     l3 = (const u_int8_t*)iph6;
+   }
++  if (ipsize < l4_offset + l4_packet_len)
++    return NULL;
+ 
+   *proto = iph->protocol;
+ 
+
+From bf7dcd63c3a663cd0e1e8c567511ccfd8047d24a Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Fri, 14 Feb 2020 14:18:31 +0100
+Subject: [PATCH 2/2] Checks length for next ip header
+
+---
+ example/reader_util.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/example/reader_util.c b/example/reader_util.c
+index eca4d12d5c..8b7f55fe4c 100644
+--- a/example/reader_util.c
++++ b/example/reader_util.c
+@@ -1607,6 +1607,9 @@ struct ndpi_proto ndpi_workflow_process_packet(struct ndpi_workflow * workflow,
+ 
+  iph_check:
+   /* Check and set IP header size and total packet length */
++  if (header->caplen < ip_offset + sizeof(struct ndpi_iphdr))
++    return(nproto); /* Too short for next IP header*/
++
+   iph = (struct ndpi_iphdr *) &packet[ip_offset];
+ 
+   /* just work on Ethernet packets that contain IP */

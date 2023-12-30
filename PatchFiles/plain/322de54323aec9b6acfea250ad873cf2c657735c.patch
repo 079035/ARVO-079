@@ -1,0 +1,38 @@
+From f28500dd0f69bda6402c3b6f92d25334c4415127 Mon Sep 17 00:00:00 2001
+From: Daniel-Genkin <genkind@gmail.com>
+Date: Fri, 29 Oct 2021 09:03:55 -0400
+Subject: [PATCH] Fixed building of Android port
+
+---
+ include/assimp/port/AndroidJNI/AndroidJNIIOSystem.h | 2 +-
+ port/AndroidJNI/AndroidJNIIOSystem.cpp              | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/include/assimp/port/AndroidJNI/AndroidJNIIOSystem.h b/include/assimp/port/AndroidJNI/AndroidJNIIOSystem.h
+index bb52d3065c..29ad8e079b 100644
+--- a/include/assimp/port/AndroidJNI/AndroidJNIIOSystem.h
++++ b/include/assimp/port/AndroidJNI/AndroidJNIIOSystem.h
+@@ -64,7 +64,7 @@ class ASSIMP_API AndroidJNIIOSystem : public DefaultIOSystem {
+ 	AndroidJNIIOSystem(ANativeActivity* activity);
+ 
+     /// Class constructor with past and asset manager.
+-	AndroidJNIIOSystem(const char *internalPath, AAssetManager assetManager);
++	AndroidJNIIOSystem(const char *internalPath, AAssetManager* assetManager);
+ 
+ 	/// Destructor.
+ 	~AndroidJNIIOSystem();
+diff --git a/port/AndroidJNI/AndroidJNIIOSystem.cpp b/port/AndroidJNI/AndroidJNIIOSystem.cpp
+index 00cf3af9c2..e0f8123622 100644
+--- a/port/AndroidJNI/AndroidJNIIOSystem.cpp
++++ b/port/AndroidJNI/AndroidJNIIOSystem.cpp
+@@ -67,8 +67,8 @@ AndroidJNIIOSystem::AndroidJNIIOSystem(ANativeActivity* activity)
+ 	AndroidActivityInit(activity);
+ }
+ 
+-AndroidJNIIOSystem::AndroidJNIIOSystem(const char *internalPath, AAssetManager assetManager) :
+-        mApkWorkspacePath(internalDataPath),
++AndroidJNIIOSystem::AndroidJNIIOSystem(const char *internalPath, AAssetManager* assetManager) :
++        mApkWorkspacePath(internalPath),
+         mApkAssetManager(assetManager) {
+     // empty
+ }

@@ -1,0 +1,79 @@
+From ab6bc59c5bb9591a40fe16092010e10831434a38 Mon Sep 17 00:00:00 2001
+From: "Victor M. Alvarez" <vmalvarez@virustotal.com>
+Date: Wed, 5 Dec 2018 16:17:57 +0100
+Subject: [PATCH] Protect yr_compiler_define_x_variable and
+ yr_rules_define_x_variable against null pointers.
+
+---
+ libyara/compiler.c |  6 ++++++
+ libyara/rules.c    | 12 ++++++++++++
+ 2 files changed, 18 insertions(+)
+
+diff --git a/libyara/compiler.c b/libyara/compiler.c
+index 33f9c0826a..66f6f9eb8a 100644
+--- a/libyara/compiler.c
++++ b/libyara/compiler.c
+@@ -871,6 +871,9 @@ int _yr_compiler_define_variable(
+ 
+   char* id;
+ 
++  if (external->identifier == NULL)
++    return ERROR_INVALID_ARGUMENT;
++
+   object = (YR_OBJECT*) yr_hash_table_lookup(
+       compiler->objects_table,
+       external->identifier,
+@@ -899,6 +902,9 @@ int _yr_compiler_define_variable(
+   {
+     char* val;
+ 
++    if (external->value.s == NULL)
++      return ERROR_INVALID_ARGUMENT;
++
+     FAIL_ON_ERROR(yr_arena_write_string(
+         compiler->sz_arena,
+         external->value.s,
+diff --git a/libyara/rules.c b/libyara/rules.c
+index 8f23f9c777..448062c799 100644
+--- a/libyara/rules.c
++++ b/libyara/rules.c
+@@ -49,6 +49,9 @@ YR_API int yr_rules_define_integer_variable(
+ {
+   YR_EXTERNAL_VARIABLE* external;
+ 
++  if (identifier == NULL)
++    return ERROR_INVALID_ARGUMENT;
++
+   external = rules->externals_list_head;
+ 
+   while (!EXTERNAL_VARIABLE_IS_NULL(external))
+@@ -76,6 +79,9 @@ YR_API int yr_rules_define_boolean_variable(
+ {
+   YR_EXTERNAL_VARIABLE* external;
+ 
++  if (identifier == NULL)
++    return ERROR_INVALID_ARGUMENT;
++
+   external = rules->externals_list_head;
+ 
+   while (!EXTERNAL_VARIABLE_IS_NULL(external))
+@@ -103,6 +109,9 @@ YR_API int yr_rules_define_float_variable(
+ {
+   YR_EXTERNAL_VARIABLE* external;
+ 
++  if (identifier == NULL)
++    return ERROR_INVALID_ARGUMENT;
++
+   external = rules->externals_list_head;
+ 
+   while (!EXTERNAL_VARIABLE_IS_NULL(external))
+@@ -130,6 +139,9 @@ YR_API int yr_rules_define_string_variable(
+ {
+   YR_EXTERNAL_VARIABLE* external;
+ 
++  if (identifier == NULL || value == NULL)
++    return ERROR_INVALID_ARGUMENT;
++
+   external = rules->externals_list_head;
+ 
+   while (!EXTERNAL_VARIABLE_IS_NULL(external))

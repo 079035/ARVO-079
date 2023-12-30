@@ -1,0 +1,256 @@
+From 81e97d75153e38ce024a308b75d64edeb4b5e9bb Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 15:35:34 +0200
+Subject: [PATCH 1/9] Fixes OOB reads in postgres
+
+Reported by GHSL
+---
+ src/lib/protocols/postgres.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/lib/protocols/postgres.c b/src/lib/protocols/postgres.c
+index b6fa74473c..a51fabaab0 100644
+--- a/src/lib/protocols/postgres.c
++++ b/src/lib/protocols/postgres.c
+@@ -97,7 +97,7 @@ void ndpi_search_postgres_tcp(struct ndpi_detection_module_struct
+ 				return;
+ 			}
+ 			size = (u_int16_t)ntohl(get_u_int32_t(packet->payload, 1)) + 1;
+-			if (packet->payload[size - 1] == 'S') {
++			if (size > 0 && size - 1 < packet->payload_packet_len && packet->payload[size - 1] == 'S') {
+ 				if ((size + get_u_int32_t(packet->payload, (size + 1))) == packet->payload_packet_len) {
+ 					NDPI_LOG_INFO(ndpi_struct, "found postgres asymmetrically\n");
+ 					ndpi_int_postgres_add_connection(ndpi_struct, flow);
+@@ -105,7 +105,7 @@ void ndpi_search_postgres_tcp(struct ndpi_detection_module_struct
+ 				}
+ 			}
+ 			size += get_u_int32_t(packet->payload, (size + 1)) + 1;
+-			if (packet->payload[size - 1] == 'S') {
++			if (size > 0 && size - 1 < packet->payload_packet_len && packet->payload[size - 1] == 'S') {
+ 				NDPI_LOG_INFO(ndpi_struct, "found postgres asymmetrically\n");
+ 				ndpi_int_postgres_add_connection(ndpi_struct, flow);
+ 				return;
+
+From 4ec3e6c064b56f1434bd4c887bd96d0916d07f2e Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 15:42:54 +0200
+Subject: [PATCH 2/9] Adds bound check in TLS
+
+---
+ src/lib/protocols/tls.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lib/protocols/tls.c b/src/lib/protocols/tls.c
+index 77d69a6feb..ef2c0a86e4 100644
+--- a/src/lib/protocols/tls.c
++++ b/src/lib/protocols/tls.c
+@@ -1069,7 +1069,7 @@ int processClientServerHello(struct ndpi_detection_module_struct *ndpi_struct,
+ 		s_offset += 2;
+ 		tot_alpn_len += s_offset;
+ 
+-		while(s_offset < tot_alpn_len) {
++		while(s_offset < tot_alpn_len && s_offset < total_len) {
+ 		  u_int8_t alpn_i, alpn_len = packet->payload[s_offset++];
+ 
+ 		  if((s_offset + alpn_len) <= tot_alpn_len) {
+
+From 369dc65c1a4af1176a5012ebb414d97e84b9f81d Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 15:45:32 +0200
+Subject: [PATCH 3/9] Fix integer overflow in quic
+
+---
+ src/lib/protocols/quic.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lib/protocols/quic.c b/src/lib/protocols/quic.c
+index be746550b4..a7873685c4 100644
+--- a/src/lib/protocols/quic.c
++++ b/src/lib/protocols/quic.c
+@@ -130,7 +130,7 @@ void ndpi_search_quic(struct ndpi_detection_module_struct *ndpi_struct,
+ 	    while((sni_offset < udp_len) && (packet->payload[sni_offset] == '-'))
+ 	      sni_offset++;
+ 
+-	    if((sni_offset+len) < udp_len) {
++	    if(len > 0 && (sni_offset+len) < udp_len) {
+ 	      int max_len = sizeof(flow->host_server_name)-1, j = 0;
+ 	      ndpi_protocol_match_result ret_match;
+ 	      
+
+From c1baf1516de5fc0cd122e4693f4774b0fd4b627b Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 15:50:58 +0200
+Subject: [PATCH 4/9] Adds bound check for TZSP
+
+---
+ example/reader_util.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/example/reader_util.c b/example/reader_util.c
+index 97aa940bd5..e5aa7478bb 100644
+--- a/example/reader_util.c
++++ b/example/reader_util.c
+@@ -1745,6 +1745,9 @@ struct ndpi_proto ndpi_workflow_process_packet(struct ndpi_workflow * workflow,
+       }
+     } else if((sport == TZSP_PORT) || (dport == TZSP_PORT)) {
+       /* https://en.wikipedia.org/wiki/TZSP */
++      if (header->caplen < ip_offset + ip_len + sizeof(struct ndpi_udphdr) + 4)
++        return(nproto); /* Too short for TZSP*/
++
+       u_int offset           = ip_offset+ip_len+sizeof(struct ndpi_udphdr);
+       u_int8_t version       = packet[offset];
+       u_int8_t ts_type       = packet[offset+1];
+
+From 98f2d3a73c0d4b09b1204e4cfc868ec258a3e478 Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 15:56:58 +0200
+Subject: [PATCH 5/9] Adds bound check for IRC
+
+---
+ src/lib/protocols/irc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lib/protocols/irc.c b/src/lib/protocols/irc.c
+index ed86aed424..2ebb929faa 100644
+--- a/src/lib/protocols/irc.c
++++ b/src/lib/protocols/irc.c
+@@ -677,7 +677,7 @@ void ndpi_search_irc_tcp(struct ndpi_detection_module_struct *ndpi_struct, struc
+ 	      if (memcmp(&packet->line[i].ptr[j], "SEND ", 5) == 0
+ 		  || (memcmp(&packet->line[i].ptr[j], "CHAT", 4) == 0)
+ 		  || (memcmp(&packet->line[i].ptr[j], "chat", 4) == 0)
+-		  || (memcmp(&packet->line[i].ptr[j], "sslchat", 7) == 0)
++		  || (j+7 < packet->line[i].len && memcmp(&packet->line[i].ptr[j], "sslchat", 7) == 0)
+ 		  || (memcmp(&packet->line[i].ptr[j], "TSEND", 5) == 0)) {
+ 		NDPI_LOG_DBG2(ndpi_struct, "found CHAT,chat,sslchat,TSEND.");
+ 		j += 4;
+
+From cf47ba234a59db325a382db4bbdf10187f93eb9a Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 16:19:57 +0200
+Subject: [PATCH 6/9] Use ndpi_handle_ipv6_extension_headers in reader_util
+
+---
+ example/reader_util.c   | 9 ++++-----
+ src/include/ndpi_main.h | 4 ++++
+ src/lib/ndpi_main.c     | 2 +-
+ 3 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/example/reader_util.c b/example/reader_util.c
+index e5aa7478bb..8b7bc1c759 100644
+--- a/example/reader_util.c
++++ b/example/reader_util.c
+@@ -1691,12 +1691,11 @@ struct ndpi_proto ndpi_workflow_process_packet(struct ndpi_workflow * workflow,
+       return(nproto); /* Too short for IPv6 header*/
+     iph6 = (struct ndpi_ipv6hdr *)&packet[ip_offset];
+     proto = iph6->ip6_hdr.ip6_un1_nxt;
+-    ip_len = sizeof(struct ndpi_ipv6hdr);
++    ip_len = ntohs(iph6->ip6_hdr.ip6_un1_plen);
+ 
+-    if(proto == IPPROTO_DSTOPTS /* IPv6 destination option */) {
+-      u_int8_t *options = (u_int8_t*)&packet[ip_offset+ip_len];
+-      proto = options[0];
+-      ip_len += 8 * (options[1] + 1);
++    const u_int8_t *l4ptr = (((const u_int8_t *) iph6) + sizeof(struct ndpi_ipv6hdr));
++    if(ndpi_handle_ipv6_extension_headers(NULL, &l4ptr, &ip_len, &proto) != 0) {
++      return(nproto);
+     }
+ 
+     iph = NULL;
+diff --git a/src/include/ndpi_main.h b/src/include/ndpi_main.h
+index 9335f2151e..f81e37c7ca 100644
+--- a/src/include/ndpi_main.h
++++ b/src/include/ndpi_main.h
+@@ -150,6 +150,10 @@ extern "C" {
+ #define ndpi_match_strprefix(payload, payload_len, str)			\
+   ndpi_match_prefix((payload), (payload_len), (str), (sizeof(str)-1))
+ 
++#ifdef NDPI_DETECTION_SUPPORT_IPV6
++    int ndpi_handle_ipv6_extension_headers(struct ndpi_detection_module_struct *ndpi_str, const u_int8_t ** l4ptr, u_int16_t * l4len, u_int8_t * nxt_hdr);
++#endif
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/src/lib/ndpi_main.c b/src/lib/ndpi_main.c
+index 88b4fecafb..b0fbcf9b71 100644
+--- a/src/lib/ndpi_main.c
++++ b/src/lib/ndpi_main.c
+@@ -3645,7 +3645,7 @@ void ndpi_set_protocol_detection_bitmask2(struct ndpi_detection_module_struct *n
+  * 	nxt_hdr: protocol of the actual payload
+  * returns 0 upon success and 1 upon failure
+  */
+-static int ndpi_handle_ipv6_extension_headers(struct ndpi_detection_module_struct *ndpi_str, const u_int8_t ** l4ptr, u_int16_t * l4len, u_int8_t * nxt_hdr)
++int ndpi_handle_ipv6_extension_headers(struct ndpi_detection_module_struct *ndpi_str, const u_int8_t ** l4ptr, u_int16_t * l4len, u_int8_t * nxt_hdr)
+ {
+   while((*nxt_hdr == 0 || *nxt_hdr == 43 || *nxt_hdr == 44 || *nxt_hdr == 60 || *nxt_hdr == 135 || *nxt_hdr == 59)) {
+     u_int16_t ehdr_len;
+
+From c1f9f05d338bd8236930df60e08b7cf635790ebf Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 16:22:16 +0200
+Subject: [PATCH 7/9] Adds tls check before reading memory
+
+---
+ src/lib/ndpi_main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lib/ndpi_main.c b/src/lib/ndpi_main.c
+index b0fbcf9b71..1a68acdd5d 100644
+--- a/src/lib/ndpi_main.c
++++ b/src/lib/ndpi_main.c
+@@ -4687,7 +4687,7 @@ void ndpi_fill_protocol_category(struct ndpi_detection_module_struct *ndpi_str,
+       }
+     }
+ 
+-    if(flow->protos.stun_ssl.ssl.client_requested_server_name[0] != '\0') {
++    if(flow->l4.tcp.tls.hello_processed == 1 && flow->protos.stun_ssl.ssl.client_requested_server_name[0] != '\0') {
+       unsigned long id;
+       int rc = ndpi_match_custom_category(ndpi_str,
+ 					  (char *)flow->protos.stun_ssl.ssl.client_requested_server_name,
+
+From 9483c842b572a887c59d715d21b4737475ffd092 Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 16:24:03 +0200
+Subject: [PATCH 8/9] TLS initializes version_str
+
+---
+ src/lib/protocols/tls.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lib/protocols/tls.c b/src/lib/protocols/tls.c
+index ef2c0a86e4..560e483acd 100644
+--- a/src/lib/protocols/tls.c
++++ b/src/lib/protocols/tls.c
+@@ -1105,7 +1105,7 @@ int processClientServerHello(struct ndpi_detection_module_struct *ndpi_struct,
+ 		u_int8_t version_len = packet->payload[s_offset];
+ 		char version_str[256];
+ 		u_int8_t version_str_len = 0;
+-		
++		version_str[0] = 0;
+ #ifdef DEBUG_TLS
+ 		printf("Client SSL [TLS version len: %u]\n", version_len);
+ #endif
+
+From 4f370fe7c49cb38125cff2a1411261011e433c94 Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 15 Apr 2020 16:27:32 +0200
+Subject: [PATCH 9/9] Adds netbios bound check
+
+---
+ src/lib/protocols/netbios.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/lib/protocols/netbios.c b/src/lib/protocols/netbios.c
+index a53a2bfe19..fa47cc4a05 100644
+--- a/src/lib/protocols/netbios.c
++++ b/src/lib/protocols/netbios.c
+@@ -80,7 +80,8 @@ static void ndpi_int_netbios_add_connection(struct ndpi_detection_module_struct
+   char name[64];
+   u_int off = flow->packet.payload[12] == 0x20 ? 12 : 14;
+   
+-  if(ndpi_netbios_name_interpret((char*)&flow->packet.payload[off], flow->packet.payload_packet_len - off, name, sizeof(name)) > 0)
++  if(off > flow->packet.payload_packet_len &&
++     ndpi_netbios_name_interpret((char*)&flow->packet.payload[off], flow->packet.payload_packet_len - off, name, sizeof(name)) > 0)
+     snprintf((char*)flow->host_server_name, sizeof(flow->host_server_name)-1, "%s", name);    
+ 
+   if(sub_protocol == NDPI_PROTOCOL_UNKNOWN)

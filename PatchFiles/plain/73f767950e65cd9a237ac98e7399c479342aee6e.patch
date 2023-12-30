@@ -1,0 +1,22 @@
+From 73f767950e65cd9a237ac98e7399c479342aee6e Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Thu, 8 Mar 2018 21:19:07 -0500
+Subject: [PATCH] Special case for a depth of 0
+
+---
+ MagickCore/quantum-private.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/MagickCore/quantum-private.h b/MagickCore/quantum-private.h
+index ce5f1a88ab9..405c3810e60 100644
+--- a/MagickCore/quantum-private.h
++++ b/MagickCore/quantum-private.h
+@@ -95,6 +95,8 @@ static inline MagickSizeType GetQuantumRange(const size_t depth)
+   MagickSizeType
+     one;
+ 
++  if (depth == 0)
++    return(0);
+   one=1;
+   return((MagickSizeType) ((one << (MagickMin(depth,64)-1))+
+     ((one << (MagickMin(depth,64)-1))-1)));

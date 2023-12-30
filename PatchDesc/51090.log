@@ -1,16 +1,8 @@
-1. Vulnerability description:
-The vulnerability in the code is that it is passing the incorrect string length to the function `get_utf_8_string()`. In both instances where `get_utf_8_string()` is called, the length parameter is set to `(int)strlen(key)` and `(int)strlen(value)` respectively. This can result in incorrect decoding of the form key and value, as the length calculated from the offsets may not be the same as the length of the string itself.
+1. Vulnerability:
+The vulnerability in the original code lies in the incorrect calculation of the length of the percent-decoded string. The length was calculated based on the offsets, which may not necessarily represent the actual length of the string. This could potentially lead to buffer overflows or underflows, incorrect string processing, or other unexpected behavior.
 
-2. Fix summary:
-The fix corrects the vulnerability by passing the correct length of the percent decoded string to the `get_utf_8_string()` function.
+2. Short Summary of the Fix:
+The fix involves passing the correct length of the percent-decoded string to the `get_utf_8_string` function. This is achieved by using the `strlen` function to calculate the length of the string, instead of using the difference between offsets.
 
-3. Fix description:
-The fix involves modifying two lines in the code. The incorrect length parameters `(int)strlen(key)` and `(int)strlen(value)` are replaced with the length calculated from the offsets `(next_offset - offset)`. 
-
-After the fix, the lines should be:
-```
-key_decoded = get_utf_8_string(pinfo->pool, key, next_offset - offset);
-value_decoded = get_utf_8_string(pinfo->pool, value, next_offset - offset);
-```
-
-By passing in the correct length of the percent decoded string, the `get_utf_8_string()` function will be able to decode the strings correctly. This ensures that the form key and value are properly decoded and avoids any potential issues that could arise from incorrectly decoded strings.
+3. Detailed Description of the Fix:
+In the original code, the length of the string passed to the `get_utf_8_string` function was calculated as `next_offset - offset`. However, this does not necessarily represent the actual length of the string, especially if the string has been percent-decoded. The fix replaces this calculation with `(int)strlen(key)` and `(int)strlen(value)` for the key and value strings respectively. The `strlen` function accurately calculates the length of a string by counting the number of characters before the null-terminating character. This ensures that the correct length is passed to the `get_utf_8_string` function, preventing potential issues caused by incorrect length calculation.

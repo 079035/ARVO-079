@@ -1,0 +1,60 @@
+From a56ed8a1f2eb0db14aad50cb7e4eaaf7f2f0d3b3 Mon Sep 17 00:00:00 2001
+From: Georg Brandl <georg@python.org>
+Date: Thu, 17 Dec 2020 08:03:20 +0100
+Subject: [PATCH] Limit recursion with nesting Ruby heredocs
+
+fixes #1638
+---
+ CHANGES                    | 1 +
+ pygments/lexers/crystal.py | 7 +++++--
+ pygments/lexers/ruby.py    | 7 +++++--
+ 3 files changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/CHANGES b/CHANGES
+index c8b5dfbbd1..5e133d8b62 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -18,6 +18,7 @@ Version 2.7.4
+ 
+ - Fixed infinite loop in SML lexer (#1625)
+ - Fixed backtracking string regexes in JavaScript/TypeScript lexers (#1637)
++- Limit recursion with nesting Ruby heredocs (#1638)
+ 
+ 
+ Version 2.7.3
+diff --git a/pygments/lexers/crystal.py b/pygments/lexers/crystal.py
+index cf051536c9..05171c9cb7 100644
+--- a/pygments/lexers/crystal.py
++++ b/pygments/lexers/crystal.py
+@@ -57,8 +57,11 @@ def heredoc_callback(self, match, ctx):
+ 
+         ctx.pos = match.start(5)
+         ctx.end = match.end(5)
+-        # this may find other heredocs
+-        yield from self.get_tokens_unprocessed(context=ctx)
++        # this may find other heredocs, so limit the recursion depth
++        if len(heredocstack) < 100:
++            yield from self.get_tokens_unprocessed(context=ctx)
++        else:
++            yield ctx.pos, String.Heredoc, match.group(5)
+         ctx.pos = match.end()
+ 
+         if outermost:
+diff --git a/pygments/lexers/ruby.py b/pygments/lexers/ruby.py
+index e16cd711df..d1ae5affa9 100644
+--- a/pygments/lexers/ruby.py
++++ b/pygments/lexers/ruby.py
+@@ -57,8 +57,11 @@ def heredoc_callback(self, match, ctx):
+ 
+         ctx.pos = match.start(5)
+         ctx.end = match.end(5)
+-        # this may find other heredocs
+-        yield from self.get_tokens_unprocessed(context=ctx)
++        # this may find other heredocs, so limit the recursion depth
++        if len(heredocstack) < 100:
++            yield from self.get_tokens_unprocessed(context=ctx)
++        else:
++            yield ctx.pos, String.Heredoc, match.group(5)
+         ctx.pos = match.end()
+ 
+         if outermost:

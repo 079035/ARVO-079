@@ -1,0 +1,57 @@
+From 3a4b54d617ee953a82fbf04405d5d8cf9083f416 Mon Sep 17 00:00:00 2001
+From: Thomas Van Lenten <thomasvl@google.com>
+Date: Mon, 19 Apr 2021 10:55:57 -0400
+Subject: [PATCH] Don't walk off the end of the buffer during a unicode bytes
+ decode.
+
+Preflight the check instead of checking during the loop (which wasn't
+advancing).
+---
+ ...stcase-minimized-FuzzTextFormat_release-5836572361621504 | 1 +
+ Sources/SwiftProtobuf/TextFormatScanner.swift               | 6 +++---
+ Tests/SwiftProtobufTests/Test_FuzzTests.swift               | 5 +++++
+ 3 files changed, 9 insertions(+), 3 deletions(-)
+ create mode 100644 FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5836572361621504
+
+diff --git a/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5836572361621504 b/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5836572361621504
+new file mode 100644
+index 000000000..2255aa4bd
+--- /dev/null
++++ b/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5836572361621504
+@@ -0,0 +1 @@
++15:'©©\uAb
+\ No newline at end of file
+diff --git a/Sources/SwiftProtobuf/TextFormatScanner.swift b/Sources/SwiftProtobuf/TextFormatScanner.swift
+index ead1bbc23..e731e6cd3 100644
+--- a/Sources/SwiftProtobuf/TextFormatScanner.swift
++++ b/Sources/SwiftProtobuf/TextFormatScanner.swift
+@@ -406,11 +406,11 @@ internal struct TextFormatScanner {
+                 count += 1
+               case asciiLowerU, asciiUpperU: // 'u' or 'U' unicode escape
+                 let numDigits = (escaped == asciiLowerU) ? 4 : 8
++                guard (end - p) >= numDigits else {
++                  throw TextFormatDecodingError.malformedText // unicode escape must 4/8 digits
++                }
+                 var codePoint: UInt32 = 0
+                 for i in 0..<numDigits {
+-                  guard p != end else {
+-                    throw TextFormatDecodingError.malformedText // unicode escape must 4/8 digits
+-                  }
+                   if let digit = uint32FromHexDigit(p[i]) {
+                     codePoint = (codePoint << 4) + digit
+                   } else {
+diff --git a/Tests/SwiftProtobufTests/Test_FuzzTests.swift b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+index 8ccc976da..cc7ead132 100644
+--- a/Tests/SwiftProtobufTests/Test_FuzzTests.swift
++++ b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+@@ -111,5 +111,10 @@ class Test_FuzzTests: XCTestCase {
+     assertTextFormatSucceeds("    1:0    1:0      1:0")
+     // FailCases/TextFormat-ending-minus
+     assertTextFormatFails("    1:0    1:0      5:-")
++
++    // FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5836572361621504
++    assertTextFormatFails([
++      0x31, 0x35, 0x3a, 0x27, 0xa9, 0xa9, 0x5c, 0x75, 0x41, 0x62
++    ])
+   }
+ }

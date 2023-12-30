@@ -1,0 +1,45 @@
+From 057d6405db7bec9e3c1694042b0db1022604e495 Mon Sep 17 00:00:00 2001
+From: Cristy <mikayla-grace@urban-warrior.org>
+Date: Sat, 16 May 2020 19:20:33 -0400
+Subject: [PATCH] ...
+
+---
+ MagickCore/xml-tree.c | 2 +-
+ coders/pnm.c          | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/MagickCore/xml-tree.c b/MagickCore/xml-tree.c
+index 99b1e2e431d..5041f672a3d 100644
+--- a/MagickCore/xml-tree.c
++++ b/MagickCore/xml-tree.c
+@@ -1511,7 +1511,7 @@ static char *ParseEntities(char *xml,char **entities,int state)
+                   }
+                 if (entity != (char *) NULL)
+                   (void) memmove(xml+length,entity+1,strlen(entity));
+-                (void) strncpy(xml,entities[i],length);
++                (void) memcpy(xml,entities[i],length);
+               }
+         }
+       else
+diff --git a/coders/pnm.c b/coders/pnm.c
+index 3de1b664a98..6b5eea0a240 100644
+--- a/coders/pnm.c
++++ b/coders/pnm.c
+@@ -1826,7 +1826,7 @@ static MagickBooleanType WritePNMImage(const ImageInfo *image_info,Image *image,
+                 (void) WriteBlob(image,q-pixels,pixels);
+                 q=pixels;
+               }
+-            (void) strncpy((char *) q,buffer,extent);
++            (void) memcpy((char *) q,buffer,extent);
+             q+=extent;
+             p+=GetPixelChannels(image);
+           }
+@@ -1901,7 +1901,7 @@ static MagickBooleanType WritePNMImage(const ImageInfo *image_info,Image *image,
+                 (void) WriteBlob(image,q-pixels,pixels);
+                 q=pixels;
+               }
+-            (void) strncpy((char *) q,buffer,extent);
++            (void) memcpy((char *) q,buffer,extent);
+             q+=extent;
+             p+=GetPixelChannels(image);
+           }

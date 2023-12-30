@@ -1,0 +1,23 @@
+commit 0ad5c625be27d7a3622dae95e9afe5e66b112d46
+Author: Jack Haughton <jack.haughton@argondesign.com>
+Date:   Mon Nov 26 13:54:48 2018 +0000
+
+    Set up frame context using next_ref_frame_map
+    
+    BUG: oss-fuzz:11523
+    Change-Id: Idec84e85f39fa6e2205853763002898b6ab1b410
+
+diff --git a/av1/decoder/decodeframe.c b/av1/decoder/decodeframe.c
+index d17e605310..f9de80087e 100644
+--- a/av1/decoder/decodeframe.c
++++ b/av1/decoder/decodeframe.c
+@@ -4755,7 +4755,8 @@ static void show_existing_frame_reset(AV1Decoder *const pbi,
+   generate_next_ref_frame_map(pbi);
+ 
+   // Reload the adapted CDFs from when we originally coded this keyframe
+-  *cm->fc = frame_bufs[cm->ref_frame_map[existing_frame_idx]].frame_context;
++  *cm->fc =
++      frame_bufs[cm->next_ref_frame_map[existing_frame_idx]].frame_context;
+ }
+ 
+ static INLINE void reset_frame_buffers(AV1_COMMON *cm) {

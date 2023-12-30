@@ -1,0 +1,23 @@
+From 70815f899869c02e01ed10b9b95807a9f08c34a5 Mon Sep 17 00:00:00 2001
+From: Aaron Boxer <boxerab@gmail.com>
+Date: Mon, 21 Feb 2022 10:04:37 -0500
+Subject: [PATCH] decompress: zero out composite data to avoid uninitialized
+ pixels for truncated
+
+---
+ src/lib/jp2/util/GrkImage.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lib/jp2/util/GrkImage.cpp b/src/lib/jp2/util/GrkImage.cpp
+index a1b468cca..9f0f704bd 100644
+--- a/src/lib/jp2/util/GrkImage.cpp
++++ b/src/lib/jp2/util/GrkImage.cpp
+@@ -414,7 +414,7 @@ bool GrkImage::allocCompositeData(CodingParams* cp)
+ 			}
+ 			if(!destComp->data)
+ 			{
+-				if(!GrkImage::allocData(destComp))
++				if(!GrkImage::allocData(destComp,true))
+ 				{
+ 					GRK_ERROR(
+ 						"Failed to allocate pixel data for component %d, with dimensions %u x %u",

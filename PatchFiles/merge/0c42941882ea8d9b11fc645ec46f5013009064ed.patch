@@ -1,0 +1,7 @@
+commit 0c42941882ea8d9b11fc645ec46f5013009064ed
+Merge: 47b23c8 8458e48
+Author: Jean-Michel Trivi <jmtrivi@google.com>
+Date:   Fri Jan 3 15:33:32 2020 +0000
+
+    Merge "Revert "Add TEST_MAPPING for aac project""
+

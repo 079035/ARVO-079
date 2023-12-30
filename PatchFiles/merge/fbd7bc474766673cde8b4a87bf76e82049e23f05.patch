@@ -1,0 +1,7 @@
+commit fbd7bc474766673cde8b4a87bf76e82049e23f05
+Merge: a59cff1e2 2ee3f9751
+Author: Treehugger Robot <treehugger-gerrit@google.com>
+Date:   Tue Apr 2 16:18:27 2019 +0000
+
+    Merge "trace_processor: ParsePowerRails: skip huge power rail indices"
+

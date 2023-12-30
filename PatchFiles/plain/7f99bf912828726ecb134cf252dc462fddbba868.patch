@@ -1,0 +1,320 @@
+commit 7f99bf912828726ecb134cf252dc462fddbba868
+Author: Aaron Boxer <boxerab@gmail.com>
+Date:   Sun Apr 10 19:54:58 2022 -0400
+
+    ICC : validate profile against colour space before applying
+    
+    fixes
+    https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=46527&sort=-opened&can=1&q=proj%3Agrok
+
+diff --git a/src/lib/jp2/codestream/FileFormatCompress.cpp b/src/lib/jp2/codestream/FileFormatCompress.cpp
+index 5c87b67e..22a4e96d 100644
+--- a/src/lib/jp2/codestream/FileFormatCompress.cpp
++++ b/src/lib/jp2/codestream/FileFormatCompress.cpp
+@@ -712,40 +712,6 @@ bool FileFormatCompress::start(void)
+ 
+ 	return codeStream->start();
+ }
+-bool FileFormatCompress::validate_icc(GRK_COLOR_SPACE colourSpace, uint8_t* iccbuf, uint32_t icclen)
+-{
+-	bool rc = true;
+-	auto in_prof = cmsOpenProfileFromMem(iccbuf, icclen);
+-	if(in_prof)
+-	{
+-		auto cmsColorSpaceSignature = cmsGetColorSpace(in_prof);
+-		switch(cmsColorSpaceSignature)
+-		{
+-			case cmsSigLabData:
+-				rc =
+-					(colourSpace == GRK_CLRSPC_DEFAULT_CIE || colourSpace == GRK_CLRSPC_CUSTOM_CIE);
+-				break;
+-			case cmsSigYCbCrData:
+-				rc = (colourSpace == GRK_CLRSPC_SYCC || colourSpace == GRK_CLRSPC_EYCC);
+-				break;
+-			case cmsSigRgbData:
+-				rc = colourSpace == GRK_CLRSPC_SRGB;
+-				break;
+-			case cmsSigGrayData:
+-				rc = colourSpace == GRK_CLRSPC_GRAY;
+-				break;
+-			case cmsSigCmykData:
+-				rc = colourSpace == GRK_CLRSPC_CMYK;
+-				break;
+-			default:
+-				rc = false;
+-				break;
+-		}
+-		cmsCloseProfile(in_prof);
+-	}
+-
+-	return rc;
+-}
+ bool FileFormatCompress::init(grk_cparameters* parameters, GrkImage* image)
+ {
+ 	uint16_t i;
+@@ -807,11 +773,8 @@ bool FileFormatCompress::init(grk_cparameters* parameters, GrkImage* image)
+ 
+ 	if(inputImage_->meta && inputImage_->meta->color.icc_profile_buf)
+ 	{
+-		if(validate_icc(inputImage_->color_space, inputImage_->meta->color.icc_profile_buf,
+-						inputImage_->meta->color.icc_profile_len))
++		if(inputImage_->validateICC())
+ 			inputImage_->color_space = GRK_CLRSPC_ICC;
+-		else
+-			GRK_WARN("ICC profile does not match underlying colour space. Ignoring");
+ 	}
+ 
+ 	/* Colour Specification box */
+diff --git a/src/lib/jp2/codestream/FileFormatCompress.h b/src/lib/jp2/codestream/FileFormatCompress.h
+index feeb5aab..f26d4829 100644
+--- a/src/lib/jp2/codestream/FileFormatCompress.h
++++ b/src/lib/jp2/codestream/FileFormatCompress.h
+@@ -35,7 +35,6 @@ class FileFormatCompress : public FileFormat, public ICodeStreamCompress
+ 	bool end(void);
+ 
+   private:
+-	bool validate_icc(GRK_COLOR_SPACE colourSpace, uint8_t* iccbuf, uint32_t icclen);
+ 	grk_color* getColour(void);
+ 	void find_cf(double x, uint32_t* num, uint32_t* den);
+ 	void write_res_box(double resx, double resy, uint32_t box_id, uint8_t** current_res_ptr);
+diff --git a/src/lib/jp2/codestream/FileFormatDecompress.cpp b/src/lib/jp2/codestream/FileFormatDecompress.cpp
+index d137c00e..e93bc6ac 100644
+--- a/src/lib/jp2/codestream/FileFormatDecompress.cpp
++++ b/src/lib/jp2/codestream/FileFormatDecompress.cpp
+@@ -172,7 +172,7 @@ bool FileFormatDecompress::readHeader(grk_header_info* header_info)
+ 			for(int i = 0; i < 2; ++i)
+ 				image->display_resolution[i] = display_resolution[i];
+ 		}
+-		/* Set Image Color Space */
++
+ 		switch(enumcs)
+ 		{
+ 			case GRK_ENUM_CLRSPC_CMYK:
+@@ -210,7 +210,11 @@ bool FileFormatDecompress::readHeader(grk_header_info* header_info)
+ 				break;
+ 		}
+ 		if(meth == 2 && getColour()->icc_profile_buf)
+-			image->color_space = GRK_CLRSPC_ICC;
++		{
++			// validate
++			if(image->validateICC())
++				image->color_space = GRK_CLRSPC_ICC;
++		}
+ 		// check RGB subsampling
+ 		if(image->color_space == GRK_CLRSPC_SRGB)
+ 		{
+diff --git a/src/lib/jp2/util/GrkImage.h b/src/lib/jp2/util/GrkImage.h
+index 1c9a4237..58db55ec 100644
+--- a/src/lib/jp2/util/GrkImage.h
++++ b/src/lib/jp2/util/GrkImage.h
+@@ -1,6 +1,7 @@
+ #pragma once
+ 
+ #include "grk_includes.h"
++#include "lcms2.h"
+ 
+ namespace grk
+ {
+@@ -76,6 +77,7 @@ class GrkImage : public grk_image
+ 	bool greyToRGB(void);
+ 	bool convertToRGB(bool wholeTileDecompress);
+ 	bool applyColourManagement(void);
++	bool validateICC(void);
+ 	void convertPrecision(void);
+ 	bool execUpsample(void);
+ 	void all_components_data_free(void);
+@@ -94,6 +96,8 @@ class GrkImage : public grk_image
+ 
+   private:
+ 	~GrkImage();
++	std::string getColourSpaceString(void);
++	std::string getICCColourSpaceString(cmsColorSpaceSignature color_space);
+ 	bool needsConversionToRGB(void);
+ 	bool isOpacity(uint16_t compno);
+ 	bool compositePlanar(const GrkImage* srcImg);
+diff --git a/src/lib/jp2/util/GrkImage_Conversion.cpp b/src/lib/jp2/util/GrkImage_Conversion.cpp
+index 3a752a93..ece2ce41 100644
+--- a/src/lib/jp2/util/GrkImage_Conversion.cpp
++++ b/src/lib/jp2/util/GrkImage_Conversion.cpp
+@@ -957,6 +957,144 @@ bool GrkImage::color_esycc_to_rgb(void)
+ 	return true;
+ 
+ } /* color_esycc_to_rgb() */
++std::string GrkImage::getColourSpaceString(void)
++{
++	std::string rc = "";
++	switch(color_space)
++	{
++		case GRK_CLRSPC_UNKNOWN:
++			rc = "unknown";
++			break;
++		case GRK_CLRSPC_SRGB:
++			rc = "sRGB";
++			break;
++		case GRK_CLRSPC_GRAY:
++			rc = "grayscale";
++			break;
++		case GRK_CLRSPC_SYCC:
++			rc = "SYCC";
++			break;
++		case GRK_CLRSPC_EYCC:
++			rc = "EYCC";
++			break;
++		case GRK_CLRSPC_CMYK:
++			rc = "CMYK";
++			break;
++		case GRK_CLRSPC_DEFAULT_CIE:
++			rc = "CIE";
++			break;
++		case GRK_CLRSPC_CUSTOM_CIE:
++			rc = "custom CIE";
++			break;
++		case GRK_CLRSPC_ICC:
++			rc = "ICC";
++			break;
++	}
++
++	return rc;
++}
++std::string GrkImage::getICCColourSpaceString(cmsColorSpaceSignature color_space)
++{
++	std::string rc = "";
++	switch(color_space)
++	{
++		case cmsSigLabData:
++			rc = "LAB";
++			break;
++		case cmsSigYCbCrData:
++			rc = "YCbCr";
++			break;
++		case cmsSigRgbData:
++			rc = "sRGB";
++			break;
++		case cmsSigGrayData:
++			rc = "grayscale";
++			break;
++		case cmsSigCmykData:
++			rc = "CMYK";
++			break;
++		default:
++			rc = "Unsupported";
++			break;
++	}
++
++	return rc;
++}
++bool GrkImage::validateICC(void)
++{
++	// check if already validated
++	if(color_space == GRK_CLRSPC_ICC)
++		return true;
++
++	bool colourSpaceValid = false;
++	bool imageValid = false;
++	bool colourSpaceSupported = false;
++	cmsColorSpaceSignature cmsColorSpaceSignature;
++	auto in_prof = cmsOpenProfileFromMem(meta->color.icc_profile_buf, meta->color.icc_profile_len);
++	if(in_prof)
++	{
++		cmsColorSpaceSignature = cmsGetColorSpace(in_prof);
++		switch(cmsColorSpaceSignature)
++		{
++			case cmsSigLabData:
++				colourSpaceValid =
++					(color_space == GRK_CLRSPC_DEFAULT_CIE || color_space == GRK_CLRSPC_CUSTOM_CIE);
++				imageValid = numcomps >= 3;
++				break;
++			case cmsSigYCbCrData:
++				colourSpaceValid =
++					(color_space == GRK_CLRSPC_SYCC || color_space == GRK_CLRSPC_EYCC);
++				if(numcomps < 3)
++					imageValid = false;
++				else
++				{
++					auto compLuma = comps;
++					imageValid = compLuma->dx == 1 && compLuma->dy == 1 && isSubsampled();
++				}
++				break;
++			case cmsSigRgbData:
++				colourSpaceValid = color_space == GRK_CLRSPC_SRGB;
++				imageValid = numcomps >= 3 && !isSubsampled();
++				colourSpaceSupported = true;
++				break;
++			case cmsSigGrayData:
++				colourSpaceValid = color_space == GRK_CLRSPC_GRAY;
++				imageValid = numcomps <= 2;
++				colourSpaceSupported = true;
++				break;
++			case cmsSigCmykData:
++				colourSpaceValid = color_space == GRK_CLRSPC_CMYK;
++				imageValid = numcomps == 4 && !isSubsampled();
++				break;
++			default:
++				break;
++		}
++		cmsCloseProfile(in_prof);
++	}
++	else
++	{
++		GRK_WARN("Unable to parse ICC colour space. Ignoring");
++		return false;
++	}
++	if(!colourSpaceSupported)
++	{
++		GRK_WARN("Unsupported ICC colour space %s. Ignoring",
++				 getICCColourSpaceString(cmsColorSpaceSignature).c_str());
++		return false;
++	}
++	if(color_space != GRK_CLRSPC_UNKNOWN && !colourSpaceValid)
++	{
++		GRK_WARN("Image signaled colour space %s doesn't match ICC colour space %s. Ignoring",
++				 getColourSpaceString().c_str(),
++				 getICCColourSpaceString(cmsColorSpaceSignature).c_str());
++		return false;
++	}
++	if(!imageValid)
++		GRK_WARN("Image properties do not match ICC colour space %s. Ignoring",
++				 getICCColourSpaceString(cmsColorSpaceSignature).c_str());
++
++	return imageValid;
++}
+ 
+ bool GrkImage::applyColourManagement(void)
+ {
+@@ -992,20 +1130,23 @@ bool GrkImage::applyColourManagement(void)
+ 		}
+ 		else
+ 		{
+-			if(!forceRGB)
+-			{
+-				GRK_WARN("");
+-				GRK_WARN("The input file contains a color profile");
+-				GRK_WARN("but the codec is unable to store this profile"
+-						 " in the output file.");
+-				GRK_WARN("The profile will therefore be applied to the output"
+-						 " image before saving.");
+-				GRK_WARN("");
+-			}
+-			if(!applyICC())
++			if(validateICC())
+ 			{
+-				GRK_ERROR("Unable to apply ICC profile");
+-				return false;
++				if(!forceRGB)
++				{
++					GRK_WARN("");
++					GRK_WARN("The input file contains a color profile");
++					GRK_WARN("but the codec is unable to store this profile"
++							 " in the output file.");
++					GRK_WARN("The profile will therefore be applied to the output"
++							 " image before saving.");
++					GRK_WARN("");
++				}
++				if(!applyICC())
++				{
++					GRK_WARN("Unable to apply ICC profile");
++					return false;
++				}
+ 			}
+ 		}
+ 	}

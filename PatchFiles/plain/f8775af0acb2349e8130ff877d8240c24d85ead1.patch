@@ -1,0 +1,53 @@
+From f8775af0acb2349e8130ff877d8240c24d85ead1 Mon Sep 17 00:00:00 2001
+From: Aaron Boxer <boxerab@gmail.com>
+Date: Sat, 26 Mar 2022 13:46:58 -0400
+Subject: [PATCH] windowed decode: restore buffer clearing for sparse block
+ allocation
+
+This change should fix most of the fuzz security bugs
+---
+ src/lib/jp2/transform/WaveletReverse.cpp | 6 +++---
+ tests/fuzzers/failing_fuzzers.txt        | 7 +++++++
+ 2 files changed, 10 insertions(+), 3 deletions(-)
+ create mode 100644 tests/fuzzers/failing_fuzzers.txt
+
+diff --git a/src/lib/jp2/transform/WaveletReverse.cpp b/src/lib/jp2/transform/WaveletReverse.cpp
+index 851636c4b..db12f6a2f 100644
+--- a/src/lib/jp2/transform/WaveletReverse.cpp
++++ b/src/lib/jp2/transform/WaveletReverse.cpp
+@@ -1976,11 +1976,11 @@ bool decompress_partial_tile(TileComponent* GRK_RESTRICT tilec, uint16_t compno,
+ 		for(uint32_t i = 0; i < BAND_NUM_ORIENTATIONS; ++i)
+ 		{
+ 			auto temp = tileBandWindowRect[i];
+-			if(!sa->alloc(temp.grow(2 * FILTER_WIDTH, fullRes->width(), fullRes->height()), false))
++			if(!sa->alloc(temp.grow(2 * FILTER_WIDTH, fullRes->width(), fullRes->height()), true))
+ 				goto cleanup;
+ 		}
+ 		auto resWindowRect = *((grk_rect32*)tilec->getBuffer()->getResWindowBufferREL(resno));
+-		if(!sa->alloc(resWindowRect, false))
++		if(!sa->alloc(resWindowRect, true))
+ 			goto cleanup;
+ 		// two windows formed by horizontal pass and used as input for vertical pass
+ 		grk_rect32 splitWindowRect[SPLIT_NUM_ORIENTATIONS];
+@@ -1991,7 +1991,7 @@ bool decompress_partial_tile(TileComponent* GRK_RESTRICT tilec, uint16_t compno,
+ 		for(uint32_t k = 0; k < SPLIT_NUM_ORIENTATIONS; ++k)
+ 		{
+ 			auto temp = splitWindowRect[k];
+-			if(!sa->alloc(temp.grow(2 * FILTER_WIDTH, fullRes->width(), fullRes->height()), false))
++			if(!sa->alloc(temp.grow(2 * FILTER_WIDTH, fullRes->width(), fullRes->height()), true))
+ 				goto cleanup;
+ 		}
+ 
+diff --git a/tests/fuzzers/failing_fuzzers.txt b/tests/fuzzers/failing_fuzzers.txt
+new file mode 100644
+index 000000000..244b78d64
+--- /dev/null
++++ b/tests/fuzzers/failing_fuzzers.txt
+@@ -0,0 +1,7 @@
++https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=32951&q=proj%3Agrok&saved=7&ts=1648316506
++https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=33275&q=proj%3Agrok&saved=7&ts=1648316506
++https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=39845&q=proj%3Agrok&saved=7&ts=1648316506
++https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=39859&q=proj%3Agrok&saved=7&ts=1648316506
++https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=43457&q=proj%3Agrok&saved=7&ts=1648316506
++https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=45532&q=proj%3Agrok&saved=7&ts=1648316506
++https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=45719&q=proj%3Agrok&saved=7&ts=1648316506

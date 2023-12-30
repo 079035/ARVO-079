@@ -1,0 +1,33 @@
+From 902891b4465b32db9ad97a1dad2f7515d8ae644b Mon Sep 17 00:00:00 2001
+From: Phillip Whelan <phil@calyptia.com>
+Date: Tue, 7 Sep 2021 18:34:24 -0300
+Subject: [PATCH] input: add FLB_INPUT_RETURN macro for returning from input
+ coroutines.
+
+Signed-off-by: Phillip Whelan <phil@calyptia.com>
+---
+ include/fluent-bit/flb_input.h | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/include/fluent-bit/flb_input.h b/include/fluent-bit/flb_input.h
+index eb3f4c42a69..d7f58818587 100644
+--- a/include/fluent-bit/flb_input.h
++++ b/include/fluent-bit/flb_input.h
+@@ -501,6 +501,17 @@ static inline void flb_input_return(struct flb_coro *coro) {
+     }
+ }
+ 
++static inline void flb_input_return_do(int ret) {
++    struct flb_coro *coro = flb_coro_get();
++
++    flb_input_return(coro);
++    flb_coro_yield(coro, FLB_TRUE);
++}
++
++#define FLB_INPUT_RETURN(x) \
++    flb_input_return_do(x); \
++    return
++
+ static inline int flb_input_buf_paused(struct flb_input_instance *i)
+ {
+     if (i->mem_buf_status == FLB_INPUT_PAUSED) {

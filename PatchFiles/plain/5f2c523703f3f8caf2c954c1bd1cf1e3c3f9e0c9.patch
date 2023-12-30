@@ -1,0 +1,23 @@
+commit 5f2c523703f3f8caf2c954c1bd1cf1e3c3f9e0c9
+Author: Martin Mathieson <martin.r.mathieson@googlemail.com>
+Date:   Mon Mar 20 10:32:03 2023 +0000
+
+    ORAN FH CUS: Ext11: Take care with array index if 0 bundles
+
+diff --git a/epan/dissectors/packet-oran.c b/epan/dissectors/packet-oran.c
+index 0edf7bf288..1733ffcccc 100644
+--- a/epan/dissectors/packet-oran.c
++++ b/epan/dissectors/packet-oran.c
+@@ -1790,8 +1790,10 @@ static int dissect_oran_c_section(tvbuff_t *tvb, proto_tree *tree, packet_info *
+                             break;
+                         }
+                     }
+-                    /* Set flag from last bundle entry */
+-                    orphaned_prbs = ext11_settings.bundles[num_bundles-1].is_orphan;
++                    if (num_bundles > 0) {
++                        /* Set flag from last bundle entry */
++                        orphaned_prbs = ext11_settings.bundles[num_bundles-1].is_orphan;
++                    }
+                 }
+                 else {
+                     /********************************************/

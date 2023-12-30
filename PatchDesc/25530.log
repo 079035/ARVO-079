@@ -1,12 +1,8 @@
-Vulnerability:
-The vulnerability patched in this diff file is a potential buffer overflow in the function `ima_reader_init()` in the file `ima_adpcm.c`. 
+1. Vulnerability:
+The vulnerability in the original code was a potential buffer overflow. The code was assuming that there would always be 8 nibbles worth of data for every channel when reading IMA ADPCM data. If there were more than 8 nibbles, it could lead to a buffer overflow, which could cause the program to crash or behave unexpectedly.
 
-Summary of the fix:
-The fix allocates slightly more memory than necessary in order to avoid a branch when pulling apart the nibbles. This ensures that there is enough space to store decoded nibbles when reading IMA ADPCM data.
+2. Short Summary of the Fix:
+The fix involves allocating slightly more memory than might be needed to store the decoded nibbles. This is done to avoid having to add a branch in the hot path of the code. The allocation is now enough for 1 more than a multiple of 8 samples to avoid having to branch when pulling apart the nibbles.
 
-Detailed description of the fix:
-In the original code, the variable `pimasize` was calculated as the sum of the sizeof `IMA_ADPCM_PRIVATE`, the blockalign multiplied by the number of channels, and 3 times the number of channels multiplied by the samplesperblock. However, this calculation did not consider the necessary space for decoding the nibbles.
-
-To fix this, the fix introduced a new variable `count` that is calculated as ((samplesperblock - 2) | 7) + 2. This ensures that `count` is always a multiple of 8, which avoids having to branch when pulling apart the nibbles. Then, the `pimasize` is calculated as the sum of the sizeof `IMA_ADPCM_PRIVATE`, the number of channels multiplied by `(blockalign + samplesperblock + sizeof(short) * count)`.
-
-By allocating slightly more memory than needed, the fix ensures that the function has enough space to store the decoded nibbles without causing a buffer overflow.
+3. Detailed Description of the Fix:
+The fix changes the calculation of `pimasize`, which determines the amount of memory to allocate for storing the decoded nibbles. Instead of simply adding the `blockalign` and `samplesperblock` multiplied by the number of channels, the code now calculates `count` as the bitwise OR of `samplesperblock - 2` and `7`, then adds `2`. This ensures that `count` is always a multiple of 8, plus 1. The `pimasize` is then calculated as the size of `IMA_ADPCM_PRIVATE` plus the number of channels multiplied by the sum of `blockalign`, `samplesperblock`, and the size of a short multiplied by `count`. This ensures that there is always enough memory allocated to store the decoded nibbles, even if there are more than 8 nibbles per channel.

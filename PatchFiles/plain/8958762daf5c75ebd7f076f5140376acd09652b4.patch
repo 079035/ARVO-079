@@ -1,0 +1,22 @@
+commit 8958762daf5c75ebd7f076f5140376acd09652b4
+Author: Chris Liddell <chris.liddell@artifex.com>
+Date:   Mon Aug 1 09:03:28 2022 +0100
+
+    oss-fuzz 49641/49654: Add missing error code assignment
+
+diff --git a/pdf/pdf_font.c b/pdf/pdf_font.c
+index 61e7734bd..93d266f23 100644
+--- a/pdf/pdf_font.c
++++ b/pdf/pdf_font.c
+@@ -345,8 +345,10 @@ pdfi_open_CIDFont_substitute_file(pdf_context *ctx, pdf_dict *font_dict, pdf_dic
+         const int fsprefixlen = strlen(fsprefix);
+ 
+         if (cidname == NULL || pdfi_type_of(cidname) != PDF_NAME
+-         || fsprefixlen + cidname->length >= gp_file_name_sizeof)
++         || fsprefixlen + cidname->length >= gp_file_name_sizeof) {
++            code = gs_note_error(gs_error_invalidfont);
+             goto exit;
++        }
+ 
+         memcpy(fontfname, fsprefix, fsprefixlen);
+         memcpy(fontfname + fsprefixlen, cidname->data, cidname->length);

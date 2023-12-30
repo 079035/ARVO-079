@@ -1,7 +1,7 @@
 {
     "localId": 14018,
     "project": "perfetto",
-    "fix": "https://android.googlesource.com/platform/external/perfetto//+/fbd7bc474766673cde8b4a87bf76e82049e23f05",
+    "fix": "https://android.googlesource.com/platform/external/perfetto//+/fbd7bc474766673cde8b4a87bf76e82049e23f05%5E%21/",
     "verify": "0",
     "fuzzer": "libfuzzer",
     "sanitizer": "asan",

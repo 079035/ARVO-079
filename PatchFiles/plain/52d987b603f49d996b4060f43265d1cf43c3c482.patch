@@ -1,0 +1,97 @@
+From 52d987b603f49d996b4060f43265d1cf43c3c482 Mon Sep 17 00:00:00 2001
+From: Luca Deri <deri@ntop.org>
+Date: Tue, 5 Jul 2022 17:00:21 +0200
+Subject: [PATCH] SMTP with STARTTLS is now identified as SMTPS
+
+---
+ src/lib/protocols/mail_smtp.c       | 16 ----------------
+ src/lib/protocols/tls.c             | 23 ++++++++++++++++-------
+ tests/result/smtp-starttls.pcap.out |  2 +-
+ 3 files changed, 17 insertions(+), 24 deletions(-)
+
+diff --git a/src/lib/protocols/mail_smtp.c b/src/lib/protocols/mail_smtp.c
+index 3d2e8d043b..fddd42b97a 100644
+--- a/src/lib/protocols/mail_smtp.c
++++ b/src/lib/protocols/mail_smtp.c
+@@ -30,22 +30,6 @@
+ #include "ndpi_api.h"
+ 
+ 
+-#define SMTP_BIT_220		0x01
+-#define SMTP_BIT_250		0x02
+-#define SMTP_BIT_235		0x04
+-#define SMTP_BIT_334		0x08
+-#define SMTP_BIT_354		0x10
+-#define SMTP_BIT_HELO_EHLO	0x20
+-#define SMTP_BIT_MAIL		0x40
+-#define SMTP_BIT_RCPT		0x80
+-#define SMTP_BIT_AUTH_LOGIN	0x100
+-#define SMTP_BIT_STARTTLS	0x200
+-#define SMTP_BIT_DATA		0x400
+-#define SMTP_BIT_NOOP		0x800
+-#define SMTP_BIT_RSET		0x1000
+-#define SMTP_BIT_TlRM		0x2000
+-#define SMTP_BIT_AUTH_PLAIN	0x4000
+-
+ /* #define SMTP_DEBUG 1 */
+ 
+ extern int processTLSBlock(struct ndpi_detection_module_struct *ndpi_struct,
+diff --git a/src/lib/protocols/tls.c b/src/lib/protocols/tls.c
+index 69bec44f58..5cd74c0dfd 100644
+--- a/src/lib/protocols/tls.c
++++ b/src/lib/protocols/tls.c
+@@ -855,7 +855,10 @@ int processTLSBlock(struct ndpi_detection_module_struct *ndpi_struct,
+   case 0x02: /* Server Hello */
+     processClientServerHello(ndpi_struct, flow, 0);
+     flow->protos.tls_quic.hello_processed = 1;
+-    ndpi_int_tls_add_connection(ndpi_struct, flow, NDPI_PROTOCOL_TLS);
++
++    ndpi_int_tls_add_connection(ndpi_struct, flow,
++				/* Check if this is a SMTP connection with STARTTLS or TLS */
++				(flow->l4.tcp.smtp_command_bitmask & SMTP_BIT_STARTTLS) ? NDPI_PROTOCOL_MAIL_SMTPS : NDPI_PROTOCOL_TLS);
+ 
+ #ifdef DEBUG_TLS
+     printf("*** TLS [version: %02X][%s Hello]\n",
+@@ -1243,7 +1246,8 @@ static void tlsCheckUncommonALPN(struct ndpi_detection_module_struct *ndpi_struc
+ static void ndpi_int_tls_add_connection(struct ndpi_detection_module_struct *ndpi_struct,
+ 					struct ndpi_flow_struct *flow, u_int32_t protocol) {
+   struct ndpi_packet_struct *packet = &ndpi_struct->packet;
+-
++  u_int16_t upper_detected_protocol;
++    
+ #if DEBUG_TLS
+   printf("[TLS] %s()\n", __FUNCTION__);
+ #endif
+@@ -1258,12 +1262,17 @@ static void ndpi_int_tls_add_connection(struct ndpi_detection_module_struct *ndp
+     return;
+   }
+ 
+-  if(protocol != NDPI_PROTOCOL_TLS)
+-    ;
+-  else
++  if(protocol != NDPI_PROTOCOL_TLS) {
++    if(flow->l4.tcp.smtp_command_bitmask & SMTP_BIT_STARTTLS)
++      upper_detected_protocol = flow->detected_protocol_stack[0];
++    else
++      upper_detected_protocol = protocol;
++  } else {
+     protocol = ndpi_tls_refine_master_protocol(ndpi_struct, flow, protocol);
+-
+-  ndpi_set_detected_protocol(ndpi_struct, flow, protocol, protocol, NDPI_CONFIDENCE_DPI);
++    upper_detected_protocol = protocol;
++  }
++  
++  ndpi_set_detected_protocol(ndpi_struct, flow, upper_detected_protocol, protocol, NDPI_CONFIDENCE_DPI);
+ 
+   tlsInitExtraPacketProcessing(ndpi_struct, flow);
+ }
+diff --git a/tests/result/smtp-starttls.pcap.out b/tests/result/smtp-starttls.pcap.out
+index cfd5ca2d83..a7418ae2b9 100644
+--- a/tests/result/smtp-starttls.pcap.out
++++ b/tests/result/smtp-starttls.pcap.out
+@@ -10,4 +10,4 @@ JA3 Host Stats:
+ 	1	 10.0.0.1                 	 1      
+ 
+ 
+-	1	TCP 10.0.0.1:57406 <-> 173.194.68.26:25 [proto: 91.126/TLS.Google][Encrypted][Confidence: DPI][cat: Email/3][17 pkts/2514 bytes <-> 19 pkts/5889 bytes][Goodput ratio: 55/79][0.48 sec][Hostname/SNI: mx.google.com][bytes ratio: -0.402 (Download)][IAT c2s/s2c min/avg/max/stddev: 0/0 30/24 156/103 42/26][Pkt Len c2s/s2c min/avg/max/stddev: 66/66 148/310 752/1484 168/444][Risk: ** Obsolete TLS (v1.1 or older) **][Risk Score: 100][Risk Info: No client to server traffic / TLSv1][TLSv1][JA3C: fab507fe132c544e8a0eb7c394affeae][Plen Bins: 23,18,13,9,4,4,4,0,0,4,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,0,0,0]
++	1	TCP 10.0.0.1:57406 <-> 173.194.68.26:25 [proto: 29.126/SMTPS.Google][Encrypted][Confidence: DPI][cat: Email/3][17 pkts/2514 bytes <-> 19 pkts/5889 bytes][Goodput ratio: 55/79][0.48 sec][Hostname/SNI: mx.google.com][bytes ratio: -0.402 (Download)][IAT c2s/s2c min/avg/max/stddev: 0/0 30/24 156/103 42/26][Pkt Len c2s/s2c min/avg/max/stddev: 66/66 148/310 752/1484 168/444][Risk: ** Obsolete TLS (v1.1 or older) **][Risk Score: 100][Risk Info: No client to server traffic / TLSv1][TLSv1][JA3C: fab507fe132c544e8a0eb7c394affeae][PLAIN TEXT (x.google.com ESMTP s4)][Plen Bins: 23,18,13,9,4,4,4,0,0,4,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,0,0,0]

@@ -1,0 +1,54 @@
+From eb512f66e1c535bbf578e564aedb3ee6f49022ee Mon Sep 17 00:00:00 2001
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date: Tue, 15 Mar 2022 02:35:08 +0100
+Subject: [PATCH] Add more heading margin in TranslateClause
+
+Valgrind reports:
+
+==3642987== Conditional jump or move depends on uninitialised value(s)
+==3642987==    at 0x491F268: TranslateNumber_1 (numbers.c:1785)
+==3642987==    by 0x4923C35: TranslateNumber (numbers.c:2080)
+==3642987==    by 0x49556DC: TranslateWord3 (translate.c:644)
+==3642987==    by 0x4957FCE: TranslateWord (translate.c:1100)
+==3642987==    by 0x4959344: TranslateWord2 (translate.c:1361)
+==3642987==    by 0x496116E: TranslateClause (translate.c:2613)
+==3642987==    by 0x494FF7A: SpeakNextClause (synthesize.c:1569)
+==3642987==    by 0x4939B9D: Synthesize (speech.c:457)
+==3642987==    by 0x493AE6A: sync_espeak_Synth (speech.c:570)
+==3642987==    by 0x493B286: espeak_ng_Synthesize (speech.c:678)
+==3642987==    by 0x4916925: espeak_Synth (espeak_api.c:90)
+==3642987==    by 0x10CF5D: main (espeak-ng.c:691)
+==3642987==  Uninitialised value was created by a stack allocation
+==3642987==    at 0x495BD9F: TranslateClause (translate.c:1941)
+
+Indeed, TranslateNumber_1 looks back up to three bytes before, with
+IsDigit09(word[-3])), so we have to increase the heading margin to three
+spaces.
+---
+ src/libespeak-ng/translate.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/libespeak-ng/translate.c b/src/libespeak-ng/translate.c
+index c2af14467..3013c2c7c 100644
+--- a/src/libespeak-ng/translate.c
++++ b/src/libespeak-ng/translate.c
+@@ -2539,7 +2539,9 @@ void TranslateClause(Translator *tr, int *tone_out, char **voice_change)
+ 		if (n_digits > 4) {
+ 			// word is entirely digits, insert commas and break into 3 digit "words"
+ 			number_buf[0] = ' ';
+-			pn = &number_buf[1];
++			number_buf[1] = ' ';
++			number_buf[2] = ' ';
++			pn = &number_buf[3];
+ 			nx = n_digits;
+ 			nw = 0;
+ 
+@@ -2583,7 +2585,7 @@ void TranslateClause(Translator *tr, int *tone_out, char **voice_change)
+ 			pn[16] = 0;
+ 			nw = 0;
+ 
+-			for (pw = &number_buf[1]; pw < pn;) {
++			for (pw = &number_buf[3]; pw < pn;) {
+ 				// keep wflags for each part, for FLAG_HYPHEN_AFTER
+ 				dict_flags = TranslateWord2(tr, pw, &num_wtab[nw++], words[ix].pre_pause);
+ 				while (*pw++ != ' ')

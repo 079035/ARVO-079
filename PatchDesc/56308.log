@@ -1,17 +1,8 @@
-Vulnerability:
+1. Vulnerability:
+The vulnerability in the code before the patch was an out-of-bound read vulnerability in the ASN parsing logic. This could potentially allow an attacker to read sensitive information from memory locations that are outside the intended boundary of the buffer.
 
-The vulnerability in the given code patch is an out-of-bound read in the ASN parsing logic. This can lead to memory corruption or information disclosure.
+2. Short Summary of the Fix:
+The fix involves adding checks to ensure that the index does not exceed the size of the buffer being read. This prevents the out-of-bound read from occurring.
 
-Summary of the fix:
-
-The fix prevents the out-of-bound read issue by adding checks for the buffer boundaries before accessing the data.
-
-Detailed description of the fix:
-
-1. The fix adds checks for buffer boundaries after parsing the CertStatus in the DecodeSingleResponse function. It checks if the index (idx) is greater than or equal to the size of the input data. If it is, the function returns BUFFER_E to indicate a buffer error.
-
-2. In addition to the previous check, the fix also checks the buffer boundaries for the "thisDateParsed" data. It verifies if the index (idx) plus the localIdx is greater than or equal to the size of the input data. If it is, the function returns BUFFER_E.
-
-3. Similarly, the fix adds checks for the buffer boundaries for the "nextDateParsed" data. It verifies if the index (idx) plus the localIdx is greater than or equal to the size of the input data. If it is, the function returns BUFFER_E.
-
-Overall, the fix adds buffer boundary checks at critical points in the code to prevent out-of-bound reads and potential memory corruption or information disclosure.
+3. Detailed Description of the Fix:
+The fix is implemented by adding checks after each block of code that increments the index. These checks compare the index against the size of the buffer. If the index is greater than or equal to the size, the function returns an error code (`BUFFER_E`). This ensures that the function does not attempt to read beyond the end of the buffer, thus preventing the out-of-bound read. The checks are added at several places in the code where the index is incremented, including after the `CertStatus` switch case, after getting the `thisDateInfo`, and after getting the `nextDateInfo`.

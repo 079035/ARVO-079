@@ -1,0 +1,72 @@
+commit 6c81a09e3ef239a2d7a991d00fe3620a67298b99
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Sun Aug 14 20:46:49 2022 +0100
+
+    ofz#49713 Heap-use-after-free
+    
+    the dtor of ScAttrArray where the std::vector<ScAttrEntry> ends up
+    will call ScDocumentPool::Remove on each entries pPattern, assuming
+    that a matching ScDocumentPool::Put was called on each, something
+    that is elided if we just do a simply copy here.
+    
+    probably a problem since:
+    
+    commit dddee125cc32f1ad5228e598a7de04e9654e65c1
+    Date:   Thu Mar 10 15:03:25 2022 +0100
+    
+        load ods/xlsx with full row attributes without allocating all columns
+    
+    Change-Id: I3a5e2e3fa4d40343f30f9eefbabd1579d8a97e02
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/138262
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/sc/qa/unit/data/xls/pass/ofz49713-1.xls b/sc/qa/unit/data/xls/pass/ofz49713-1.xls
+new file mode 100644
+index 000000000000..b32574013e95
+Binary files /dev/null and b/sc/qa/unit/data/xls/pass/ofz49713-1.xls differ
+diff --git a/sc/source/core/data/table2.cxx b/sc/source/core/data/table2.cxx
+index c7c8a92b03dc..4eb5671f0dc7 100644
+--- a/sc/source/core/data/table2.cxx
++++ b/sc/source/core/data/table2.cxx
+@@ -2897,6 +2897,20 @@ void ScTable::ApplyPatternArea( SCCOL nStartCol, SCROW nStartRow, SCCOL nEndCol,
+         CreateColumnIfNotExists(i).ApplyPatternArea(nStartRow, nEndRow, rAttr, pDataArray, pIsChanged);
+ }
+ 
++namespace
++{
++    std::vector<ScAttrEntry> duplicateScAttrEntries(ScDocument& rDocument, const std::vector<ScAttrEntry>& rOrigData)
++    {
++        std::vector<ScAttrEntry> aData(rOrigData);
++        for (size_t nIdx = 0; nIdx < aData.size(); ++nIdx)
++        {
++            ScPatternAttr aNewPattern(*aData[nIdx].pPattern);
++            aData[nIdx].pPattern = &rDocument.GetPool()->Put(aNewPattern);
++        }
++        return aData;
++    }
++}
++
+ void ScTable::SetAttrEntries( SCCOL nStartCol, SCCOL nEndCol, std::vector<ScAttrEntry> && vNewData)
+ {
+     if (!ValidCol(nStartCol) || !ValidCol(nEndCol))
+@@ -2908,8 +2922,7 @@ void ScTable::SetAttrEntries( SCCOL nStartCol, SCCOL nEndCol, std::vector<ScAttr
+             // If we would like set all columns to same attrs, then change only attrs for not existing columns
+             nEndCol = aCol.size() - 1;
+             for (SCCOL i = nStartCol; i <= nEndCol; i++)
+-                // [-loplugin:redundantfcast] false positive:
+-                aCol[i].SetAttrEntries( std::vector<ScAttrEntry>(vNewData));
++                aCol[i].SetAttrEntries(duplicateScAttrEntries(rDocument, vNewData));
+             aDefaultColData.SetAttrEntries(std::move(vNewData));
+         }
+         else
+@@ -2922,8 +2935,7 @@ void ScTable::SetAttrEntries( SCCOL nStartCol, SCCOL nEndCol, std::vector<ScAttr
+     {
+         CreateColumnIfNotExists( nEndCol );
+         for (SCCOL i = nStartCol; i < nEndCol; i++) // all but last need a copy
+-            // [-loplugin:redundantfcast] false positive:
+-            aCol[i].SetAttrEntries( std::vector<ScAttrEntry>(vNewData));
++            aCol[i].SetAttrEntries(duplicateScAttrEntries(rDocument, vNewData));
+         aCol[nEndCol].SetAttrEntries( std::move(vNewData));
+     }
+ }

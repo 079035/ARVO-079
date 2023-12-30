@@ -1,0 +1,41 @@
+From 9b9a4cfacf8f5672c19bc8298f9c03ecc53bd8e5 Mon Sep 17 00:00:00 2001
+From: Thomas Van Lenten <thomasvl@google.com>
+Date: Wed, 14 Apr 2021 14:04:18 -0400
+Subject: [PATCH] Handle a extension in JSON being 'null'
+
+---
+ Sources/SwiftProtobuf/JSONDecoder.swift       | 8 +++++++-
+ Tests/SwiftProtobufTests/Test_FuzzTests.swift | 2 ++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/Sources/SwiftProtobuf/JSONDecoder.swift b/Sources/SwiftProtobuf/JSONDecoder.swift
+index 41e8e5afa..b0214e1df 100644
+--- a/Sources/SwiftProtobuf/JSONDecoder.swift
++++ b/Sources/SwiftProtobuf/JSONDecoder.swift
+@@ -730,6 +730,12 @@ internal struct JSONDecoder: Decoder {
+     } else {
+       fieldValue = try ext._protobuf_newField(decoder: &self)
+     }
+-    values[fieldNumber] = fieldValue!
++    // If the value was `null`, then the 'else' clause will return nil, as there
++    // is nothing to assign. If the api ever supports merging JSON into an
++    // object to update it, then the 'then' clause likely should be update to
++    // support clearing the the value rather that keeping its current value.
++    if fieldValue != nil {
++      values[fieldNumber] = fieldValue
++    }
+   }
+ }
+diff --git a/Tests/SwiftProtobufTests/Test_FuzzTests.swift b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+index 7f292b40a..55df18a80 100644
+--- a/Tests/SwiftProtobufTests/Test_FuzzTests.swift
++++ b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+@@ -89,6 +89,8 @@ class Test_FuzzTests: XCTestCase {
+       0x7b, 0x22, 0xf4, 0x7b, 0x22, 0x3a, 0x5c, 0x00, 0x2e, 0x20, 0x22, 0x3a,
+       0x5c, 0x00, 0x2e, 0x20
+     ])
++
++    assertJSONFails("{\"[fuzz.testing.singular_sint32_ext]\":null")
+   }
+ 
+   func test_TextFormat() {

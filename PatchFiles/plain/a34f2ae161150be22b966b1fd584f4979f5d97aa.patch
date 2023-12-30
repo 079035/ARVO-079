@@ -1,0 +1,23 @@
+commit a34f2ae161150be22b966b1fd584f4979f5d97aa
+Author: Ken Sharp <ken.sharp@artifex.com>
+Date:   Wed Sep 21 10:15:30 2022 +0100
+
+    OSS_fuzz 51618 - Ins_PUSHW: bounds check byte code buffer
+    
+    As per Chris's commit e3615c77c860a20d7537f3d126c0aaa399c52787 for the
+    Ins_PUSHB instruction, but for 'words' (2 bytes each).
+
+diff --git a/base/ttinterp.c b/base/ttinterp.c
+index c5e0e32ce..8c968ffac 100644
+--- a/base/ttinterp.c
++++ b/base/ttinterp.c
+@@ -2402,7 +2402,8 @@ static int nInstrCount=0;
+ 
+     L = CUR.opcode - 0xB8 + 1;
+ 
+-    if ( BOUNDS( L, CUR.stackSize+1-CUR.top ) )
++    if ( BOUNDS( L, CUR.stackSize+1-CUR.top )
++      || BOUNDS( CUR.IP + (L * 2), CUR.codeSize ))
+     {
+       CUR.error = TT_Err_Stack_Overflow;
+       return;

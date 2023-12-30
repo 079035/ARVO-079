@@ -1,0 +1,64 @@
+From a7aa2c5df6ced5f3c2019a825cfb08a619cf6851 Mon Sep 17 00:00:00 2001
+From: Sen Huang <senhuang96@fb.com>
+Date: Wed, 15 Sep 2021 09:51:42 -0700
+Subject: [PATCH 1/2] Fix NCountWriteBound
+
+---
+ lib/compress/fse_compress.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/lib/compress/fse_compress.c b/lib/compress/fse_compress.c
+index faca767c5c..5547b4ac09 100644
+--- a/lib/compress/fse_compress.c
++++ b/lib/compress/fse_compress.c
+@@ -221,7 +221,11 @@ size_t FSE_buildCTable_wksp(FSE_CTable* ct,
+ ****************************************************************/
+ size_t FSE_NCountWriteBound(unsigned maxSymbolValue, unsigned tableLog)
+ {
+-    size_t const maxHeaderSize = (((maxSymbolValue+1) * tableLog) >> 3) + 3;
++    size_t const maxHeaderSize = (((maxSymbolValue+1) * tableLog
++                                   + 4 /* bitCount initialized at 4 */
++                                   + 2 /* first two symbols may use one additional bit each */) / 8)
++                                    + 1 /* round up to whole nb bytes */
++                                    + 2 /* additional two bytes for bitstream flush */;
+     return maxSymbolValue ? maxHeaderSize : FSE_NCOUNTBOUND;  /* maxSymbolValue==0 ? use default */
+ }
+ 
+
+From 99b5e7b8c28875d0df998be2a4598d2358e37f23 Mon Sep 17 00:00:00 2001
+From: senhuang42 <senhuang96@fb.com>
+Date: Wed, 22 Sep 2021 11:27:56 -0400
+Subject: [PATCH 2/2] Add test case for FSE over-write
+
+---
+ tests/fuzzer.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/tests/fuzzer.c b/tests/fuzzer.c
+index fff963176f..49f671d170 100644
+--- a/tests/fuzzer.c
++++ b/tests/fuzzer.c
+@@ -3353,6 +3353,23 @@ static int basicUnitTests(U32 const seed, double compressibility)
+         FSE_normalizeCount(norm, tableLog, count, nbSeq, maxSymbolValue, /* useLowProbCount */ 1);
+     }
+     DISPLAYLEVEL(3, "OK \n");
++
++    DISPLAYLEVEL(3, "test%3i : testing FSE_writeNCount() PR#2779: ", testNb++);
++    {
++        size_t const outBufSize = 9;
++        short const count[11] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 9, 18};
++        unsigned const tableLog = 5;
++        unsigned const maxSymbolValue = 10;
++        BYTE* outBuf = (BYTE*)malloc(outBufSize*sizeof(BYTE));
++
++        /* Ensure that this write doesn't write out of bounds, and that 
++         * FSE_writeNCount_generic() is *not* called with writeIsSafe == 1.
++         */
++        FSE_writeNCount(outBuf, outBufSize, count, maxSymbolValue, tableLog);
++        free(outBuf);
++    }
++    DISPLAYLEVEL(3, "OK \n");
++
+ #ifdef ZSTD_MULTITHREAD
+     DISPLAYLEVEL(3, "test%3i : passing wrong full dict should fail on compressStream2 refPrefix ", testNb++);
+     {   ZSTD_CCtx* cctx = ZSTD_createCCtx();

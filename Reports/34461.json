@@ -1,5 +1,5 @@
 {
-    "fix": "https://gitlab.gnome.org/GNOME/libxml2.git8f5ccada05ddd4a1ff8e399ad39fc7cd4bd33325",
+    "fix": "https://github.com/GNOME/libxml2/commit/8f5ccada05ddd4a1ff8e399ad39fc7cd4bd33325",
     "verify": "0",
     "localId": 34461,
     "project": "libxml2",

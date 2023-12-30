@@ -1,0 +1,178 @@
+From dea123f88e1be645937be4e793523819374648ec Mon Sep 17 00:00:00 2001
+From: tim-weller-wolfssl <tim.weller@wolfssl.com>
+Date: Fri, 10 Feb 2023 15:15:51 -0600
+Subject: [PATCH] Minimal changes to avoid Out-of-Bounds write in ASN.1 parsing
+ logic.  Add unit tests for ParseCert() API passing badly formed ASN data
+ (should error out gracefully).
+
+---
+ tests/api.c         | 68 +++++++++++++++++++++++++++++++++++++--------
+ wolfcrypt/src/asn.c | 26 +++++++++++++++--
+ 2 files changed, 79 insertions(+), 15 deletions(-)
+
+diff --git a/tests/api.c b/tests/api.c
+index 8a67c22a58e..e863f4ddbe3 100644
+--- a/tests/api.c
++++ b/tests/api.c
+@@ -25626,6 +25626,15 @@ static int test_wc_ecc_rs_to_sig(void)
+     XMEMSET(s, 0, keySz);
+ 
+     ret = wc_ecc_rs_to_sig(R, S, sig, &siglen);
++    if (ret == 0) {
++        ret = wc_ecc_sig_to_rs(sig, siglen, r, &rlen, s, &slen);
++    #if !defined(HAVE_SELFTEST) && !defined(HAVE_FIPS) || \
++        (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION > 2))
++        if (ret == ASN_PARSE_E) {
++            ret = 0;
++        }
++    #endif
++    }
+     /* Test bad args. */
+     if (ret == 0) {
+         ret = wc_ecc_rs_to_sig(NULL, S, sig, &siglen);
+@@ -25645,19 +25654,8 @@ static int test_wc_ecc_rs_to_sig(void)
+             ret = wc_ecc_rs_to_sig(zeroStr, S, sig, &siglen);
+         }
+         if (ret == MP_ZERO_E) {
+-            ret = 0;
++            ret = wc_ecc_sig_to_rs(NULL, siglen, r, &rlen, s, &slen);
+         }
+-        else {
+-            ret = WOLFSSL_FATAL_ERROR;
+-        }
+-    }
+-
+-    if (ret == 0) {
+-        ret = wc_ecc_sig_to_rs(sig, siglen, r, &rlen, s, &slen);
+-    }
+-    /* Test bad args. */
+-    if (ret == 0) {
+-        ret = wc_ecc_sig_to_rs(NULL, siglen, r, &rlen, s, &slen);
+         if (ret == ECC_BAD_ARG_E) {
+             ret = wc_ecc_sig_to_rs(sig, siglen, NULL, &rlen, s, &slen);
+         }
+@@ -48286,6 +48284,51 @@ static int test_wc_ParseCert(void)
+     return res;
+ }
+ 
++/* Test wc_ParseCert decoding of various encodings and scenarios ensuring that
++ * the API safely errors out on badly-formed ASN input.
++ * NOTE: Test not compatible with released FIPS implementations!
++ */
++static int test_wc_ParseCert_Error(void)
++{
++    int res = TEST_SKIPPED;
++#if !defined(NO_CERTS) && !defined(NO_RSA) && !defined(HAVE_SELFTEST) && \
++    (!defined(HAVE_FIPS) || \
++    (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION > 2)))
++    DecodedCert decodedCert;
++
++    /* Certificate data */
++    const byte c0[] = { 0x30, 0x04, 0x30, 0x02, 0x02, 0x80, 0x00, 0x00};
++    const byte c1[] = { 0x30, 0x04, 0x30, 0x04, 0x02, 0x80, 0x00, 0x00};
++    const byte c2[] = { 0x30, 0x06, 0x30, 0x04, 0x02, 0x80, 0x00, 0x00};
++    const byte c3[] = { 0x30, 0x07, 0x30, 0x05, 0x02, 0x80, 0x10, 0x00, 0x00};
++    const byte c4[] = { 0x02, 0x80, 0x10, 0x00, 0x00};
++
++    /* Test data */
++    const struct testStruct {
++        const byte* c;
++        const int cSz;
++        const int expRet;
++    } t[] = {
++        {c0, sizeof(c0), ASN_PARSE_E}, /* Invalid bit-string length */
++        {c1, sizeof(c1), ASN_PARSE_E}, /* Invalid bit-string length */
++        {c2, sizeof(c2), ASN_PARSE_E}, /* Invalid integer length (zero) */
++        {c3, sizeof(c3), ASN_PARSE_E}, /* Valid INTEGER, but buffer too short */
++        {c4, sizeof(c4), ASN_PARSE_E}, /* Valid INTEGER, but not in bit-string */
++    };
++    const int tSz = (int)(sizeof(t) / sizeof(struct testStruct));
++
++    for (int i = 0; i < tSz; i++) {
++        WOLFSSL_MSG_EX("i == %d", i);
++        wc_InitDecodedCert(&decodedCert, t[i].c, t[i].cSz, NULL);
++        AssertIntEQ(wc_ParseCert(&decodedCert, CERT_TYPE, NO_VERIFY, NULL), t[i].expRet);
++        wc_FreeDecodedCert(&decodedCert);
++    }
++
++    res = TEST_RES_CHECK(1);
++#endif
++    return res;
++}
++
+ static int test_MakeCertWithPathLen(void)
+ {
+     int res = TEST_SKIPPED;
+@@ -62421,6 +62464,7 @@ TEST_CASE testCases[] = {
+     TEST_DECL(test_wc_SetSubject),
+     TEST_DECL(test_CheckCertSignature),
+     TEST_DECL(test_wc_ParseCert),
++    TEST_DECL(test_wc_ParseCert_Error),
+     TEST_DECL(test_MakeCertWithPathLen),
+ 
+     /* wolfCrypt ECC tests */
+diff --git a/wolfcrypt/src/asn.c b/wolfcrypt/src/asn.c
+index f046e479432..67c4bd2becb 100644
+--- a/wolfcrypt/src/asn.c
++++ b/wolfcrypt/src/asn.c
+@@ -1023,6 +1023,16 @@ static int GetOID(const byte* input, word32* inOutIdx, word32* oid,
+ static int GetASN_Integer(const byte* input, word32 idx, int length,
+                           int positive)
+ {
++#if !defined(HAVE_SELFTEST) && !defined(HAVE_FIPS) || \
++    (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION > 2))
++    /* Check contents consist of one or more octets. */
++    if (length == 0) {
++    #ifdef WOLFSSL_DEBUG_ASN_TEMPLATE
++        WOLFSSL_MSG("Zero length INTEGER not allowed");
++    #endif
++        return ASN_PARSE_E;
++    }
++#endif
+     if (input[idx] == 0) {
+         /* Check leading zero byte required. */
+         if ((length > 1) && ((input[idx + 1] & 0x80) == 0)) {
+@@ -1053,6 +1063,16 @@ static int GetASN_Integer(const byte* input, word32 idx, int length,
+  */
+ static int GetASN_BitString(const byte* input, word32 idx, int length)
+ {
++#if !defined(HAVE_SELFTEST) && !defined(HAVE_FIPS) || \
++    (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION > 2))
++    /* Check contents consist of one or more octets. */
++    if (length == 0) {
++    #ifdef WOLFSSL_DEBUG_ASN_TEMPLATE
++        WOLFSSL_MSG("Zero length BIT STRING not allowed");
++    #endif
++        return ASN_PARSE_E;
++    }
++#endif
+     /* Ensure unused bits value is valid range. */
+     if (input[idx] > 7) {
+     #ifdef WOLFSSL_DEBUG_ASN_TEMPLATE
+@@ -2098,7 +2118,7 @@ int GetLength_ex(const byte* input, word32* inOutIdx, int* len, word32 maxIdx,
+     /* Ensure zero return length on error. */
+     *len = 0;
+ 
+-    /* Check there is at least on byte available containing length information.
++    /* Check there is at least one byte available containing length information.
+      */
+     if ((idx + 1) > maxIdx) {
+         WOLFSSL_MSG("GetLength - bad index on input");
+@@ -2116,7 +2136,7 @@ int GetLength_ex(const byte* input, word32* inOutIdx, int* len, word32 maxIdx,
+         int minLen;
+ 
+         /* Calculate minimum length to be encoded with bytes. */
+-        if (b == 0x80) {
++        if (b == ASN_INDEF_LENGTH) {
+             /* Indefinite length encoding - no length bytes. */
+             minLen = 0;
+         }
+@@ -2156,7 +2176,7 @@ int GetLength_ex(const byte* input, word32* inOutIdx, int* len, word32 maxIdx,
+         length = b;
+     }
+ 
+-    /* When request, check the buffer has at least length bytes left. */
++    /* When requested, check the buffer has at least length bytes left. */
+     if (check && ((idx + length) > maxIdx)) {
+         WOLFSSL_MSG("GetLength - value exceeds buffer length");
+         return BUFFER_E;

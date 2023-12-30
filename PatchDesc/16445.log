@@ -1,12 +1,8 @@
-Vulnerability:
-There is a buffer overflow vulnerability in the `ZSTD_decodeLiteralsBlock` function in the file `zstd_v03.c`.
+1. Vulnerability:
+The vulnerability in the code is a Buffer Overflow vulnerability. This occurs in the Legacy (v0.3) Raw Literals Decompression function. The vulnerability arises when the size of the literals (litSize) is greater than the source size (srcSize) minus 11, which could lead to reading too far with wildcopy, causing a buffer overflow.
 
-Summary of the fix:
-The fix prevents the buffer overflow vulnerability by adding two conditional statements to check the value of `litSize` before executing the memcpy function.
+2. Short Summary of the Fix:
+The fix involves adding a check to ensure that the size of the literals (litSize) does not exceed the block size (BLOCKSIZE). If it does, an error is returned, preventing the buffer overflow.
 
-Detailed description of the fix:
-The vulnerability occurs in the `case IS_RAW` section of the `ZSTD_decodeLiteralsBlock` function. The code checks if the value of `litSize` is greater than `srcSize-11` and if so, returns an error indicating a corruption is detected. However, the code does not check if `litSize` is greater than `BLOCKSIZE` or if it is greater than `srcSize-3`. This introduces a potential buffer overflow vulnerability.
-
-To fix the vulnerability, two conditional statements are added before the `memcpy` function. The first conditional statement checks if `litSize` is greater than `BLOCKSIZE`, and if so, returns an error. This prevents the buffer overflow from occurring. The second conditional statement checks if `litSize` is greater than `srcSize-3`, and if so, returns an error. This ensures that the `memcpy` function does not read beyond the available source data.
-
-By adding these two conditional statements, the fix prevents the buffer overflow vulnerability and ensures the safe execution of the `memcpy` function.
+3. Detailed Description of the Fix:
+In the case of IS_RAW, a check has been added to ensure that the size of the literals (litSize) does not exceed the block size (BLOCKSIZE). If the litSize is greater than BLOCKSIZE, the function returns an error (ERROR(corruption_detected)). This prevents the buffer overflow that could occur if the litSize is too large. This check is in addition to the existing check that ensures that litSize is not greater than srcSize minus 3. If either of these conditions is not met, the function returns an error, preventing the buffer overflow.

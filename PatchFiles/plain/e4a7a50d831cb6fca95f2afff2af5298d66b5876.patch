@@ -1,0 +1,65 @@
+commit e4a7a50d831cb6fca95f2afff2af5298d66b5876
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Thu May 5 20:12:06 2022 +0100
+
+    ofz#47241 don't use hardcoded SalLayoutFlags::BiDiStrong mode for fuzzing
+    
+    getting different results vs the real world wrt glyph caching, go back
+    to normal and try a different approach when timeouts return
+    
+    Change-Id: Ifb335888615b82c9bea83bd19a1cabcf8660dc74
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/133909
+    Tested-by: Caolán McNamara <caolanm@redhat.com>
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/vcl/source/gdi/impglyphitem.cxx b/vcl/source/gdi/impglyphitem.cxx
+index 8bb7e0f3e984..43f102102210 100644
+--- a/vcl/source/gdi/impglyphitem.cxx
++++ b/vcl/source/gdi/impglyphitem.cxx
+@@ -24,7 +24,6 @@
+ #include <tools/stream.hxx>
+ #include <unotools/configmgr.hxx>
+ #include <TextLayoutCache.hxx>
+-#include <config_fuzzers.h>
+ #include <officecfg/Office/Common.hxx>
+ 
+ // These need being explicit because of SalLayoutGlyphsImpl being private in vcl.
+@@ -297,13 +296,7 @@ SalLayoutGlyphsCache::GetLayoutGlyphs(VclPtr<const OutputDevice> outputDevice, c
+         // So in that case this is a cached failure.
+         return nullptr;
+     }
+-#if !ENABLE_FUZZERS
+     const SalLayoutFlags glyphItemsOnlyLayout = SalLayoutFlags::GlyphItemsOnly;
+-#else
+-    // ofz#39150 skip detecting bidi directions
+-    const SalLayoutFlags glyphItemsOnlyLayout
+-        = SalLayoutFlags::GlyphItemsOnly | SalLayoutFlags::BiDiStrong;
+-#endif
+     bool resetLastSubstringKey = true;
+     const sal_Unicode nbSpace = 0xa0; // non-breaking space
+     if (nIndex != 0 || nLen != text.getLength())
+diff --git a/vcl/source/outdev/text.cxx b/vcl/source/outdev/text.cxx
+index aa3fb503941b..d1d50f79572b 100644
+--- a/vcl/source/outdev/text.cxx
++++ b/vcl/source/outdev/text.cxx
+@@ -41,7 +41,6 @@
+ #include <vcl/sysdata.hxx>
+ #include <vcl/unohelp.hxx>
+ 
+-#include <config_fuzzers.h>
+ #include <ImplLayoutArgs.hxx>
+ #include <ImplOutDevData.hxx>
+ #include <drawmode.hxx>
+@@ -791,12 +790,7 @@ vcl::Region OutputDevice::GetOutputBoundsClipRegion() const
+     return GetClipRegion();
+ }
+ 
+-#if !ENABLE_FUZZERS
+ const SalLayoutFlags eDefaultLayout = SalLayoutFlags::NONE;
+-#else
+-// ofz#23573 skip detecting bidi directions
+-const SalLayoutFlags eDefaultLayout = SalLayoutFlags::BiDiStrong;
+-#endif
+ 
+ void OutputDevice::DrawText( const Point& rStartPt, const OUString& rStr,
+                              sal_Int32 nIndex, sal_Int32 nLen,

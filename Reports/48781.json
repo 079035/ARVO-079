@@ -1,5 +1,5 @@
 {
-    "fix": "https://chromium.googlesource.com/webm/libvpx/+/933b6b90a583b593efd8acb644603ab189226309",
+    "fix": "https://chromium.googlesource.com/webm/libvpx/+/933b6b90a583b593efd8acb644603ab189226309%5E%21/",
     "verify": "0",
     "localId": 48781,
     "project": "libvpx",

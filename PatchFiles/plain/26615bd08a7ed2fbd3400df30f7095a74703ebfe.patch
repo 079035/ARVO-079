@@ -1,0 +1,83 @@
+From 26615bd08a7ed2fbd3400df30f7095a74703ebfe Mon Sep 17 00:00:00 2001
+From: "Victor M. Alvarez" <vmalvarez@virustotal.com>
+Date: Tue, 17 Mar 2020 18:37:08 +0100
+Subject: [PATCH] Expose profiling API so that dependencies are met even if
+ YARA is compiled without YR_PROFILING_ENABLED.
+
+---
+ libyara/include/yara/types.h |  7 ++-----
+ libyara/scanner.c            | 12 +++++++++---
+ 2 files changed, 11 insertions(+), 8 deletions(-)
+
+diff --git a/libyara/include/yara/types.h b/libyara/include/yara/types.h
+index 0524546c67..83d10a2429 100644
+--- a/libyara/include/yara/types.h
++++ b/libyara/include/yara/types.h
+@@ -623,13 +623,11 @@ struct YR_RULES_STATS
+ };
+ 
+ 
+-#ifdef YR_PROFILING_ENABLED
+ struct YR_PROFILING_INFO
+ {
+   YR_RULE* rule;
+   uint64_t cost;
+ };
+-#endif
+ 
+ 
+ typedef const uint8_t* (*YR_MEMORY_BLOCK_FETCH_DATA_FUNC)(
+@@ -739,10 +737,9 @@ struct YR_SCAN_CONTEXT
+   YR_MATCHES* unconfirmed_matches;
+ 
+   // rule_cost is a pointer to an array of 64-bit integers with one entry per
+-  // rule. Entry N has the time cost for rule with index N.
+-  #ifdef YR_PROFILING_ENABLED
++  // rule. Entry N has the time cost for rule with index N. If YARA is not
++  // built with YR_PROFILING_ENABLED this pointer is NULL.
+   uint64_t* time_cost;
+-  #endif
+ };
+ 
+ 
+diff --git a/libyara/scanner.c b/libyara/scanner.c
+index 4afe8c124d..bd25ff319c 100644
+--- a/libyara/scanner.c
++++ b/libyara/scanner.c
+@@ -174,7 +174,7 @@ YR_API int yr_scanner_create(
+ 
+   FAIL_ON_ERROR_WITH_CLEANUP(
+       yr_hash_table_create(64, &new_scanner->objects_table),
+-      yr_scanner_destroy(new_scanner));
++      yr_free(new_scanner));
+ 
+   new_scanner->rules = rules;
+   new_scanner->entry_point = YR_UNDEFINED;
+@@ -200,6 +200,14 @@ YR_API int yr_scanner_create(
+   #ifdef YR_PROFILING_ENABLED
+   new_scanner->time_cost = (uint64_t*) yr_calloc(
+       rules->num_rules, sizeof(uint64_t));
++
++  if (new_scanner->time_cost == NULL)
++  {
++    yr_scanner_destroy(new_scanner);
++    return ERROR_INSUFFICIENT_MEMORY;
++  }
++  #else
++  new_scanner->time_cost = NULL;
+   #endif
+ 
+   external = rules->externals_list_head;
+@@ -638,7 +646,6 @@ YR_API YR_RULE* yr_scanner_last_error_rule(
+ }
+ 
+ 
+-#ifdef YR_PROFILING_ENABLED
+ static int sort_by_cost_desc(
+     const struct YR_PROFILING_INFO* r1,
+     const struct YR_PROFILING_INFO* r2)
+@@ -719,4 +726,3 @@ YR_API int yr_scanner_print_profiling_info(
+ 
+   return ERROR_SUCCESS;
+ }
+-#endif

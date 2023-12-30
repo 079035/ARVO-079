@@ -1,0 +1,61 @@
+commit 0d1064face9956be43774b81e9cdad5daea28c92
+Author: Alan Modra <amodra@gmail.com>
+Date:   Thu Mar 17 11:54:40 2022 +1030
+
+    asan: buffer overflows after calling ignore_rest_of_line
+    
+    operand() is not a place that should be calling ignore_rest_of_line.
+    ignore_rest_of_line shouldn't increment input_line_pointer if already
+    at buffer limit.
+    
+            * expr.c (operand): Don't call ignore_rest_of_line.
+            * read.c (s_mri_common): Likewise.
+            (ignore_rest_of_line): Don't increment input_line_pointer if
+            already at buffer_limit.
+
+diff --git a/gas/expr.c b/gas/expr.c
+index bd5b9e70a4a..2341343bf00 100644
+--- a/gas/expr.c
++++ b/gas/expr.c
+@@ -1212,9 +1212,7 @@ operand (expressionS *expressionP, enum expr_mode mode)
+ 		{
+ 		  as_bad (_("expected symbol name"));
+ 		  (void) restore_line_pointer (c);
+-		  if (c != ')')
+-		    ignore_rest_of_line ();
+-		  else
++		  if (c == ')')
+ 		    ++input_line_pointer;
+ 		  break;
+ 		}
+diff --git a/gas/read.c b/gas/read.c
+index fe0aff26175..e9a300fe10c 100644
+--- a/gas/read.c
++++ b/gas/read.c
+@@ -1940,7 +1940,6 @@ s_mri_common (int small ATTRIBUTE_UNUSED)
+   if (S_IS_DEFINED (sym) && !S_IS_COMMON (sym))
+     {
+       as_bad (_("symbol `%s' is already defined"), S_GET_NAME (sym));
+-      ignore_rest_of_line ();
+       mri_comment_end (stop, stopc);
+       return;
+     }
+@@ -3980,15 +3979,10 @@ demand_empty_rest_of_line (void)
+ void
+ ignore_rest_of_line (void)
+ {
+-  while (input_line_pointer < buffer_limit
+-	 && !is_end_of_line[(unsigned char) *input_line_pointer])
+-    input_line_pointer++;
+-
+-  input_line_pointer++;
+-
++  while (input_line_pointer < buffer_limit)
++    if (is_end_of_line[(unsigned char) *input_line_pointer++])
++      break;
+   /* Return pointing just after end-of-line.  */
+-  if (input_line_pointer <= buffer_limit)
+-    know (is_end_of_line[(unsigned char) input_line_pointer[-1]]);
+ }
+ 
+ /* Sets frag for given symbol to zero_address_frag, except when the

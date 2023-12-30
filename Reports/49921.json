@@ -1,0 +1,93 @@
+{
+    "fix": "https://chromium.googlesource.com/chromiumos/third_party/adhd/+/014771d61a77dfdd8ad623a0138c9e90b9f3ee35",
+    "verify": "0",
+    "localId": 49921,
+    "project": "adhd",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "msan",
+    "crash_type": "Use-of-uninitialized-value",
+    "severity": "Medium",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 49921,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1660027128,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=6749599955550208\n\nProject: cras\nFuzzing Engine: libFuzzer\nFuzz Target: cras_fl_media_fuzzer\nJob Type: libfuzzer_msan_cras\nPlatform Id: linux\n\nCrash Type: Use-of-uninitialized-value\nCrash Address: \nCrash State:\n  mix_add_scale_stride\n  cras_mix_add_scale_stride\n  cras_audio_area_copy\n  \nSanitizer: memory (MSAN)\n\nRecommended Security Severity: Medium\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_msan_cras&range=202208040000:202208040613\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=6749599955550208\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 49921,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1660070967,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2022-11-07"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 49921,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "233459370",
+                    "displayName": "Git Watcher"
+                },
+                "timestamp": 1660520944,
+                "content": "The following revision refers to this bug:\n  https://chromium.googlesource.com/chromiumos/third_party/adhd/+/014771d61a77dfdd8ad623a0138c9e90b9f3ee35\n\ncommit 014771d61a77dfdd8ad623a0138c9e90b9f3ee35\nAuthor: michelleyswang <michelleyswang@google.com>\nDate: Fri Aug 12 06:56:36 2022\n\nCRAS: fix use of uninitialized value in cras_fmt_conv\n\nChanges:\n- Change malloc to calloc in mix_add_scale_stride to fix use of\n  uninitialized value error\n\nBUG=b:242265071, oss-fuzz:49921\nTEST=cras_fl_media_fuzzer\n\nChange-Id: Ib7d0823d3fb1b03a80f4ab560d6e17dd03ef3d4f\nReviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/adhd/+/3827105\nCommit-Queue: Chih-Yang Hsia <paulhsia@chromium.org>\nTested-by: Michelle Wang <michelleyswang@google.com>\nTested-by: Chih-Yang Hsia <paulhsia@chromium.org>\nReviewed-by: Chih-Yang Hsia <paulhsia@chromium.org>\n\n[modify] https://crrev.com/014771d61a77dfdd8ad623a0138c9e90b9f3ee35/cras/src/server/cras_fmt_conv.c\n"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 49921,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1660576440,
+                "content": "ClusterFuzz testcase 6749599955550208 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_msan_cras&range=202208141800:202208150000\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 49921,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1660588745,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "014771d61a77dfdd8ad623a0138c9e90b9f3ee35",
+    "repo_addr": "https://chromium.googlesource.com/chromiumos/third_party/adhd"
+}

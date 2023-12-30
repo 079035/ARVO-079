@@ -1,0 +1,65 @@
+From e81547f313af6f6733ccc25eb3c0cea8e6008578 Mon Sep 17 00:00:00 2001
+From: Konstantin Varlamov <var-const@users.noreply.github.com>
+Date: Tue, 30 Mar 2021 19:02:56 -0400
+Subject: [PATCH] Fix fuzzer build failure (#7739)
+
+---
+ Firestore/core/CMakeLists.txt          | 1 +
+ Firestore/fuzzing/CMakeLists.txt       | 2 +-
+ Firestore/fuzzing/serializer_fuzzer.cc | 5 ++++-
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/Firestore/core/CMakeLists.txt b/Firestore/core/CMakeLists.txt
+index 3270297febc..ec4806bc392 100644
+--- a/Firestore/core/CMakeLists.txt
++++ b/Firestore/core/CMakeLists.txt
+@@ -136,6 +136,7 @@ target_link_libraries(
+   absl_meta
+   absl_optional
+   absl_strings
++  absl::time
+ )
+ 
+ if(HAVE_OPENSSL_RAND_H)
+diff --git a/Firestore/fuzzing/CMakeLists.txt b/Firestore/fuzzing/CMakeLists.txt
+index 55699911d83..a404fb4c0fd 100644
+--- a/Firestore/fuzzing/CMakeLists.txt
++++ b/Firestore/fuzzing/CMakeLists.txt
+@@ -32,7 +32,7 @@ set(
+   ${FIREBASE_SOURCE_DIR}/Firestore/Example/FuzzTests/FuzzingResources
+ )
+ 
+-link_libraries(firestore_core)
++link_libraries(firestore_core firestore_util)
+ 
+ 
+ # Serializer fuzzing target.
+diff --git a/Firestore/fuzzing/serializer_fuzzer.cc b/Firestore/fuzzing/serializer_fuzzer.cc
+index af7fe8e6e02..66844e620e1 100644
+--- a/Firestore/fuzzing/serializer_fuzzer.cc
++++ b/Firestore/fuzzing/serializer_fuzzer.cc
+@@ -22,12 +22,14 @@
+ #include "Firestore/core/src/nanopb/message.h"
+ #include "Firestore/core/src/nanopb/reader.h"
+ #include "Firestore/core/src/remote/serializer.h"
++#include "Firestore/core/src/util/read_context.h"
+ 
+ using firebase::firestore::google_firestore_v1_Value;
+ using firebase::firestore::model::DatabaseId;
+ using firebase::firestore::nanopb::Message;
+ using firebase::firestore::nanopb::StringReader;
+ using firebase::firestore::remote::Serializer;
++using firebase::firestore::util::ReadContext;
+ 
+ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+   Serializer serializer{DatabaseId{"project", DatabaseId::kDefault}};
+@@ -35,7 +37,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+     // Try to decode the received data using the serializer.
+     StringReader reader{data, size};
+     auto message = Message<google_firestore_v1_Value>::TryParse(&reader);
+-    serializer.DecodeFieldValue(&reader, *message);
++    ReadContext context;
++    serializer.DecodeFieldValue(&context, *message);
+   } catch (...) {
+     // Ignore caught errors and assertions because fuzz testing is looking for
+     // crashes and memory errors.

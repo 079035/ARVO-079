@@ -1,0 +1,34 @@
+commit c745108a1b72b7b14899e048ee76b99ee49d9d80
+Author: Ken Sharp <ken.sharp@artifex.com>
+Date:   Tue Nov 22 14:11:49 2022 +0000
+
+    GhostPDF - cgeck base space for Indexed colour spaces
+    
+    OSS-fuzz 53619
+    
+    The fuzzed file has a /Indexed space with a base space which is an array
+    [/Pattern]. Pattern spaces (and Indexed spaces) are not valid as the
+    base space for an Indexed space.
+    
+    Check the base space and exit with an error if it is not a valid space.
+
+diff --git a/pdf/pdf_colour.c b/pdf/pdf_colour.c
+index ebd95e152..fd873f9df 100644
+--- a/pdf/pdf_colour.c
++++ b/pdf/pdf_colour.c
+@@ -2092,9 +2092,13 @@ pdfi_create_indexed(pdf_context *ctx, pdf_array *color_array, int index,
+     if (code < 0)
+         goto exit;
+ 
+-    (void)pcs_base->type->install_cspace(pcs_base, ctx->pgs);
+-
+     base_type = gs_color_space_get_index(pcs_base);
++    if (base_type == gs_color_space_index_Pattern || base_type == gs_color_space_index_Indexed) {
++        code = gs_note_error(gs_error_typecheck);
++        goto exit;
++    }
++
++    (void)pcs_base->type->install_cspace(pcs_base, ctx->pgs);
+ 
+     code = pdfi_array_get(ctx, color_array, index + 3, &lookup);
+     if (code < 0)

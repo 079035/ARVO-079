@@ -1,7 +1,7 @@
 {
     "localId": 14481,
     "project": "net-snmp",
-    "fix": "git://git.code.sf.net/p/net-snmp/code/commits/7de049193ab78d9fcdc3baa2c0673bd1e300ed5b",
+    "fix": "https://github.com/tbeu/matio/commit/7de049193ab78d9fcdc3baa2c0673bd1e300ed5b",
     "verify": "0",
     "fuzzer": "afl",
     "sanitizer": "asan",

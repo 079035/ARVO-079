@@ -1,0 +1,22 @@
+From 26cbc430197a3432075c7c5dfec41765f92b97ed Mon Sep 17 00:00:00 2001
+From: Valentin Clement <clementval@gmail.com>
+Date: Fri, 21 Jan 2022 18:30:34 +0100
+Subject: [PATCH] [flang] Remove target and require shell
+
+Fix failure from 68db0e25df4b1edaa2c6080eb88453ab01ea01d3 on
+arm buildbot.
+---
+ flang/test/Fir/basic-program.fir | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/flang/test/Fir/basic-program.fir b/flang/test/Fir/basic-program.fir
+index 02463bef99496..b417a6148d39b 100644
+--- a/flang/test/Fir/basic-program.fir
++++ b/flang/test/Fir/basic-program.fir
+@@ -1,4 +1,5 @@
+-// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
++// RUN: tco %s | FileCheck %s
++// REQUIRES: shell
+ 
+ // Check that tco is working with a basic test.
+ 

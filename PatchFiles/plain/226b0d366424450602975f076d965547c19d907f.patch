@@ -1,0 +1,75 @@
+From 226b0d366424450602975f076d965547c19d907f Mon Sep 17 00:00:00 2001
+From: Guillaume Valadon <guillaume.valadon@datadoghq.com>
+Date: Thu, 11 Feb 2021 12:54:22 +0100
+Subject: [PATCH] Ensure that the PcapNG interface identifier is valid
+
+---
+ scapy/utils.py      | 14 ++++++++++++++
+ test/regression.uts |  8 ++++++++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/scapy/utils.py b/scapy/utils.py
+index b5f6e1eb82..6034c822ec 100644
+--- a/scapy/utils.py
++++ b/scapy/utils.py
+@@ -1491,6 +1491,14 @@ def _read_block_idb(self, block, _):
+             raise EOFError
+         self.interfaces.append(interface)
+ 
++    def _check_interface_id(self, intid):
++        # type: (int) -> None
++        """Check the interface id value and raise EOFError if invalid."""
++        tmp_len = len(self.interfaces)
++        if intid >= tmp_len:
++            warning("PcapNg: invalid interface id %d/%d" % (intid, tmp_len))
++            raise EOFError
++
+     def _read_block_epb(self, block, size):
+         # type: (bytes, int) -> Tuple[bytes, RawPcapNgReader.PacketMetadata]
+         """Enhanced Packet Block"""
+@@ -1501,6 +1509,8 @@ def _read_block_epb(self, block, size):
+             )
+         except struct.error:
+             raise EOFError
++
++        self._check_interface_id(intid)
+         return (block[20:20 + caplen][:size],
+                 RawPcapNgReader.PacketMetadata(linktype=self.interfaces[intid][0],  # noqa: E501
+                                                tsresol=self.interfaces[intid][2],  # noqa: E501
+@@ -1515,6 +1525,8 @@ def _read_block_spb(self, block, size):
+         # been captured on the interface previously specified in the
+         # first Interface Description Block."
+         intid = 0
++        self._check_interface_id(intid)
++
+         wirelen, = struct.unpack(self.endian + "I", block[:4])
+         caplen = min(wirelen, self.interfaces[intid][1])
+         return (block[4:4 + caplen][:size],
+@@ -1531,6 +1543,8 @@ def _read_block_pkt(self, block, size):
+             self.endian + "HH4I",
+             block[:20],
+         )
++
++        self._check_interface_id(intid)
+         return (block[20:20 + caplen][:size],
+                 RawPcapNgReader.PacketMetadata(linktype=self.interfaces[intid][0],  # noqa: E501
+                                                tsresol=self.interfaces[intid][2],  # noqa: E501
+diff --git a/test/regression.uts b/test/regression.uts
+index ba7c519f2e..08c4eba551 100644
+--- a/test/regression.uts
++++ b/test/regression.uts
+@@ -2003,6 +2003,14 @@ except Scapy_Exception:
+ invalid_pcapngfile_2 = BytesIO(b'\n\r\r\n\x00\x00\x00\x10\x1a+<M\x00\x00\x00\x10\x00\x00\x00\x01\x00\x00\x00\x10    \x00\x00\x00\x10')
+ assert len(rdpcap(invalid_pcapngfile_2)) == 0
+ 
++# Invalid interface ID in PCAPNG -> raise EOFError
++try:
++    invalid_pcapngfile_3 = BytesIO(b'\n\n\n\x14\x00\x00\x00M<+\x1a    \x14\x00\x00\x00\x03\x00\x00\x00\x14\x00\x00\x00        \x14\x00\x00\x00')
++    rdpcap(invalid_pcapngfile_3)
++    assert False
++except Scapy_Exception:
++    pass
++
+ = Check PcapWriter on null write
+ 
+ f = BytesIO()

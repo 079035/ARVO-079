@@ -1,0 +1,80 @@
+From 272df442f5a9617bf19e55ba5c6e3180315a18cf Mon Sep 17 00:00:00 2001
+From: "Christoph M. Becker" <cmbecker69@gmx.de>
+Date: Thu, 22 Apr 2021 11:46:16 +0200
+Subject: [PATCH] Fix #73246: XMLReader: encoding length not checked
+
+libxml2 expects the passed encoding to be NUL terminated, so we reject
+strings with NUL bytes right away.
+
+Closes GH-6899.
+---
+ NEWS                              |  3 +++
+ ext/xmlreader/php_xmlreader.c     | 10 ++++++++++
+ ext/xmlreader/tests/bug73246.phpt | 16 ++++++++++++++++
+ 3 files changed, 29 insertions(+)
+ create mode 100644 ext/xmlreader/tests/bug73246.phpt
+
+diff --git a/NEWS b/NEWS
+index f4b5f72fef855..f5284d0d49512 100644
+--- a/NEWS
++++ b/NEWS
+@@ -31,6 +31,9 @@ PHP                                                                        NEWS
+ - Opcache:
+   . Fixed bug #80900 (switch statement behavior inside function). (twosee)
+ 
++- XMLReader:
++  . Fixed bug #73246 (XMLReader: encoding length not checked). (cmb)
++
+ 29 Apr 2021, PHP 7.4.18
+ 
+ - Core:
+diff --git a/ext/xmlreader/php_xmlreader.c b/ext/xmlreader/php_xmlreader.c
+index 20960d96d5f03..06f569949ceef 100644
+--- a/ext/xmlreader/php_xmlreader.c
++++ b/ext/xmlreader/php_xmlreader.c
+@@ -873,6 +873,11 @@ PHP_METHOD(xmlreader, open)
+ 		RETURN_FALSE;
+ 	}
+ 
++	if (encoding && CHECK_NULL_PATH(encoding, encoding_len)) {
++		php_error_docref(NULL, E_WARNING, "Encoding must not contain NUL bytes");
++		RETURN_FALSE;
++	}
++
+ 	valid_file = _xmlreader_get_valid_file_path(source, resolved_path, MAXPATHLEN );
+ 
+ 	if (valid_file) {
+@@ -1055,6 +1060,11 @@ PHP_METHOD(xmlreader, XML)
+ 		RETURN_FALSE;
+ 	}
+ 
++	if (encoding && CHECK_NULL_PATH(encoding, encoding_len)) {
++		php_error_docref(NULL, E_WARNING, "Encoding must not contain NUL bytes");
++		RETURN_FALSE;
++	}
++
+ 	inputbfr = xmlParserInputBufferCreateMem(source, source_len, XML_CHAR_ENCODING_NONE);
+ 
+     if (inputbfr != NULL) {
+diff --git a/ext/xmlreader/tests/bug73246.phpt b/ext/xmlreader/tests/bug73246.phpt
+new file mode 100644
+index 0000000000000..809902adb0614
+--- /dev/null
++++ b/ext/xmlreader/tests/bug73246.phpt
+@@ -0,0 +1,16 @@
++--TEST--
++Bug #73246 (XMLReader: encoding length not checked)
++--SKIPIF--
++<?php
++if (!extension_loaded("xmlreader")) die("skip xmlreader extension not available");
++?>
++--FILE--
++<?php
++$reader = new XMLReader();
++$reader->open(__FILE__, "UTF\0-8");
++$reader->XML('<?xml version="1.0"?><root/>', "UTF\0-8");
++?>
++--EXPECTF--
++Warning: XMLReader::open(): Encoding must not contain NUL bytes in %s on line %d
++
++Warning: XMLReader::XML(): Encoding must not contain NUL bytes in %s on line %d

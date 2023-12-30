@@ -1,0 +1,743 @@
+commit 080c2f14c13d0adb74019bce118ca65d97ee407d
+Author: Aaron Boxer <boxerab@gmail.com>
+Date:   Thu Apr 7 18:20:50 2022 -0400
+
+    scheduling: prepare to integrate block scheduling with wavelet
+
+diff --git a/src/lib/jp2/scheduling/CompressScheduler.cpp b/src/lib/jp2/scheduling/CompressScheduler.cpp
+index 32fc3690..da07e378 100644
+--- a/src/lib/jp2/scheduling/CompressScheduler.cpp
++++ b/src/lib/jp2/scheduling/CompressScheduler.cpp
+@@ -21,10 +21,10 @@ namespace grk
+ {
+ CompressScheduler::CompressScheduler(Tile* tile, bool needsRateControl, TileCodingParams* tcp,
+ 									 const double* mct_norms, uint16_t mct_numcomps)
+-	: Scheduler(tile), tile(tile), needsRateControl(needsRateControl), encodeBlocks(nullptr),
++	: Scheduler(tile,false), tile(tile), needsRateControl(needsRateControl), encodeBlocks(nullptr),
+ 	  blockCount(-1), tcp_(tcp), mct_norms_(mct_norms), mct_numcomps_(mct_numcomps)
+ {}
+-bool CompressScheduler::schedule(uint16_t compno)
++bool CompressScheduler::scheduleBlocks(uint16_t compno)
+ {
+ 	uint8_t resno, bandIndex;
+ 	tile->distortion = 0;
+diff --git a/src/lib/jp2/scheduling/CompressScheduler.h b/src/lib/jp2/scheduling/CompressScheduler.h
+index 6a4d07f4..104480aa 100644
+--- a/src/lib/jp2/scheduling/CompressScheduler.h
++++ b/src/lib/jp2/scheduling/CompressScheduler.h
+@@ -24,7 +24,8 @@ class CompressScheduler : public Scheduler
+ 	CompressScheduler(Tile* tile, bool needsRateControl, TileCodingParams* tcp,
+ 					  const double* mct_norms, uint16_t mct_numcomps);
+ 	~CompressScheduler() = default;
+-	bool schedule(uint16_t compno) override;
++	bool scheduleBlocks(uint16_t compno) override;
++	bool scheduleWavelet(uint16_t compno) override {return false; };
+ 
+   private:
+ 	void compress(std::vector<CompressBlockExec*>* blocks);
+diff --git a/src/lib/jp2/scheduling/DecompressScheduler.cpp b/src/lib/jp2/scheduling/DecompressScheduler.cpp
+index 2064cd2b..af520742 100644
+--- a/src/lib/jp2/scheduling/DecompressScheduler.cpp
++++ b/src/lib/jp2/scheduling/DecompressScheduler.cpp
+@@ -20,18 +20,31 @@ namespace grk
+ {
+ const uint8_t gain_b[4] = {0, 1, 1, 2};
+ 
+-DecompressScheduler::DecompressScheduler(Tile* tile, TileCodingParams* tcp, uint8_t prec)
+-	: Scheduler(tile), tcp_(tcp), prec_(prec)
++ResDecompressBlocks::ResDecompressBlocks(void) : res_(0), waveletTransform_(true)
+ {}
++void ResDecompressBlocks::clear(void){
++	res_ = 0;
++	blocks_.clear();
++}
++
++bool ResDecompressBlocks::empty(void) const{
++	return blocks_.empty();
++}
+ 
+-bool DecompressScheduler::schedule(uint16_t compno)
++DecompressScheduler::DecompressScheduler(TileProcessor* tileProcessor, Tile* tile, TileCodingParams* tcp, uint8_t prec)
++	: Scheduler(tile,true), tileProcessor_(tileProcessor), tcp_(tcp), prec_(prec)
++{
++}
++
++bool DecompressScheduler::scheduleBlocks(uint16_t compno)
+ {
+ 	DecompressBlocks blocks;
+ 	ResDecompressBlocks resBlocks;
+ 	auto tccp = tcp_->tccps + compno;
+ 	auto tilec = tile_->comps + compno;
+ 	bool wholeTileDecoding = tilec->isWholeTileDecoding();
+-	for(uint8_t resno = 0; resno <= tilec->highestResolutionDecompressed; ++resno)
++	uint8_t resno = 0;
++	for(; resno <= tilec->highestResolutionDecompressed; ++resno)
+ 	{
+ 		auto res = tilec->tileCompResolution + resno;
+ 		for(uint8_t bandIndex = 0; bandIndex < res->numTileBandWindows; ++bandIndex)
+@@ -64,22 +77,31 @@ bool DecompressScheduler::schedule(uint16_t compno)
+ 						block->stepsize = band->stepsize;
+ 						block->k_msbs = (uint8_t)(band->numbps - cblk->numbps);
+ 						block->R_b = prec_ + gain_b[band->orientation];
+-						resBlocks.push_back(block);
++						resBlocks.blocks_.push_back(block);
+ 					}
+ 				}
+ 			}
+ 		}
+-		if(!resBlocks.empty() && resno > 0)
++		// combine first two resolutions together into single resBlock
++		if(!resBlocks.blocks_.empty() && resno > 0)
+ 		{
++			resBlocks.res_ = resno-1;
+ 			blocks.push_back(resBlocks);
+ 			resBlocks.clear();
+ 		}
+ 	}
++	// handle case where only one resolution is decompressed
++	// (in this case, there will be no wavelet transform)
+ 	if(!resBlocks.empty())
+ 	{
++		assert(tilec->highestResolutionDecompressed == 0);
++		resBlocks.res_ = 0;
++		resBlocks.waveletTransform_ = false;
+ 		blocks.push_back(resBlocks);
+ 		resBlocks.clear();
+ 	}
++	if(!blocks.size())
++		return true;
+ 	// nominal code block dimensions
+ 	uint16_t codeblock_width = (uint16_t)(tccp->cblkw ? (uint32_t)1 << tccp->cblkw : 0);
+ 	uint16_t codeblock_height = (uint16_t)(tccp->cblkh ? (uint32_t)1 << tccp->cblkh : 0);
+@@ -87,15 +109,13 @@ bool DecompressScheduler::schedule(uint16_t compno)
+ 		t1Implementations.push_back(
+ 			T1Factory::makeT1(false, tcp_, codeblock_width, codeblock_height));
+ 
+-	if(!blocks.size())
+-		return true;
+ 	size_t num_threads = ExecSingleton::get()->num_workers();
+ 	success = true;
+ 	if(num_threads == 1)
+ 	{
+ 		for(auto& resBlocks : blocks)
+ 		{
+-			for(auto& block : resBlocks)
++			for(auto& block : resBlocks.blocks_)
+ 			{
+ 				if(!success)
+ 				{
+@@ -112,23 +132,13 @@ bool DecompressScheduler::schedule(uint16_t compno)
+ 
+ 		return success;
+ 	}
+-
+-	uint8_t resno = 0;
+-	for(auto& resBlocks : blocks)
+-	{
+-		auto resFlow = imageComponentFlows_[compno]->resFlows_ + resno;
+-		auto blockFlowName = imageComponentFlows_[compno]->genBlockFlowTaskName(resno);
+-		resFlow->blocks_->push_tasks(resBlocks.size())->add_to(codecFlow_)->name(blockFlowName);
+-		resno++;
+-	}
+ 	resno = 0;
+ 	for(auto& resBlocks : blocks)
+ 	{
+-		size_t blockno = 0;
+ 		auto resFlow = imageComponentFlows_[compno]->resFlows_ + resno;
+-		for(auto& block : resBlocks)
++		for(auto& block : resBlocks.blocks_)
+ 		{
+-			resFlow->blocks_->tasks_[blockno++].work([this, block] {
++			resFlow->blocks_->nextTask()->work([this, block] {
+ 				if(!success)
+ 				{
+ 					delete block;
+@@ -144,6 +154,13 @@ bool DecompressScheduler::schedule(uint16_t compno)
+ 		}
+ 		resno++;
+ 	}
++	if (!includeBlocks) {
++		for(uint8_t resFlowNum = 0;resFlowNum <  blocks.size(); ++resFlowNum)
++		{
++			auto resFlow = imageComponentFlows_[compno]->resFlows_ + resFlowNum;
++			resFlow->blocks_->addTo(codecFlow_);
++		}
++	}
+ 
+ 	return true;
+ }
+@@ -165,4 +182,17 @@ bool DecompressScheduler::decompressBlock(T1Interface* impl, DecompressBlockExec
+ 	return true;
+ }
+ 
++bool DecompressScheduler::scheduleWavelet(uint16_t compno) {
++	auto tilec = tile_->comps + compno;
++	auto numRes = tilec->highestResolutionDecompressed + 1U;
++	WaveletReverse w(tileProcessor_, tilec,
++					compno, tilec->getBuffer()->unreducedBounds(), numRes,
++					 (tcp_->tccps + compno)->qmfbid);
++
++	return w.decompress();
++
++	return false;
++}
++
++
+ } // namespace grk
+diff --git a/src/lib/jp2/scheduling/DecompressScheduler.h b/src/lib/jp2/scheduling/DecompressScheduler.h
+index 411fd1d6..57716113 100644
+--- a/src/lib/jp2/scheduling/DecompressScheduler.h
++++ b/src/lib/jp2/scheduling/DecompressScheduler.h
+@@ -21,18 +21,29 @@
+ 
+ namespace grk
+ {
+-typedef std::vector<DecompressBlockExec*> ResDecompressBlocks;
++
++struct ResDecompressBlocks {
++	ResDecompressBlocks(void);
++	void clear(void);
++	bool empty(void) const;
++
++	std::vector<DecompressBlockExec*> blocks_;
++	uint8_t res_;
++	bool waveletTransform_;
++};
++
+ typedef std::vector<ResDecompressBlocks> DecompressBlocks;
+ 
+ class DecompressScheduler : public Scheduler
+ {
+   public:
+-	DecompressScheduler(Tile* tile, TileCodingParams* tcp, uint8_t prec);
++	DecompressScheduler(TileProcessor* tileProcessor, Tile* tile, TileCodingParams* tcp, uint8_t prec);
+ 	~DecompressScheduler() = default;
+-	bool schedule(uint16_t compno) override;
+-
++	bool scheduleBlocks(uint16_t compno) override;
++	bool scheduleWavelet(uint16_t compno) override;
+   private:
+ 	bool decompressBlock(T1Interface* impl, DecompressBlockExec* block);
++	TileProcessor* tileProcessor_;
+ 	TileCodingParams* tcp_;
+ 	uint8_t prec_;
+ };
+diff --git a/src/lib/jp2/scheduling/FlowComponent.h b/src/lib/jp2/scheduling/FlowComponent.h
+index 0780883b..e021d032 100644
+--- a/src/lib/jp2/scheduling/FlowComponent.h
++++ b/src/lib/jp2/scheduling/FlowComponent.h
+@@ -19,16 +19,9 @@
+ 
+ struct FlowComponent
+ {
+-	FlowComponent(void) : current_(0) {}
++	FlowComponent(void) = default;
+ 	~FlowComponent(void) {}
+-	FlowComponent* push_tasks(uint64_t numTasks)
+-	{
+-		for(uint64_t i = 0; i < numTasks; i++)
+-			tasks_.push_back(flow_.placeholder());
+-
+-		return this;
+-	}
+-	FlowComponent* add_to(tf::Taskflow& composition)
++	FlowComponent* addTo(tf::Taskflow& composition)
+ 	{
+ 		composedFlowTask_ = composition.composed_of(flow_);
+ 		return this;
+@@ -43,19 +36,13 @@ struct FlowComponent
+ 		composedFlowTask_.name(name);
+ 		return this;
+ 	}
+-
+-	tf::Task* get(size_t i)
+-	{
+-		return &tasks_[i];
+-	}
+-
+-	tf::Task* get()
++	tf::Task* nextTask()
+ 	{
+-		return &tasks_[current_++];
++		tasks_.push(flow_.placeholder());
++		return &tasks_.back();
+ 	}
+ 
+-	std::vector<tf::Task> tasks_;
+-	size_t current_;
++	std::queue<tf::Task> tasks_;
+ 	tf::Taskflow flow_;
+ 	tf::Task composedFlowTask_;
+ };
+diff --git a/src/lib/jp2/scheduling/ImageComponentFlow.cpp b/src/lib/jp2/scheduling/ImageComponentFlow.cpp
+index 4f0392a0..c09b5445 100644
+--- a/src/lib/jp2/scheduling/ImageComponentFlow.cpp
++++ b/src/lib/jp2/scheduling/ImageComponentFlow.cpp
+@@ -16,26 +16,34 @@
+  */
+ #include "grk_includes.h"
+ 
++namespace grk
++{
++
+ ResFlow::ResFlow(void)
+ 	: blocks_(new FlowComponent()), waveletHoriz_(new FlowComponent()),
+ 	  waveletVert_(new FlowComponent())
+ {}
+ void ResFlow::graph(void)
+ {
+-	//blocks_->precede(waveletHoriz_);
+-	waveletHoriz_->precede(waveletVert_);
++	if (includeBlocks && blocks_)
++		blocks_->precede(waveletHoriz_);
++	else
++		waveletHoriz_->precede(waveletVert_);
+ }
+-ResFlow* ResFlow::add_to(tf::Taskflow& composition){
+-	//blocks_->add_to(composition);
+-	waveletHoriz_->add_to(composition);
+-	waveletVert_->add_to(composition);
++ResFlow* ResFlow::addTo(tf::Taskflow& composition){
++	if (includeBlocks && blocks_)
++	  blocks_->addTo(composition);
++	waveletHoriz_->addTo(composition);
++	waveletVert_->addTo(composition);
+ 
+ 	return this;
+ }
+ ResFlow* ResFlow::precede(ResFlow* successor)
+ {
+-	//waveletVert_->precede(successor->blocks_);
+-	waveletVert_->precede(successor->waveletHoriz_);
++	if (includeBlocks && successor->blocks_)
++		waveletVert_->precede(successor->blocks_);
++	else
++		waveletVert_->precede(successor->waveletHoriz_);
+ 
+ 	return this;
+ }
+@@ -67,21 +75,23 @@ ImageComponentFlow::~ImageComponentFlow()
+ 	delete[] resFlows_;
+ 	delete waveletFinalCopy_;
+ }
++void ImageComponentFlow::setRegionDecompression(void){
++	waveletFinalCopy_ = new FlowComponent();
++}
+ void ImageComponentFlow::graph(void)
+ {
+ 	for(uint8_t i = 0; i < numResFlows_; ++i)
+ 		(resFlows_ + i)->graph();
+ 	for(uint8_t i = 0; i < numResFlows_ - 1; ++i)
+ 		(resFlows_ + i)->precede(resFlows_ + i + 1);
+-}
+-void ImageComponentFlow::graph_final(void)
+-{
+ 	if(waveletFinalCopy_)
+ 		(resFlows_ + numResFlows_ - 1)->precede(waveletFinalCopy_);
+ }
+-ImageComponentFlow* ImageComponentFlow::add_to(tf::Taskflow& composition){
++ImageComponentFlow* ImageComponentFlow::addTo(tf::Taskflow& composition){
+ 	for(uint8_t i = 0; i < numResFlows_; ++i)
+-		(resFlows_ + i)->add_to(composition);
++		(resFlows_ + i)->addTo(composition);
++	if (waveletFinalCopy_)
++		waveletFinalCopy_->addTo(composition);
+ 
+ 	return this;
+ }
+@@ -96,3 +106,5 @@ std::string ImageComponentFlow::genBlockFlowTaskName(uint8_t resFlowNo)
+ 
+ 	return ss.str();
+ }
++
++}
+diff --git a/src/lib/jp2/scheduling/ImageComponentFlow.h b/src/lib/jp2/scheduling/ImageComponentFlow.h
+index 50d7d9c4..2c4a3302 100644
+--- a/src/lib/jp2/scheduling/ImageComponentFlow.h
++++ b/src/lib/jp2/scheduling/ImageComponentFlow.h
+@@ -19,13 +19,18 @@
+ 
+ #include "FlowComponent.h"
+ 
++namespace grk
++{
++
++const bool includeBlocks = false;
++
+ struct ResFlow
+ {
+ 	ResFlow(void);
+ 	~ResFlow(void);
+ 
+ 	void graph(void);
+-	ResFlow* add_to(tf::Taskflow& composition);
++	ResFlow* addTo(tf::Taskflow& composition);
+ 	ResFlow* precede(ResFlow* successor);
+ 	ResFlow* precede(FlowComponent* successor);
+ 	FlowComponent* blocks_;
+@@ -37,14 +42,16 @@ class ImageComponentFlow
+ {
+   public:
+ 	ImageComponentFlow(uint8_t numResolutions);
+-	virtual ~ImageComponentFlow();
++	virtual ~ImageComponentFlow(void);
++	void setRegionDecompression(void);
+ 	std::string genBlockFlowTaskName(uint8_t resFlowNo);
+ 	ResFlow* getResFlow(uint8_t resFlowNo);
+ 	void graph(void);
+-	void graph_final(void);
+-	ImageComponentFlow* add_to(tf::Taskflow& composition);
++	ImageComponentFlow* addTo(tf::Taskflow& composition);
+ 
+ 	uint8_t numResFlows_;
+ 	ResFlow* resFlows_;
+ 	FlowComponent* waveletFinalCopy_;
+ };
++
++}
+diff --git a/src/lib/jp2/scheduling/Scheduler.cpp b/src/lib/jp2/scheduling/Scheduler.cpp
+index 7a81513f..b89825e8 100644
+--- a/src/lib/jp2/scheduling/Scheduler.cpp
++++ b/src/lib/jp2/scheduling/Scheduler.cpp
+@@ -18,15 +18,16 @@
+ 
+ namespace grk
+ {
+-Scheduler::Scheduler(Tile* tile) : success(true), tile_(tile), numcomps_(tile->numcomps_)
++Scheduler::Scheduler(Tile* tile, bool decompress) : success(true), tile_(tile), numcomps_(tile->numcomps_)
+ {
+-	assert(tile);
++	assert(tile && tile->comps && tile->numcomps_);
+ 	imageComponentFlows_ = new ImageComponentFlow*[numcomps_];
+ 	for(uint16_t compno = 0; compno < numcomps_; ++compno)
+ 	{
+ 		uint8_t numResolutions = (tile->comps + compno)->highestResolutionDecompressed + 1;
+-		imageComponentFlows_[compno] =
+-			numResolutions ? new ImageComponentFlow(numResolutions) : nullptr;
++		imageComponentFlows_[compno] = new ImageComponentFlow(numResolutions);
++		if (decompress && !tile->comps->isWholeTileDecoding())
++			imageComponentFlows_[compno]->setRegionDecompression();
+ 	}
+ }
+ Scheduler::~Scheduler()
+diff --git a/src/lib/jp2/scheduling/Scheduler.h b/src/lib/jp2/scheduling/Scheduler.h
+index df74df2d..c873b717 100644
+--- a/src/lib/jp2/scheduling/Scheduler.h
++++ b/src/lib/jp2/scheduling/Scheduler.h
+@@ -21,9 +21,10 @@ namespace grk
+ class Scheduler
+ {
+   public:
+-	Scheduler(Tile* tile);
++	Scheduler(Tile* tile, bool decompress);
+ 	virtual ~Scheduler();
+-	virtual bool schedule(uint16_t compno) = 0;
++	virtual bool scheduleBlocks(uint16_t compno) = 0;
++	virtual bool scheduleWavelet(uint16_t compno) = 0;
+ 	void graph(uint16_t compno);
+ 	bool run(void);
+ 	ImageComponentFlow* getImageComponentFlow(uint16_t compno);
+diff --git a/src/lib/jp2/tile/TileProcessor.cpp b/src/lib/jp2/tile/TileProcessor.cpp
+index a981c383..77e9f006 100644
+--- a/src/lib/jp2/tile/TileProcessor.cpp
++++ b/src/lib/jp2/tile/TileProcessor.cpp
+@@ -431,12 +431,10 @@ bool TileProcessor::decompressT1(void)
+ 		!current_plugin_tile || (current_plugin_tile->decompress_flags & GRK_DECODE_POST_T1);
+ 	if(doT1)
+ 	{
+-		scheduler_ = new DecompressScheduler(tile, tcp_, headerImage->comps->prec);
++		scheduler_ = new DecompressScheduler(this, tile, tcp_, headerImage->comps->prec);
+ 		for(uint16_t compno = 0; compno < tile->numcomps_; ++compno)
+ 		{
+ 			auto tilec = tile->comps + compno;
+-			auto tccp = tcp_->tccps + compno;
+-
+ 			if(!wholeTileDecompress)
+ 			{
+ 				try
+@@ -454,23 +452,30 @@ bool TileProcessor::decompressT1(void)
+ 				GRK_ERROR("Not enough memory for tile data");
+ 				return false;
+ 			}
+-			if(!scheduler_->schedule(compno))
+-				return false;
+-			if(!scheduler_->run())
++			if(!scheduler_->scheduleBlocks(compno))
+ 				return false;
+-			scheduler_->getCodecFlow().clear();
++			if (!includeBlocks) {
++				scheduler_->getImageComponentFlow(compno)->addTo(scheduler_->getCodecFlow());
++				scheduler_->getImageComponentFlow(compno)->graph();
++				if(!scheduler_->run())
++					return false;
++				scheduler_->getCodecFlow().clear();
++			} else {
++				scheduler_->graph(compno);
++			}
++			if (!includeBlocks) {
++				scheduler_->getImageComponentFlow(compno)->addTo(scheduler_->getCodecFlow());
++				scheduler_->getImageComponentFlow(compno)->graph();
++			}
+ 			uint8_t numRes = tilec->highestResolutionDecompressed + 1U;
+ 			if(doPostT1 && numRes > 1)
+ 			{
+-				WaveletReverse w(this, tilec, compno, tilec->getBuffer()->unreducedBounds(), numRes,
+-								 tccp->qmfbid);
+-				if(!w.decompress())
+-					return false;
+-				// scheduler_->graph(compno);
+-				if(!scheduler_->run())
++				if (!scheduler_->scheduleWavelet(compno))
+ 					return false;
+-				scheduler_->getCodecFlow().clear();
+ 			}
++			if(!scheduler_->run())
++				return false;
++			scheduler_->getCodecFlow().clear();
+ 		}
+ 
+ 		delete scheduler_;
+@@ -715,7 +720,7 @@ void TileProcessor::t1_encode()
+ 	}
+ 
+ 	scheduler_ = new CompressScheduler(tile, needsRateControl(), tcp, mct_norms, mct_numcomps);
+-	scheduler_->schedule(0);
++	scheduler_->scheduleBlocks(0);
+ }
+ bool TileProcessor::encodeT2(uint32_t* tileBytesWritten)
+ {
+diff --git a/src/lib/jp2/transform/WaveletReverse.cpp b/src/lib/jp2/transform/WaveletReverse.cpp
+index e24be53b..5251b364 100644
+--- a/src/lib/jp2/transform/WaveletReverse.cpp
++++ b/src/lib/jp2/transform/WaveletReverse.cpp
+@@ -530,7 +530,6 @@ bool WaveletReverse::decompress_h_97(uint8_t res, uint32_t numThreads, size_t da
+ 		uint32_t incrPerJob = resHeight / numTasks;
+ 		auto imageComponentFlow = scheduler_->getImageComponentFlow(compno_);
+ 		auto resFlow = imageComponentFlow->getResFlow(res - 1);
+-		resFlow->waveletHoriz_->push_tasks(numTasks);
+ 		for(uint32_t j = 0; j < numTasks; ++j)
+ 		{
+ 			auto indexMin = j * incrPerJob;
+@@ -541,7 +540,7 @@ bool WaveletReverse::decompress_h_97(uint8_t res, uint32_t numThreads, size_t da
+ 				GRK_ERROR("Out of memory");
+ 				return false;
+ 			}
+-			resFlow->waveletHoriz_->get()->work([this, myhoriz,indexMax, winL,winH,winDest] {
++			resFlow->waveletHoriz_->nextTask()->work([this, myhoriz,indexMax, winL,winH,winDest] {
+ 				decompress_h_strip_97(myhoriz, indexMax, winL, winH,
+ 									  winDest);
+ 				delete myhoriz;
+@@ -626,7 +625,6 @@ bool WaveletReverse::decompress_v_97(uint8_t res, uint32_t numThreads, size_t da
+ 		auto incrPerJob = resWidth / numTasks;
+ 		auto imageComponentFlow = scheduler_->getImageComponentFlow(compno_);
+ 		auto resFlow = imageComponentFlow->getResFlow(res - 1);
+-		resFlow->waveletVert_->push_tasks(numTasks);
+ 		for(uint32_t j = 0; j < numTasks; j++)
+ 		{
+ 			auto indexMin = j * incrPerJob;
+@@ -638,7 +636,7 @@ bool WaveletReverse::decompress_v_97(uint8_t res, uint32_t numThreads, size_t da
+ 				delete myvert;
+ 				return false;
+ 			}
+-			resFlow->waveletVert_->get()->work([this, myvert,resHeight, indexMax, winL,winH,winDest] {
++			resFlow->waveletVert_->nextTask()->work([this, myvert,resHeight, indexMax, winL,winH,winDest] {
+ 				decompress_v_strip_97(myvert, indexMax, resHeight, winL, winH,
+ 									  winDest);
+ 				delete myvert;
+@@ -672,10 +670,6 @@ bool WaveletReverse::decompress_tile_97(void)
+ 	}
+ 	vertF_.mem = horizF_.mem;
+ 	uint32_t numThreads = (uint32_t)ExecSingleton::get()->num_workers();
+-	auto imageComponentFlow = scheduler_->getImageComponentFlow(compno_);
+-	tf::Taskflow& codecFlow = scheduler_->getCodecFlow();
+-	imageComponentFlow->add_to(codecFlow);
+-	imageComponentFlow->graph();
+ 	for(uint8_t res = 1; res < numres_; ++res)
+ 	{
+ 		horizF_.sn_full = resWidth;
+@@ -711,8 +705,6 @@ bool WaveletReverse::decompress_tile_97(void)
+ 							buf->getResWindowBufferREL(res)->simpleF()))
+ 			return false;
+ 	}
+-	if (numThreads > 1)
+-		run();
+ 
+ 	return true;
+ }
+@@ -1079,7 +1071,6 @@ bool WaveletReverse::decompress_h_53(uint8_t res, TileComponentWindowBuffer<int3
+ 		}
+ 		else
+ 		{
+-			resFlow->waveletHoriz_->push_tasks(numTasks[orient]);
+ 			uint32_t incrPerJob = height[orient] / numTasks[orient];
+ 			for(uint32_t j = 0; j < numTasks[orient]; ++j)
+ 			{
+@@ -1092,7 +1083,7 @@ bool WaveletReverse::decompress_h_53(uint8_t res, TileComponentWindowBuffer<int3
+ 					delete horiz;
+ 					return false;
+ 				}
+-				resFlow->waveletHoriz_->get()->work([this, horiz, winL,winH,winDest,indexMin,indexMax] {
++				resFlow->waveletHoriz_->nextTask()->work([this, horiz, winL,winH,winDest,indexMin,indexMax] {
+ 					decompress_h_strip_53(horiz, indexMin, indexMax, winL,
+ 										  winH, winDest);
+ 					delete horiz;
+@@ -1152,7 +1143,6 @@ bool WaveletReverse::decompress_v_53(uint8_t res, TileComponentWindowBuffer<int3
+ 		auto resFlow = imageComponentFlow->getResFlow(res - 1);
+ 		const uint32_t numTasks = resWidth < numThreads ? resWidth : numThreads;
+ 		uint32_t step = resWidth / numTasks;
+-		resFlow->waveletVert_->push_tasks(numTasks);
+ 		for(uint32_t j = 0; j < numTasks; j++)
+ 		{
+ 			auto indexMin = j * step;
+@@ -1164,7 +1154,7 @@ bool WaveletReverse::decompress_v_53(uint8_t res, TileComponentWindowBuffer<int3
+ 				delete vert;
+ 				return false;
+ 			}
+-			resFlow->waveletVert_->get()->work([this, vert,indexMin,indexMax,winL,winH,winDest] {
++			resFlow->waveletVert_->nextTask()->work([this, vert,indexMin,indexMax,winL,winH,winDest] {
+ 				decompress_v_strip_53(vert, indexMin, indexMax, winL,
+ 									  winH, winDest);
+ 				delete vert;
+@@ -1176,12 +1166,6 @@ bool WaveletReverse::decompress_v_53(uint8_t res, TileComponentWindowBuffer<int3
+ 	}
+ 	return true;
+ }
+-void WaveletReverse::run(void)
+-{
+-	scheduler_->run();
+-	tf::Taskflow& codecFlow = scheduler_->getCodecFlow();
+-	codecFlow.clear();
+-}
+ /* <summary>                            */
+ /* Inverse wavelet transform in 2-D.    */
+ /* </summary>                           */
+@@ -1203,11 +1187,6 @@ bool WaveletReverse::decompress_tile_53(void)
+ 	/* since for the vertical pass */
+ 	/* we process PLL_COLS_53 columns at a time */
+ 	dataLength *= PLL_COLS_53 * sizeof(int32_t);
+-	auto imageComponentFlow = scheduler_->getImageComponentFlow(compno_);
+-	tf::Taskflow& codecFlow = scheduler_->getCodecFlow();
+-	uint32_t numThreads = (uint32_t)ExecSingleton::get()->num_workers();
+-	imageComponentFlow->add_to(codecFlow);
+-	imageComponentFlow->graph();
+ 	for(uint8_t res = 1; res < numres_; ++res)
+ 	{
+ 		horiz_.sn_full = tileCompRes->width();
+@@ -1226,8 +1205,6 @@ bool WaveletReverse::decompress_tile_53(void)
+ 		if(!decompress_v_53(res, buf, resWidth, dataLength))
+ 			return false;
+ 	}
+-	if(numThreads > 1)
+-		run();
+ 
+ 	return true;
+ }
+@@ -1823,8 +1800,6 @@ bool WaveletReverse::decompress_partial_tile(ISparseCanvas* sa)
+ 	}
+ 	D decompressor;
+ 	uint32_t numThreads = (uint32_t)ExecSingleton::get()->num_workers();
+-	auto flowComponent = scheduler_->getImageComponentFlow(compno_);
+-	tf::Taskflow& codecFlow = scheduler_->getCodecFlow();
+ 	auto final_read = [this, sa, synthesisWindow, buf]() {
+ 		// final read into tile buffer
+ 		bool ret = sa->read(numres_ - 1, BAND_ORIENT_LL, synthesisWindow,
+@@ -1833,6 +1808,9 @@ bool WaveletReverse::decompress_partial_tile(ISparseCanvas* sa)
+ 		assert(ret);
+ 		GRK_UNUSED(ret);
+ 	};
++	auto imageComponentFlow = scheduler_->getImageComponentFlow(compno_);
++	if(numThreads > 1)
++		imageComponentFlow->waveletFinalCopy_->nextTask()->work([final_read] { final_read(); });
+ 	for(uint8_t resno = 1; resno < numres_; resno++)
+ 	{
+ 		auto fullResLower = fullRes;
+@@ -2005,9 +1983,7 @@ bool WaveletReverse::decompress_partial_tile(ISparseCanvas* sa)
+ 		horiz.win_h = bandWindowRect[BAND_ORIENT_HL].dimX();
+ 		horiz.resno = resno;
+ 		size_t dataLength = (splitWindowRect[0].width() + 2 * FILTER_WIDTH) * HORIZ_PASS_HEIGHT;
+-		auto resFlow = flowComponent->getResFlow(resno - 1);
+-		resFlow->waveletHoriz_->add_to(codecFlow);
+-
++		auto resFlow = imageComponentFlow->getResFlow(resno - 1);
+ 		for(uint32_t k = 0; k < 2; ++k)
+ 		{
+ 			uint32_t numTasks = numThreads;
+@@ -2017,8 +1993,6 @@ bool WaveletReverse::decompress_partial_tile(ISparseCanvas* sa)
+ 			uint32_t incrPerJob = numTasks ? (num_rows / numTasks) : 0;
+ 			if(numThreads == 1)
+ 				numTasks = 1;
+-			if(numThreads > 1)
+-				resFlow->waveletHoriz_->push_tasks(numTasks);
+ 			bool blockError = false;
+ 			for(uint32_t j = 0; j < numTasks; ++j)
+ 			{
+@@ -2033,7 +2007,7 @@ bool WaveletReverse::decompress_partial_tile(ISparseCanvas* sa)
+ 					goto cleanup;
+ 				}
+ 				if(numThreads > 1)
+-					resFlow->waveletHoriz_->get()->work(
++					resFlow->waveletHoriz_->nextTask()->work(
+ 						[job, executor_h, &blockError] { blockError = executor_h(job); });
+ 				else
+ 					blockError = (executor_h(job) != 0);
+@@ -2041,8 +2015,6 @@ bool WaveletReverse::decompress_partial_tile(ISparseCanvas* sa)
+ 			if(blockError)
+ 				goto cleanup;
+ 		}
+-		if(numThreads > 1)
+-			run();
+ 		dataLength = (resWindowRect.height() + 2 * FILTER_WIDTH) * VERT_PASS_WIDTH * sizeof(T) /
+ 					 sizeof(int32_t);
+ 		vert.win_l = bandWindowRect[BAND_ORIENT_LL].dimY();
+@@ -2056,8 +2028,6 @@ bool WaveletReverse::decompress_partial_tile(ISparseCanvas* sa)
+ 		bool blockError = false;
+ 		if(numThreads == 1)
+ 			numTasks = 1;
+-		else
+-			resFlow->waveletVert_->push_tasks(numTasks)->add_to(codecFlow);
+ 		for(uint32_t j = 0; j < numTasks; ++j)
+ 		{
+ 			auto job = new decompress_job<T, dwt_data<T>>(
+@@ -2070,28 +2040,17 @@ bool WaveletReverse::decompress_partial_tile(ISparseCanvas* sa)
+ 				goto cleanup;
+ 			}
+ 			if(numThreads > 1)
+-				resFlow->waveletVert_->get()->work(
++				resFlow->waveletVert_->nextTask()->work(
+ 					[job, executor_v, &blockError] { blockError = executor_v(job); });
+ 			else
+ 				blockError = (executor_v(job) != 0);
+ 		}
+-		if(numThreads > 1)
+-			run();
+ 		if(blockError)
+ 			goto cleanup;
+ 	}
+ 
+-	if(numThreads > 1)
+-	{
+-		auto finalFlow = flowComponent->waveletFinalCopy_ = new FlowComponent();
+-		finalFlow->push_tasks(1)->add_to(codecFlow);
+-		finalFlow->get()->work([final_read] { final_read(); });
+-		run();
+-	}
+-	else
+-	{
++	if(numThreads == 1)
+ 		final_read();
+-	}
+ 
+ #ifdef GRK_DEBUG_VALGRIND
+ 	{
+diff --git a/src/lib/jp2/transform/WaveletReverse.h b/src/lib/jp2/transform/WaveletReverse.h
+index 37dfad30..60cbddd0 100644
+--- a/src/lib/jp2/transform/WaveletReverse.h
++++ b/src/lib/jp2/transform/WaveletReverse.h
+@@ -129,7 +129,6 @@ class WaveletReverse
+ 	static void decompress_step_97(dwt_data<vec4f>* GRK_RESTRICT dwt);
+ 
+   private:
+-	void run(void);
+ 	template<typename T, uint32_t FILTER_WIDTH, uint32_t VERT_PASS_WIDTH, typename D>
+ 	bool decompress_partial_tile(ISparseCanvas* sa);
+ 	static void decompress_step1_97(const Params97& d, const float c);

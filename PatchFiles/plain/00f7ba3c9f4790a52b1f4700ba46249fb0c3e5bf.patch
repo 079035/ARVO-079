@@ -1,0 +1,22 @@
+From 00f7ba3c9f4790a52b1f4700ba46249fb0c3e5bf Mon Sep 17 00:00:00 2001
+From: Patrick Soquet <ps@moddable.tech>
+Date: Sat, 19 Nov 2022 08:58:23 +0100
+Subject: [PATCH] XS: clusterfuzz 15
+
+---
+ xs/sources/xsre.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/xs/sources/xsre.c b/xs/sources/xsre.c
+index f01e54c7f0..067b7e2983 100644
+--- a/xs/sources/xsre.c
++++ b/xs/sources/xsre.c
+@@ -7363,6 +7363,8 @@ void* fxCharSetUnicodeProperty(txPatternParser* parser)
+ 	}
+ 	*p = 0;
+ 	if (c == '=') {
++		if (p == q)
++			fxPatternParserError(parser, gxErrors[mxNameOverflow]);			
+ 		p++;
+ 		fxPatternParserNext(parser);
+ 		c = parser->character;

@@ -1,0 +1,169 @@
+commit ffd8d20d368a885d6d786749278fa438573227a7
+Author: László Németh <nemeth@numbertext.org>
+Date:   Wed May 10 11:39:49 2023 +0200
+
+    tdf#150673 sw xmloff: import/export tracked table column
+    
+    to OpenDocument format using
+    
+    <style:table-cell-properties loext:text-changes-only="false"/>
+    
+    Follow-up to commit 05366b8e6683363688de8708a3d88cf144c7a2bf
+    "tdf#60382 sw offapi: add change tracking of table/row deletion"
+    and commit 48898a72066ff9982feafebb26708c4e779fd460
+    "tdf#60382 sw xmloff: import/export tracked table/row deletion".
+    
+    Change-Id: I6fb37322056a42a6746db0e4144b0848b0754b0f
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/151606
+    Tested-by: László Németh <nemeth@numbertext.org>
+    Reviewed-by: László Németh <nemeth@numbertext.org>
+
+diff --git a/schema/libreoffice/OpenDocument-v1.3+libreoffice-schema.rng b/schema/libreoffice/OpenDocument-v1.3+libreoffice-schema.rng
+index 5fe259dbd5e5..c0a983f46aab 100644
+--- a/schema/libreoffice/OpenDocument-v1.3+libreoffice-schema.rng
++++ b/schema/libreoffice/OpenDocument-v1.3+libreoffice-schema.rng
+@@ -3210,6 +3210,15 @@ xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.
+     </rng:optional>
+   </rng:define>
+ 
++  <!-- TODO no proposal -->
++  <rng:define name="style-table-cell-properties-attlist" combine="interleave">
++    <rng:optional>
++      <rng:attribute name="loext:text-changes-only">
++        <rng:ref name="boolean"/>
++      </rng:attribute>
++    </rng:optional>
++  </rng:define>
++
+   <!-- https://issues.oasis-open.org/browse/OFFICE-4108 -->
+   <rng:define name="common-num-format-prefix-suffix-attlist" combine="interleave">
+     <rng:optional>
+diff --git a/sw/qa/extras/uiwriter/uiwriter5.cxx b/sw/qa/extras/uiwriter/uiwriter5.cxx
+index 38fe2143a992..52fefec9194a 100644
+--- a/sw/qa/extras/uiwriter/uiwriter5.cxx
++++ b/sw/qa/extras/uiwriter/uiwriter5.cxx
+@@ -2556,6 +2556,55 @@ CPPUNIT_TEST_FIXTURE(SwUiWriterTest5, testRedlineTableColumnDeletion)
+     assertXPath(pXmlDoc, "//page[1]//body/tab/row/cell", 1);
+ }
+ 
++CPPUNIT_TEST_FIXTURE(SwUiWriterTest5, testTdf150673_RedlineTableColumnDeletionWithExport)
++{
++    // load a table, and delete the first column with enabled change tracking:
++    // now the column is not deleted silently, but keeps the deleted cell contents,
++    // and only accepting all of them will result the deletion of the table column.
++    createSwDoc("tdf118311.fodt");
++    SwDoc* pDoc = getSwDoc();
++
++    // turn on red-lining and show changes
++    pDoc->getIDocumentRedlineAccess().SetRedlineFlags(RedlineFlags::On | RedlineFlags::ShowDelete
++                                                      | RedlineFlags::ShowInsert);
++    CPPUNIT_ASSERT_MESSAGE("redlining should be on",
++                           pDoc->getIDocumentRedlineAccess().IsRedlineOn());
++    CPPUNIT_ASSERT_MESSAGE(
++        "redlines should be visible",
++        IDocumentRedlineAccess::IsShowChanges(pDoc->getIDocumentRedlineAccess().GetRedlineFlags()));
++
++    // check table
++    xmlDocUniquePtr pXmlDoc = parseLayoutDump();
++    assertXPath(pXmlDoc, "//page[1]//body/tab");
++
++    // delete table column with enabled change tracking
++    // (HasTextChangesOnly property of the cell will be false)
++    dispatchCommand(mxComponent, ".uno:DeleteColumns", {});
++
++    // Deleted text content with change tracking,
++    // but not table deletion
++    discardDumpedLayout();
++    pXmlDoc = parseLayoutDump();
++    assertXPath(pXmlDoc, "//page[1]//body/tab");
++    assertXPath(pXmlDoc, "//page[1]//body/tab/row/cell", 2);
++
++    // Save it and load it back.
++    reload("writer8", "tdf150673_tracked_column_deletion.odt");
++    pDoc = getSwDoc();
++
++    // accept the deletion of the content of the first cell
++    SwEditShell* const pEditShell(pDoc->GetEditShell());
++    CPPUNIT_ASSERT_EQUAL(static_cast<SwRedlineTable::size_type>(1), pEditShell->GetRedlineCount());
++    pEditShell->AcceptRedline(0);
++
++    // first table column was deleted finally
++    // (working export/import of HasTextChangesOnly)
++    discardDumpedLayout();
++    pXmlDoc = parseLayoutDump();
++    assertXPath(pXmlDoc, "//page[1]//body/tab");
++    assertXPath(pXmlDoc, "//page[1]//body/tab/row/cell", 1);
++}
++
+ CPPUNIT_TEST_FIXTURE(SwUiWriterTest5, testTdf128335)
+ {
+     // Load the bugdoc, which has 3 textboxes.
+diff --git a/sw/source/filter/xml/xmlitemm.cxx b/sw/source/filter/xml/xmlitemm.cxx
+index 1d610b6a9966..a8de955916e9 100644
+--- a/sw/source/filter/xml/xmlitemm.cxx
++++ b/sw/source/filter/xml/xmlitemm.cxx
+@@ -219,7 +219,8 @@ const SvXMLItemMapEntry aTableCellItemMap[] =
+     // RES_FOOTER
+     // not required
+     // RES_PRINT
+-    // not required
++    // M_E_SE( STYLE, TEXT_CHANGES_ONLY, RES_PRINT, 0 ),
++    M_E_SE( LO_EXT, TEXT_CHANGES_ONLY, RES_PRINT, 0 ),
+     // RES_OPAQUE
+     // not required
+     // RES_PROTECT
+diff --git a/sw/source/filter/xml/xmltble.cxx b/sw/source/filter/xml/xmltble.cxx
+index 4181a869ce45..31b24dc02005 100644
+--- a/sw/source/filter/xml/xmltble.cxx
++++ b/sw/source/filter/xml/xmltble.cxx
+@@ -334,9 +334,11 @@ static OUString lcl_xmltble_appendBoxPrefix(std::u16string_view rNamePrefix,
+                                                 false );
+     const SvXMLAttrContainerItem *pAttCnt = rItemSet.GetItemIfSet( RES_UNKNOWNATR_CONTAINER,
+                                                 false );
++    const SvxPrintItem *pHasTextChangesOnly = rItemSet.GetItemIfSet( RES_PRINT, false);
+ 
+     // empty styles have not to be exported
+-    if( !pVertOrient && !pBrush && !pBox && !pNumFormat && !pFrameDir && !pAttCnt )
++    if( !pVertOrient && !pBrush && !pBox && !pNumFormat && !pFrameDir && !pAttCnt &&
++        !pHasTextChangesOnly )
+     {
+         m_rFormatMap.try_emplace(&rFrameFormat); // empty just to enable assert
+         return {};
+@@ -357,6 +359,7 @@ static OUString lcl_xmltble_appendBoxPrefix(std::u16string_view rNamePrefix,
+         const SwTableBoxNumFormat *pTestNumFormat = nullptr;
+         const SvxFrameDirectionItem *pTestFrameDir = nullptr;
+         const SvXMLAttrContainerItem *pTestAttCnt = nullptr;
++        const SvxPrintItem *pTestHasTextChangesOnly = rItemSet.GetItemIfSet( RES_PRINT, false);
+         const SwFrameFormat* pTestFormat = *i;
+         const SfxItemSet& rTestSet = pTestFormat->GetAttrSet();
+         if( const SwFormatVertOrient* pItem = rTestSet.GetItemIfSet( RES_VERT_ORIENT, false ) )
+@@ -443,6 +446,19 @@ static OUString lcl_xmltble_appendBoxPrefix(std::u16string_view rNamePrefix,
+ 
+         }
+ 
++        if( const SvxPrintItem* pItem = rTestSet.GetItemIfSet( RES_PRINT, false ) )
++        {
++            if( !pHasTextChangesOnly )
++                break;
++
++            pTestHasTextChangesOnly = pItem;
++        }
++        else
++        {
++            if( pHasTextChangesOnly )
++                continue;
++        }
++
+         if( pVertOrient &&
+             pVertOrient->GetVertOrient() != pTestVertOrient->GetVertOrient() )
+             continue;
+@@ -462,6 +478,9 @@ static OUString lcl_xmltble_appendBoxPrefix(std::u16string_view rNamePrefix,
+         if( pAttCnt && ( *pAttCnt != *pTestAttCnt ) )
+             continue;
+ 
++        if( pHasTextChangesOnly && (!pHasTextChangesOnly->GetValue() != !pTestHasTextChangesOnly->GetValue()) )
++            continue;
++
+         // found!
+         auto const oName(m_rFormatMap.find(pTestFormat)->second);
+         assert(oName);

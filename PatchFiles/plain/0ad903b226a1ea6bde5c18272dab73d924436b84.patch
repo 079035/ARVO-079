@@ -1,0 +1,4227 @@
+From 0ad903b226a1ea6bde5c18272dab73d924436b84 Mon Sep 17 00:00:00 2001
+From: code <wbpcode@users.noreply.github.com>
+Date: Thu, 8 Apr 2021 02:58:03 +0800
+Subject: [PATCH] dubbo proxy: support parsing parameters and attachment of
+ dubbo request (#15308)
+
+This PR is an enhancement and supplement to dubbo proxy. Although the original dubbo proxy provided a complete API, many functions did not provide complete implementation, such as headers matching, parameters matching, group matching, etc.
+For more information, please refer to issues: #15131 #14391 #14529
+
+This PR uses  [hessian2-codes](https://github.com/alibaba/hessian2-codec) for dubbo request decoding and encoding. Thanks very much to the main contributor of [hessian2-codes](https://github.com/alibaba/hessian2-codec) @zyfjeff
+
+Additional Description:
+
+hessian2-codec dependency policy check list:
+
+MUST
+- [x] Cloud Native Computing Foundation (CNCF) approved license
+- [x] Dependencies must not substantially increase the binary size unless they are optional (i.e. confined to specific extensions)
+- [x] No duplication of existing dependencies
+- [x] Hosted on a git repository and the archive fetch must directly reference this repository. We will NOT support intermediate artifacts built by-hand located on GCS, S3, etc.
+- [x] CVE history appears reasonable, no pathological CVE arcs
+- [x] Code review (ideally PRs) before merge
+- [x] Security vulnerability process exists, with contact details and reporting/disclosure process
+- [x] Tests run in CI
+
+SHOULD
+
+- [x] > 1 contributor responsible for a non-trivial number of commits
+- [ ] High test coverage (also static/dynamic analysis, fuzzing)
+- [ ] Envoy can obtain advanced notification of vulnerabilities or of security releases
+- [ ] Do other significant projects have shared fate by using this dependency?
+- [ ] Releases (with release notes)
+- [x] Commits/releases in last 90 days
+
+coverage:
+* Overall: 87%
+* Core: 91%
+
+Risk Level: Normal.
+Testing: Added.
+Docs Changes: N/A
+Release Notes: N/A
+
+Signed-off-by: wbpcode <comems@msn.com>
+---
+ bazel/repositories.bzl                        |  12 +
+ bazel/repository_locations.bzl                |  13 +
+ .../filters/network/dubbo_proxy/BUILD         |  28 +-
+ .../network/dubbo_proxy/active_message.cc     |   6 +-
+ .../network/dubbo_proxy/buffer_helper.cc      |  30 -
+ .../network/dubbo_proxy/buffer_helper.h       |  40 -
+ .../filters/network/dubbo_proxy/decoder.cc    |   4 +-
+ .../dubbo_hessian2_serializer_impl.cc         |  98 +-
+ .../dubbo_hessian2_serializer_impl.h          |   3 +-
+ .../dubbo_proxy/dubbo_protocol_impl.cc        |   3 +-
+ .../network/dubbo_proxy/hessian_utils.cc      | 615 +-----------
+ .../network/dubbo_proxy/hessian_utils.h       |  61 +-
+ .../filters/network/dubbo_proxy/message.h     |  18 +-
+ .../network/dubbo_proxy/message_impl.cc       | 109 ++
+ .../network/dubbo_proxy/message_impl.h        | 115 ++-
+ .../dubbo_proxy/router/route_matcher.cc       |  87 +-
+ .../dubbo_proxy/router/route_matcher.h        |  35 +-
+ .../network/dubbo_proxy/router/router_impl.cc |  36 +-
+ .../network/dubbo_proxy/router/router_impl.h  |   3 +
+ .../network/dubbo_proxy/serializer_impl.cc    |  48 -
+ .../network/dubbo_proxy/serializer_impl.h     |  62 --
+ .../filters/network/dubbo_proxy/BUILD         |  26 +
+ .../network/dubbo_proxy/app_exception_test.cc |  48 +-
+ .../dubbo_hessian2_serializer_impl_test.cc    | 312 +++++-
+ .../dubbo_proxy/dubbo_protocol_impl_test.cc   |   2 -
+ .../dubbo_proxy/heartbeat_response_test.cc    |  63 ++
+ .../network/dubbo_proxy/hessian_utils_test.cc | 937 ++----------------
+ .../network/dubbo_proxy/message_impl_test.cc  | 164 +++
+ .../network/dubbo_proxy/metadata_test.cc      |  69 +-
+ .../network/dubbo_proxy/route_matcher_test.cc | 195 +++-
+ .../network/dubbo_proxy/router_test.cc        | 101 +-
+ 31 files changed, 1493 insertions(+), 1850 deletions(-)
+ delete mode 100644 source/extensions/filters/network/dubbo_proxy/buffer_helper.cc
+ delete mode 100644 source/extensions/filters/network/dubbo_proxy/buffer_helper.h
+ create mode 100644 source/extensions/filters/network/dubbo_proxy/message_impl.cc
+ delete mode 100644 source/extensions/filters/network/dubbo_proxy/serializer_impl.cc
+ delete mode 100644 source/extensions/filters/network/dubbo_proxy/serializer_impl.h
+ create mode 100644 test/extensions/filters/network/dubbo_proxy/heartbeat_response_test.cc
+ create mode 100644 test/extensions/filters/network/dubbo_proxy/message_impl_test.cc
+
+diff --git a/bazel/repositories.bzl b/bazel/repositories.bzl
+index cf0e7ba947f5b..c143dc01c3e7b 100644
+--- a/bazel/repositories.bzl
++++ b/bazel/repositories.bzl
+@@ -144,6 +144,7 @@ def envoy_dependencies(skip_targets = []):
+     _com_github_nghttp2_nghttp2()
+     _com_github_skyapm_cpp2sky()
+     _com_github_nodejs_http_parser()
++    _com_github_alibaba_hessian2_codec()
+     _com_github_tencent_rapidjson()
+     _com_github_nlohmann_json()
+     _com_github_ncopa_suexec()
+@@ -478,6 +479,17 @@ def _com_github_nodejs_http_parser():
+         actual = "@com_github_nodejs_http_parser//:http_parser",
+     )
+ 
++def _com_github_alibaba_hessian2_codec():
++    external_http_archive("com_github_alibaba_hessian2_codec")
++    native.bind(
++        name = "hessian2_codec_object_codec_lib",
++        actual = "@com_github_alibaba_hessian2_codec//hessian2/basic_codec:object_codec_lib",
++    )
++    native.bind(
++        name = "hessian2_codec_codec_impl",
++        actual = "@com_github_alibaba_hessian2_codec//hessian2:codec_impl_lib",
++    )
++
+ def _com_github_ncopa_suexec():
+     external_http_archive(
+         name = "com_github_ncopa_suexec",
+diff --git a/bazel/repository_locations.bzl b/bazel/repository_locations.bzl
+index 2a6a28f50ef5c..653318d76c023 100644
+--- a/bazel/repository_locations.bzl
++++ b/bazel/repository_locations.bzl
+@@ -490,6 +490,19 @@ REPOSITORY_LOCATIONS_SPEC = dict(
+         release_date = "2020-07-10",
+         cpe = "cpe:2.3:a:nodejs:node.js:*",
+     ),
++    com_github_alibaba_hessian2_codec = dict(
++        project_name = "hessian2-codec",
++        project_desc = "hessian2-codec is a C++ library for hessian2 codec",
++        project_url = "https://github.com/alibaba/hessian2-codec.git",
++        version = "dd8e05487a27b367b90ce81f4e6e6f62d693a212",
++        sha256 = "93260c54406e11b7be078a7ea120f7ab0df475c733e68d010fde400c5c8c8162",
++        strip_prefix = "hessian2-codec-{version}",
++        urls = ["https://github.com/alibaba/hessian2-codec/archive/{version}.tar.gz"],
++        use_category = ["dataplane_ext"],
++        extensions = ["envoy.filters.network.dubbo_proxy"],
++        release_date = "2021-04-05",
++        cpe = "N/A",
++    ),
+     com_github_tencent_rapidjson = dict(
+         project_name = "RapidJSON",
+         project_desc = "Fast JSON parser/generator for C++",
+diff --git a/source/extensions/filters/network/dubbo_proxy/BUILD b/source/extensions/filters/network/dubbo_proxy/BUILD
+index db011190e6263..e051679a29b6d 100644
+--- a/source/extensions/filters/network/dubbo_proxy/BUILD
++++ b/source/extensions/filters/network/dubbo_proxy/BUILD
+@@ -9,24 +9,16 @@ licenses(["notice"])  # Apache 2
+ 
+ envoy_extension_package()
+ 
+-envoy_cc_library(
+-    name = "buffer_helper_lib",
+-    srcs = ["buffer_helper.cc"],
+-    hdrs = ["buffer_helper.h"],
+-    deps = [
+-        "//source/common/buffer:buffer_lib",
+-        "//source/common/common:assert_lib",
+-        "//source/common/common:byte_order_lib",
+-        "//source/common/common:safe_memcpy_lib",
+-    ],
+-)
+-
+ envoy_cc_library(
+     name = "hessian_utils_lib",
+     srcs = ["hessian_utils.cc"],
+     hdrs = ["hessian_utils.h"],
++    external_deps = [
++        "hessian2_codec_codec_impl",
++        "hessian2_codec_object_codec_lib",
++    ],
+     deps = [
+-        ":buffer_helper_lib",
++        "//include/envoy/buffer:buffer_interface",
+         "//source/common/singleton:const_singleton",
+     ],
+ )
+@@ -35,7 +27,6 @@ envoy_cc_library(
+     name = "protocol_interface",
+     hdrs = ["protocol.h"],
+     deps = [
+-        ":buffer_helper_lib",
+         ":message_lib",
+         ":metadata_lib",
+         ":serializer_interface",
+@@ -59,13 +50,12 @@ envoy_cc_library(
+ 
+ envoy_cc_library(
+     name = "serializer_interface",
+-    srcs = ["serializer_impl.cc"],
+     hdrs = [
+         "protocol_constants.h",
+         "serializer.h",
+-        "serializer_impl.h",
+     ],
+     deps = [
++        ":hessian_utils_lib",
+         ":message_lib",
+         ":metadata_lib",
+         "//include/envoy/buffer:buffer_interface",
+@@ -83,7 +73,6 @@ envoy_cc_library(
+         "dubbo_hessian2_serializer_impl.h",
+     ],
+     deps = [
+-        ":buffer_helper_lib",
+         ":hessian_utils_lib",
+         ":serializer_interface",
+         "//source/common/singleton:const_singleton",
+@@ -141,12 +130,17 @@ envoy_cc_library(
+ 
+ envoy_cc_library(
+     name = "message_lib",
++    srcs = [
++        "message_impl.cc",
++    ],
+     hdrs = [
+         "message.h",
+         "message_impl.h",
+     ],
+     deps = [
++        ":hessian_utils_lib",
+         "//source/common/buffer:buffer_lib",
++        "//source/common/http:header_map_lib",
+     ],
+ )
+ 
+diff --git a/source/extensions/filters/network/dubbo_proxy/active_message.cc b/source/extensions/filters/network/dubbo_proxy/active_message.cc
+index fc98e76a28627..e0818cf76b18c 100644
+--- a/source/extensions/filters/network/dubbo_proxy/active_message.cc
++++ b/source/extensions/filters/network/dubbo_proxy/active_message.cc
+@@ -45,7 +45,7 @@ void ActiveResponseDecoder::onStreamDecoded(MessageMetadataSharedPtr metadata,
+     throw DownstreamConnectionCloseException("Downstream has closed or closing");
+   }
+ 
+-  response_connection_.write(ctx->messageOriginData(), false);
++  response_connection_.write(ctx->originMessage(), false);
+   ENVOY_LOG(debug,
+             "dubbo response: the upstream response message has been forwarded to the downstream");
+ 
+@@ -128,7 +128,7 @@ ActiveMessageDecoderFilter::ActiveMessageDecoderFilter(ActiveMessage& parent,
+ void ActiveMessageDecoderFilter::continueDecoding() {
+   ASSERT(parent_.context());
+   auto state = ActiveMessage::FilterIterationStartState::AlwaysStartFromNext;
+-  if (0 != parent_.context()->messageOriginData().length()) {
++  if (0 != parent_.context()->originMessage().length()) {
+     state = ActiveMessage::FilterIterationStartState::CanStartFromCurrent;
+     ENVOY_LOG(warn, "The original message data is not consumed, triggering the decoder filter from "
+                     "the current location");
+@@ -170,7 +170,7 @@ ActiveMessageEncoderFilter::ActiveMessageEncoderFilter(ActiveMessage& parent,
+ void ActiveMessageEncoderFilter::continueEncoding() {
+   ASSERT(parent_.context());
+   auto state = ActiveMessage::FilterIterationStartState::AlwaysStartFromNext;
+-  if (0 != parent_.context()->messageOriginData().length()) {
++  if (0 != parent_.context()->originMessage().length()) {
+     state = ActiveMessage::FilterIterationStartState::CanStartFromCurrent;
+     ENVOY_LOG(warn, "The original message data is not consumed, triggering the encoder filter from "
+                     "the current location");
+diff --git a/source/extensions/filters/network/dubbo_proxy/buffer_helper.cc b/source/extensions/filters/network/dubbo_proxy/buffer_helper.cc
+deleted file mode 100644
+index 934a8ffb780ae..0000000000000
+--- a/source/extensions/filters/network/dubbo_proxy/buffer_helper.cc
++++ /dev/null
+@@ -1,30 +0,0 @@
+-#include "extensions/filters/network/dubbo_proxy/buffer_helper.h"
+-
+-namespace Envoy {
+-namespace Extensions {
+-namespace NetworkFilters {
+-namespace DubboProxy {
+-
+-double BufferHelper::peekDouble(Buffer::Instance& buffer, uint64_t offset) {
+-  if (buffer.length() < offset + 8) {
+-    throw EnvoyException("buffer underflow");
+-  }
+-  double i;
+-  uint64_t j = buffer.peekBEInt<uint64_t>(offset);
+-  safeMemcpy(&i, &j);
+-  return i;
+-}
+-
+-float BufferHelper::peekFloat(Buffer::Instance& buffer, uint64_t offset) {
+-  if (buffer.length() < offset + 4) {
+-    throw EnvoyException("buffer underflow");
+-  }
+-  float i;
+-  uint32_t j = buffer.peekBEInt<uint32_t>(offset);
+-  safeMemcpy(&i, &j);
+-  return i;
+-}
+-} // namespace DubboProxy
+-} // namespace NetworkFilters
+-} // namespace Extensions
+-} // namespace Envoy
+diff --git a/source/extensions/filters/network/dubbo_proxy/buffer_helper.h b/source/extensions/filters/network/dubbo_proxy/buffer_helper.h
+deleted file mode 100644
+index cdd25c939f4b3..0000000000000
+--- a/source/extensions/filters/network/dubbo_proxy/buffer_helper.h
++++ /dev/null
+@@ -1,40 +0,0 @@
+-#pragma once
+-
+-#include "envoy/buffer/buffer.h"
+-#include "envoy/common/exception.h"
+-
+-#include "common/common/assert.h"
+-#include "common/common/safe_memcpy.h"
+-
+-namespace Envoy {
+-namespace Extensions {
+-namespace NetworkFilters {
+-namespace DubboProxy {
+-
+-/**
+- * BufferHelper provides buffer operations for reading bytes and numbers in the various encodings
+- * used by protocols.
+- */
+-class BufferHelper {
+-public:
+-  /**
+-   * Reads an double from the buffer at the given offset.
+-   * @param buffer Buffer::Instance containing data to decode
+-   * @param offset offset into buffer to peek at
+-   * @return the double at offset in buffer
+-   */
+-  static double peekDouble(Buffer::Instance& buffer, uint64_t offset = 0);
+-
+-  /**
+-   * Reads an float from the buffer at the given offset.
+-   * @param buffer Buffer::Instance containing data to decode
+-   * @param offset offset into buffer to peek at
+-   * @return the float at offset in buffer
+-   */
+-  static float peekFloat(Buffer::Instance& buffer, uint64_t offset = 0);
+-};
+-
+-} // namespace DubboProxy
+-} // namespace NetworkFilters
+-} // namespace Extensions
+-} // namespace Envoy
+diff --git a/source/extensions/filters/network/dubbo_proxy/decoder.cc b/source/extensions/filters/network/dubbo_proxy/decoder.cc
+index 0f838a9a06f9f..3bd1e79097e23 100644
+--- a/source/extensions/filters/network/dubbo_proxy/decoder.cc
++++ b/source/extensions/filters/network/dubbo_proxy/decoder.cc
+@@ -34,7 +34,7 @@ DecoderStateMachine::onDecodeStreamHeader(Buffer::Instance& buffer) {
+ 
+   active_stream_ = delegate_.newStream(metadata, context);
+   ASSERT(active_stream_);
+-  context->messageOriginData().move(buffer, context->headerSize());
++  context->originMessage().move(buffer, context->headerSize());
+ 
+   return {ProtocolState::OnDecodeStreamData};
+ }
+@@ -49,7 +49,7 @@ DecoderStateMachine::onDecodeStreamData(Buffer::Instance& buffer) {
+     return {ProtocolState::WaitForData};
+   }
+ 
+-  active_stream_->context_->messageOriginData().move(buffer, active_stream_->context_->bodySize());
++  active_stream_->context_->originMessage().move(buffer, active_stream_->context_->bodySize());
+   active_stream_->onStreamDecoded();
+   active_stream_ = nullptr;
+ 
+diff --git a/source/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl.cc b/source/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl.cc
+index 7a63a1a15db51..32572652625fb 100644
+--- a/source/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl.cc
++++ b/source/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl.cc
+@@ -7,8 +7,8 @@
+ 
+ #include "extensions/filters/network/dubbo_proxy/hessian_utils.h"
+ #include "extensions/filters/network/dubbo_proxy/message_impl.h"
+-#include "extensions/filters/network/dubbo_proxy/serializer.h"
+-#include "extensions/filters/network/dubbo_proxy/serializer_impl.h"
++
++#include "hessian2/object.hpp"
+ 
+ namespace Envoy {
+ namespace Extensions {
+@@ -18,26 +18,64 @@ namespace DubboProxy {
+ std::pair<RpcInvocationSharedPtr, bool>
+ DubboHessian2SerializerImpl::deserializeRpcInvocation(Buffer::Instance& buffer,
+                                                       ContextSharedPtr context) {
+-  size_t total_size = 0, size;
++  Hessian2::Decoder decoder(std::make_unique<BufferReader>(buffer));
++
+   // TODO(zyfjeff): Add format checker
+-  std::string dubbo_version = HessianUtils::peekString(buffer, &size);
+-  total_size += size;
+-  std::string service_name = HessianUtils::peekString(buffer, &size, total_size);
+-  total_size += size;
+-  std::string service_version = HessianUtils::peekString(buffer, &size, total_size);
+-  total_size += size;
+-  std::string method_name = HessianUtils::peekString(buffer, &size, total_size);
+-  total_size += size;
+-
+-  if (static_cast<uint64_t>(context->bodySize()) < total_size) {
+-    throw EnvoyException(fmt::format("RpcInvocation size({}) large than body size({})", total_size,
+-                                     context->bodySize()));
++  auto dubbo_version = decoder.decode<std::string>();
++  auto service_name = decoder.decode<std::string>();
++  auto service_version = decoder.decode<std::string>();
++  auto method_name = decoder.decode<std::string>();
++
++  if (context->bodySize() < decoder.offset()) {
++    throw EnvoyException(fmt::format("RpcInvocation size({}) larger than body size({})",
++                                     decoder.offset(), context->bodySize()));
++  }
++
++  if (dubbo_version == nullptr || service_name == nullptr || service_version == nullptr ||
++      method_name == nullptr) {
++    throw EnvoyException(fmt::format("RpcInvocation has no request metadata"));
+   }
+ 
+   auto invo = std::make_shared<RpcInvocationImpl>();
+-  invo->setServiceName(service_name);
+-  invo->setServiceVersion(service_version);
+-  invo->setMethodName(method_name);
++  invo->setServiceName(*service_name);
++  invo->setServiceVersion(*service_version);
++  invo->setMethodName(*method_name);
++
++  size_t parsed_size = context->headerSize() + decoder.offset();
++
++  auto delayed_decoder = std::make_shared<Hessian2::Decoder>(
++      std::make_unique<BufferReader>(context->originMessage(), parsed_size));
++
++  invo->setParametersLazyCallback([delayed_decoder]() -> RpcInvocationImpl::ParametersPtr {
++    auto params = std::make_unique<RpcInvocationImpl::Parameters>();
++
++    if (auto types = delayed_decoder->decode<std::string>(); types != nullptr && !types->empty()) {
++      uint32_t number = HessianUtils::getParametersNumber(*types);
++      for (uint32_t i = 0; i < number; i++) {
++        if (auto result = delayed_decoder->decode<Hessian2::Object>(); result != nullptr) {
++          params->push_back(std::move(result));
++        } else {
++          throw EnvoyException("Cannot parse RpcInvocation parameter from buffer");
++        }
++      }
++    }
++    return params;
++  });
++
++  invo->setAttachmentLazyCallback([delayed_decoder]() -> RpcInvocationImpl::AttachmentPtr {
++    size_t offset = delayed_decoder->offset();
++
++    auto result = delayed_decoder->decode<Hessian2::Object>();
++    if (result != nullptr && result->type() == Hessian2::Object::Type::UntypedMap) {
++      return std::make_unique<RpcInvocationImpl::Attachment>(
++          RpcInvocationImpl::Attachment::MapPtr{
++              dynamic_cast<RpcInvocationImpl::Attachment::Map*>(result.release())},
++          offset);
++    } else {
++      return std::make_unique<RpcInvocationImpl::Attachment>(
++          std::make_unique<RpcInvocationImpl::Attachment::Map>(), offset);
++    }
++  });
+ 
+   return std::pair<RpcInvocationSharedPtr, bool>(invo, true);
+ }
+@@ -46,11 +84,17 @@ std::pair<RpcResultSharedPtr, bool>
+ DubboHessian2SerializerImpl::deserializeRpcResult(Buffer::Instance& buffer,
+                                                   ContextSharedPtr context) {
+   ASSERT(buffer.length() >= context->bodySize());
+-  size_t total_size = 0;
+   bool has_value = true;
+ 
+   auto result = std::make_shared<RpcResultImpl>();
+-  RpcResponseType type = static_cast<RpcResponseType>(HessianUtils::peekInt(buffer, &total_size));
++
++  Hessian2::Decoder decoder(std::make_unique<BufferReader>(buffer));
++  auto type_value = decoder.decode<int32_t>();
++  if (type_value == nullptr) {
++    throw EnvoyException(fmt::format("Cannot parse RpcResult type from buffer"));
++  }
++
++  RpcResponseType type = static_cast<RpcResponseType>(*type_value);
+ 
+   switch (type) {
+   case RpcResponseType::ResponseWithException:
+@@ -69,6 +113,8 @@ DubboHessian2SerializerImpl::deserializeRpcResult(Buffer::Instance& buffer,
+     throw EnvoyException(fmt::format("not supported return type {}", static_cast<uint8_t>(type)));
+   }
+ 
++  size_t total_size = decoder.offset();
++
+   if (context->bodySize() < total_size) {
+     throw EnvoyException(fmt::format("RpcResult size({}) large than body size({})", total_size,
+                                      context->bodySize()));
+@@ -87,17 +133,15 @@ size_t DubboHessian2SerializerImpl::serializeRpcResult(Buffer::Instance& output_
+                                                        const std::string& content,
+                                                        RpcResponseType type) {
+   size_t origin_length = output_buffer.length();
++  Hessian2::Encoder encoder(std::make_unique<BufferWriter>(output_buffer));
+ 
+   // The serialized response type is compact int.
+-  size_t serialized_size = HessianUtils::writeInt(
+-      output_buffer, static_cast<std::underlying_type<RpcResponseType>::type>(type));
+-
+-  // Serialized response content.
+-  serialized_size += HessianUtils::writeString(output_buffer, content);
++  bool result = encoder.encode(static_cast<std::underlying_type<RpcResponseType>::type>(type));
++  result |= encoder.encode(content);
+ 
+-  ASSERT((output_buffer.length() - origin_length) == serialized_size);
++  ASSERT(result);
+ 
+-  return serialized_size;
++  return output_buffer.length() - origin_length;
+ }
+ 
+ class DubboHessian2SerializerConfigFactory
+diff --git a/source/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl.h b/source/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl.h
+index 7655d891a5544..0bdb7697d15cb 100644
+--- a/source/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl.h
++++ b/source/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl.h
+@@ -1,14 +1,15 @@
+ #pragma once
+ 
++#include "extensions/filters/network/dubbo_proxy/message_impl.h"
+ #include "extensions/filters/network/dubbo_proxy/serializer.h"
+ 
+ namespace Envoy {
+ namespace Extensions {
+ namespace NetworkFilters {
+ namespace DubboProxy {
++
+ class DubboHessian2SerializerImpl : public Serializer {
+ public:
+-  ~DubboHessian2SerializerImpl() override = default;
+   const std::string& name() const override {
+     return ProtocolSerializerNames::get().fromType(ProtocolType::Dubbo, type());
+   }
+diff --git a/source/extensions/filters/network/dubbo_proxy/dubbo_protocol_impl.cc b/source/extensions/filters/network/dubbo_proxy/dubbo_protocol_impl.cc
+index 3a05491134d98..daaacfe2be4f9 100644
+--- a/source/extensions/filters/network/dubbo_proxy/dubbo_protocol_impl.cc
++++ b/source/extensions/filters/network/dubbo_proxy/dubbo_protocol_impl.cc
+@@ -5,7 +5,6 @@
+ #include "common/common/assert.h"
+ 
+ #include "extensions/filters/network/dubbo_proxy/message_impl.h"
+-#include "extensions/filters/network/dubbo_proxy/serializer_impl.h"
+ 
+ namespace Envoy {
+ namespace Extensions {
+@@ -140,7 +139,7 @@ bool DubboProtocolImpl::decodeData(Buffer::Instance& buffer, ContextSharedPtr co
+                                    MessageMetadataSharedPtr metadata) {
+   ASSERT(serializer_);
+ 
+-  if ((buffer.length()) < static_cast<uint64_t>(context->bodySize())) {
++  if ((buffer.length()) < context->bodySize()) {
+     return false;
+   }
+ 
+diff --git a/source/extensions/filters/network/dubbo_proxy/hessian_utils.cc b/source/extensions/filters/network/dubbo_proxy/hessian_utils.cc
+index 777bf38549681..c75a7427c0c74 100644
+--- a/source/extensions/filters/network/dubbo_proxy/hessian_utils.cc
++++ b/source/extensions/filters/network/dubbo_proxy/hessian_utils.cc
+@@ -1,584 +1,67 @@
+ #include "extensions/filters/network/dubbo_proxy/hessian_utils.h"
+ 
+-#include <type_traits>
+-
+-#include "common/common/assert.h"
+-#include "common/common/fmt.h"
+-
+-#include "extensions/filters/network/dubbo_proxy/buffer_helper.h"
+-
+-#include "absl/strings/str_cat.h"
+-
+ namespace Envoy {
+ namespace Extensions {
+ namespace NetworkFilters {
+ namespace DubboProxy {
+ 
+-namespace {
+-
+-template <typename T>
+-typename std::enable_if<std::is_signed<T>::value, T>::type leftShift(T left, uint16_t bit_number) {
+-  if (left < 0) {
+-    left = -left;
+-    return -1 * (left << bit_number);
+-  }
+-
+-  return left << bit_number;
+-}
+-
+-inline void addByte(Buffer::Instance& buffer, const uint8_t value) { buffer.add(&value, 1); }
+-
+-void addSeq(Buffer::Instance& buffer, const std::initializer_list<uint8_t>& values) {
+-  for (const uint8_t& value : values) {
+-    buffer.add(&value, 1);
+-  }
+-}
+-
+-size_t doWriteString(Buffer::Instance& instance, absl::string_view str_view) {
+-  const size_t length = str_view.length();
+-  constexpr size_t str_max_length = 0xffff;
+-  constexpr size_t two_octet_max_lenth = 1024;
+-
+-  if (length < 32) {
+-    addByte(instance, static_cast<uint8_t>(length));
+-    instance.add(str_view.data(), str_view.length());
+-    return length + sizeof(uint8_t);
+-  }
+-
+-  if (length < two_octet_max_lenth) {
+-    const uint8_t code = length >> 8; // 0x30 + length / 0x100 must less than 0x34
+-    const uint8_t remain = length & 0xff;
+-    std::initializer_list<uint8_t> values{static_cast<uint8_t>(0x30 + code), remain};
+-    addSeq(instance, values);
+-    instance.add(str_view.data(), str_view.length());
+-    return length + values.size();
+-  }
+-
+-  if (length <= str_max_length) {
+-    const uint8_t code = length >> 8;
+-    const uint8_t remain = length & 0xff;
+-    std::initializer_list<uint8_t> values{'S', code, remain};
+-    addSeq(instance, values);
+-    instance.add(str_view.data(), str_view.length());
+-    return length + values.size();
++// Check
++// https://github.com/apache/dubbo/blob/master/dubbo-common/src/main/java/org/apache/dubbo/common/utils/ReflectUtils.java
++// for details of parameters type.
++uint32_t HessianUtils::getParametersNumber(const std::string& parameters_type) {
++  if (parameters_type.empty()) {
++    return 0;
+   }
+ 
+-  std::initializer_list<uint8_t> values{0x52, 0xff, 0xff};
+-  addSeq(instance, values);
+-  instance.add(str_view.data(), str_max_length);
+-  const size_t size = str_max_length + values.size();
+-  ASSERT(size == (str_max_length + values.size()));
+-
+-  const size_t child_size =
+-      doWriteString(instance, str_view.substr(str_max_length, length - str_max_length));
+-  return child_size + size;
+-}
+-
+-} // namespace
+-
+-/*
+- * Reference:
+- * https://cs.chromium.org/chromium/src/base/strings/string_util.h?q=WriteInto&sq=package:chromium&dr=CSs&l=426
+- */
+-char* allocStringBuffer(std::string* str, size_t length) {
+-  str->reserve(length);
+-  str->resize(length - 1);
+-  return &((*str)[0]);
+-}
+-
+-std::string HessianUtils::peekString(Buffer::Instance& buffer, size_t* size, uint64_t offset) {
+-  ASSERT(buffer.length() > offset);
+-  const uint8_t code = buffer.peekInt<uint8_t>(offset);
+-  size_t delta_length = 0;
+-  std::string result;
+-  switch (code) {
+-  case 0x00:
+-  case 0x01:
+-  case 0x02:
+-  case 0x03:
+-  case 0x04:
+-  case 0x05:
+-  case 0x06:
+-  case 0x07:
+-  case 0x08:
+-  case 0x09:
+-  case 0x0a:
+-  case 0x0b:
+-  case 0x0c:
+-  case 0x0d:
+-  case 0x0e:
+-  case 0x0f:
+-  case 0x10:
+-  case 0x11:
+-  case 0x12:
+-  case 0x13:
+-  case 0x14:
+-  case 0x15:
+-  case 0x16:
+-  case 0x17:
+-  case 0x18:
+-  case 0x19:
+-  case 0x1a:
+-  case 0x1b:
+-  case 0x1c:
+-  case 0x1d:
+-  case 0x1e:
+-  case 0x1f:
+-    delta_length = code - 0x00;
+-    if (delta_length + 1 + offset > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-    buffer.copyOut(offset + 1, delta_length, allocStringBuffer(&result, delta_length + 1));
+-    *size = delta_length + 1;
+-    return result;
+-
+-  case 0x30:
+-  case 0x31:
+-  case 0x32:
+-  case 0x33:
+-    if (offset + 2 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    delta_length = (code - 0x30) * 256 + buffer.peekInt<uint8_t>(offset + 1);
+-    if (delta_length + 2 + offset > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    buffer.copyOut(offset + 2, delta_length, allocStringBuffer(&result, delta_length + 1));
+-    *size = delta_length + 2;
+-    return result;
+-
+-  case 0x53:
+-    if (offset + 3 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    delta_length = buffer.peekBEInt<uint16_t>(offset + 1);
+-
+-    if (delta_length + 3 + offset > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
++  uint32_t count = 0;
++  bool next = false;
++
++  for (auto ch : parameters_type) {
++    if (ch == '[') {
++      // Is array.
++      continue;
++    }
++
++    if (next && ch != ';') {
++      // Is Object.
++      continue;
++    }
++
++    switch (ch) {
++    case 'V':
++    case 'Z':
++    case 'B':
++    case 'C':
++    case 'D':
++    case 'F':
++    case 'I':
++    case 'J':
++    case 'S':
++      count++;
++      break;
++    case 'L':
++      // Start of Object.
++      count++;
++      next = true;
++      break;
++    case ';':
++      // End of Object.
++      next = false;
++      break;
++    default:
++      break;
+     }
+-
+-    buffer.copyOut(offset + 3, delta_length, allocStringBuffer(&result, delta_length + 1));
+-    *size = delta_length + 3;
+-    return result;
+-
+-  case 0x52:
+-    if (offset + 3 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    delta_length = buffer.peekBEInt<uint16_t>(offset + 1);
+-    buffer.copyOut(offset + 3, delta_length, allocStringBuffer(&result, delta_length + 1));
+-    size_t next_size = 0;
+-    result.append(peekString(buffer, &next_size, delta_length + 3 + offset));
+-    *size = next_size + delta_length + 3;
+-    return result;
+   }
+-  throw EnvoyException(absl::StrCat("hessian type is not string ", code));
++  return count;
+ }
+ 
+-std::string HessianUtils::readString(Buffer::Instance& buffer) {
+-  size_t size;
+-  std::string result(peekString(buffer, &size));
+-  buffer.drain(size);
+-  return result;
+-}
++void BufferWriter::rawWrite(const void* data, uint64_t size) { buffer_.add(data, size); }
+ 
+-long HessianUtils::peekLong(Buffer::Instance& buffer, size_t* size, uint64_t offset) {
+-  ASSERT(buffer.length() > offset);
+-  long result;
+-  uint8_t code = buffer.peekInt<uint8_t>(offset);
+-  switch (code) {
+-  case 0xd8:
+-  case 0xd9:
+-  case 0xda:
+-  case 0xdb:
+-  case 0xdc:
+-  case 0xdd:
+-  case 0xde:
+-  case 0xdf:
+-  case 0xe0:
+-  case 0xe1:
+-  case 0xe2:
+-  case 0xe3:
+-  case 0xe4:
+-  case 0xe5:
+-  case 0xe6:
+-  case 0xe7:
+-  case 0xe8:
+-  case 0xe9:
+-  case 0xea:
+-  case 0xeb:
+-  case 0xec:
+-  case 0xed:
+-  case 0xee:
+-  case 0xef:
+-
+-    result = code - 0xe0;
+-    *size = 1;
+-    return result;
+-
+-  case 0xf0:
+-  case 0xf1:
+-  case 0xf2:
+-  case 0xf3:
+-  case 0xf4:
+-  case 0xf5:
+-  case 0xf6:
+-  case 0xf7:
+-  case 0xf8:
+-  case 0xf9:
+-  case 0xfa:
+-  case 0xfb:
+-  case 0xfc:
+-  case 0xfd:
+-  case 0xfe:
+-  case 0xff:
+-
+-    if (offset + 2 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    result = leftShift<int16_t>(code - 0xf8, 8) + buffer.peekInt<uint8_t>(offset + 1);
+-    *size = 2;
+-    return result;
+-
+-  case 0x38:
+-  case 0x39:
+-  case 0x3a:
+-  case 0x3b:
+-  case 0x3c:
+-  case 0x3d:
+-  case 0x3e:
+-  case 0x3f:
+-
+-    if (offset + 3 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    result = leftShift<int32_t>(code - 0x3c, 16) + (buffer.peekInt<uint8_t>(offset + 1) << 8) +
+-             buffer.peekInt<uint8_t>(offset + 2);
+-    *size = 3;
+-    return result;
+-
+-  case 0x59:
+-
+-    if (offset + 5 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    result = buffer.peekBEInt<uint32_t>(offset + 1);
+-    *size = 5;
+-    return result;
+-
+-  case 0x4c:
+-
+-    if (offset + 9 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    result = buffer.peekBEInt<int64_t>(offset + 1);
+-    *size = 9;
+-    return result;
+-  }
+-
+-  throw EnvoyException(absl::StrCat("hessian type is not long ", code));
+-}
+-
+-long HessianUtils::readLong(Buffer::Instance& buffer) {
+-  size_t size;
+-  const long result = peekLong(buffer, &size);
+-  buffer.drain(size);
+-  return result;
+-}
+-
+-bool HessianUtils::peekBool(Buffer::Instance& buffer, size_t* size, uint64_t offset) {
+-  ASSERT(buffer.length() > offset);
+-  bool result;
+-  const uint8_t code = buffer.peekInt<uint8_t>(offset);
+-  if (code == 0x46) {
+-    result = false;
+-    *size = 1;
+-    return result;
+-  }
+-
+-  if (code == 0x54) {
+-    result = true;
+-    *size = 1;
+-    return result;
+-  }
+-
+-  throw EnvoyException(absl::StrCat("hessian type is not bool ", code));
+-}
+-
+-bool HessianUtils::readBool(Buffer::Instance& buffer) {
+-  size_t size;
+-  bool result(peekBool(buffer, &size));
+-  buffer.drain(size);
+-  return result;
+-}
+-
+-int HessianUtils::peekInt(Buffer::Instance& buffer, size_t* size, uint64_t offset) {
+-  ASSERT(buffer.length() > offset);
+-  const uint8_t code = buffer.peekInt<uint8_t>(offset);
+-  int result;
+-
+-  // Compact int
+-  if (code >= 0x80 && code <= 0xbf) {
+-    result = (code - 0x90);
+-    *size = 1;
+-    return result;
+-  }
+-
+-  switch (code) {
+-  case 0xc0:
+-  case 0xc1:
+-  case 0xc2:
+-  case 0xc3:
+-  case 0xc4:
+-  case 0xc5:
+-  case 0xc6:
+-  case 0xc7:
+-  case 0xc8:
+-  case 0xc9:
+-  case 0xca:
+-  case 0xcb:
+-  case 0xcc:
+-  case 0xcd:
+-  case 0xce:
+-  case 0xcf:
+-    if (offset + 2 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    result = leftShift<int16_t>(code - 0xc8, 8) + buffer.peekInt<uint8_t>(offset + 1);
+-    *size = 2;
+-    return result;
+-
+-  case 0xd0:
+-  case 0xd1:
+-  case 0xd2:
+-  case 0xd3:
+-  case 0xd4:
+-  case 0xd5:
+-  case 0xd6:
+-  case 0xd7:
+-    if (offset + 3 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-    result = leftShift<int32_t>(code - 0xd4, 16) + (buffer.peekInt<uint8_t>(offset + 1) << 8) +
+-             buffer.peekInt<uint8_t>(offset + 2);
+-    *size = 3;
+-    return result;
+-
+-  case 0x49:
+-    if (offset + 5 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-    result = buffer.peekBEInt<int32_t>(offset + 1);
+-    *size = 5;
+-    return result;
+-  }
+-
+-  throw EnvoyException(absl::StrCat("hessian type is not int ", code));
+-}
+-
+-int HessianUtils::readInt(Buffer::Instance& buffer) {
+-  size_t size;
+-  int result(peekInt(buffer, &size));
+-  buffer.drain(size);
+-  return result;
+-}
+-
+-double HessianUtils::peekDouble(Buffer::Instance& buffer, size_t* size, uint64_t offset) {
+-  ASSERT(buffer.length() > offset);
+-  double result;
+-  uint8_t code = buffer.peekInt<uint8_t>(offset);
+-  switch (code) {
+-  case 0x5b:
+-    result = 0.0;
+-    *size = 1;
+-    return result;
+-
+-  case 0x5c:
+-    result = 1.0;
+-    *size = 1;
+-    return result;
+-
+-  case 0x5d:
+-    if (offset + 2 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-    result = static_cast<double>(buffer.peekInt<int8_t>(offset + 1));
+-    *size = 2;
+-    return result;
+-
+-  case 0x5e:
+-    if (offset + 3 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-    result = static_cast<double>(256 * buffer.peekInt<int8_t>(offset + 1) +
+-                                 buffer.peekInt<uint8_t>(offset + 2));
+-    *size = 3;
+-    return result;
+-
+-  case 0x5f:
+-    if (offset + 5 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-    result = BufferHelper::peekFloat(buffer, offset + 1);
+-    *size = 5;
+-    return result;
+-
+-  case 0x44:
+-    if (offset + 9 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-    result = BufferHelper::peekDouble(buffer, offset + 1);
+-    *size = 9;
+-    return result;
+-  }
+-
+-  throw EnvoyException(absl::StrCat("hessian type is not double ", code));
+-}
+-
+-double HessianUtils::readDouble(Buffer::Instance& buffer) {
+-  size_t size;
+-  double result(peekDouble(buffer, &size));
+-  buffer.drain(size);
+-  return result;
+-}
+-
+-void HessianUtils::peekNull(Buffer::Instance& buffer, size_t* size, uint64_t offset) {
+-  ASSERT(buffer.length() > offset);
+-  uint8_t code = buffer.peekInt<uint8_t>(offset);
+-  if (code == 0x4e) {
+-    *size = 1;
+-    return;
+-  }
+-
+-  throw EnvoyException(absl::StrCat("hessian type is not null ", code));
+-}
+-
+-void HessianUtils::readNull(Buffer::Instance& buffer) {
+-  size_t size;
+-  peekNull(buffer, &size);
+-  buffer.drain(size);
+-}
+-
+-std::chrono::milliseconds HessianUtils::peekDate(Buffer::Instance& buffer, size_t* size,
+-                                                 uint64_t offset) {
+-  ASSERT(buffer.length() > offset);
+-  std::chrono::milliseconds result;
+-  uint8_t code = buffer.peekInt<uint8_t>(offset);
+-  switch (code) {
+-  case 0x4b:
+-    if (offset + 5 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    result = std::chrono::minutes(buffer.peekBEInt<uint32_t>(offset + 1));
+-    *size = 5;
+-    return result;
+-
+-  case 0x4a:
+-    if (offset + 9 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-    result = std::chrono::milliseconds(buffer.peekBEInt<uint64_t>(offset + 1));
+-    *size = 9;
+-    return result;
+-  }
+-
+-  throw EnvoyException(absl::StrCat("hessian type is not date ", code));
+-}
+-
+-std::chrono::milliseconds HessianUtils::readDate(Buffer::Instance& buffer) {
+-  size_t size;
+-  std::chrono::milliseconds result;
+-  result = peekDate(buffer, &size);
+-  buffer.drain(size);
+-  return result;
+-}
+-
+-std::string HessianUtils::peekByte(Buffer::Instance& buffer, size_t* size, uint64_t offset) {
+-  ASSERT(buffer.length() > offset);
+-  std::string result;
+-  uint8_t code = buffer.peekInt<uint8_t>(offset);
+-  size_t delta_length = 0;
+-  switch (code) {
+-  case 0x20:
+-  case 0x21:
+-  case 0x22:
+-  case 0x23:
+-  case 0x24:
+-  case 0x25:
+-  case 0x26:
+-  case 0x27:
+-  case 0x28:
+-  case 0x29:
+-  case 0x2a:
+-  case 0x2b:
+-  case 0x2c:
+-  case 0x2d:
+-  case 0x2e:
+-  case 0x2f:
+-    delta_length = code - 0x20;
+-    if (delta_length + 1 + offset > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    buffer.copyOut(offset + 1, delta_length, allocStringBuffer(&result, delta_length + 1));
+-    *size = delta_length + 1;
+-    return result;
+-
+-  case 0x42:
+-    if (offset + 3 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    delta_length = buffer.peekBEInt<uint16_t>(offset + 1);
+-    if (delta_length + 3 + offset > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    buffer.copyOut(offset + 3, delta_length, allocStringBuffer(&result, delta_length + 1));
+-    *size = delta_length + 3;
+-    return result;
+-
+-  case 0x41:
+-    if (offset + 3 > buffer.length()) {
+-      throw EnvoyException("buffer underflow");
+-    }
+-
+-    delta_length = buffer.peekBEInt<uint16_t>(offset + 1);
+-    buffer.copyOut(offset + 3, delta_length, allocStringBuffer(&result, delta_length + 1));
+-    size_t next_size;
+-    result.append(peekByte(buffer, &next_size, delta_length + 3 + offset));
+-    *size = delta_length + 3 + next_size;
+-    return result;
+-  }
+-
+-  throw EnvoyException(absl::StrCat("hessian type is not byte ", code));
+-}
+-
+-std::string HessianUtils::readByte(Buffer::Instance& buffer) {
+-  size_t size;
+-  std::string result(peekByte(buffer, &size));
+-  buffer.drain(size);
+-  return result;
+-}
+-
+-size_t HessianUtils::writeString(Buffer::Instance& buffer, absl::string_view str) {
+-  return doWriteString(buffer, str);
+-}
++void BufferWriter::rawWrite(absl::string_view data) { buffer_.add(data); }
+ 
+-size_t HessianUtils::writeInt(Buffer::Instance& buffer, uint8_t value) {
+-  // Compact int
+-  buffer.writeByte(0x90 + value);
+-  return sizeof(uint8_t);
++void BufferReader::rawReadNBytes(void* data, size_t len, size_t peek_offset) {
++  ASSERT(byteAvailable() - peek_offset >= len);
++  buffer_.copyOut(offset() + peek_offset, len, data);
+ }
+ 
+ } // namespace DubboProxy
+diff --git a/source/extensions/filters/network/dubbo_proxy/hessian_utils.h b/source/extensions/filters/network/dubbo_proxy/hessian_utils.h
+index 88f250442cf20..8385eb37c0a41 100644
+--- a/source/extensions/filters/network/dubbo_proxy/hessian_utils.h
++++ b/source/extensions/filters/network/dubbo_proxy/hessian_utils.h
+@@ -1,43 +1,50 @@
+ #pragma once
+ 
+-#include <chrono>
+-#include <map>
+ #include <string>
+ 
+ #include "envoy/buffer/buffer.h"
+ 
++#include "absl/strings/string_view.h"
++#include "hessian2/basic_codec/object_codec.hpp"
++#include "hessian2/codec.hpp"
++#include "hessian2/object.hpp"
++#include "hessian2/reader.hpp"
++#include "hessian2/writer.hpp"
++
+ namespace Envoy {
+ namespace Extensions {
+ namespace NetworkFilters {
+ namespace DubboProxy {
+ 
+-/*
+- * Hessian deserialization
+- * See http://hessian.caucho.com/doc/hessian-serialization.html
+- */
+ class HessianUtils {
+ public:
+-  static std::string peekString(Buffer::Instance& buffer, size_t* size, uint64_t offset = 0);
+-  static long peekLong(Buffer::Instance& buffer, size_t* size, uint64_t offset = 0);
+-  static bool peekBool(Buffer::Instance& buffer, size_t* size, uint64_t offset = 0);
+-  static int peekInt(Buffer::Instance& buffer, size_t* size, uint64_t offset = 0);
+-  static double peekDouble(Buffer::Instance& buffer, size_t* size, uint64_t offset = 0);
+-  static void peekNull(Buffer::Instance& buffer, size_t* size, uint64_t offset = 0);
+-  static std::chrono::milliseconds peekDate(Buffer::Instance& buffer, size_t* size,
+-                                            uint64_t offset = 0);
+-  static std::string peekByte(Buffer::Instance& buffer, size_t* size, uint64_t offset = 0);
+-
+-  static std::string readString(Buffer::Instance& buffer);
+-  static long readLong(Buffer::Instance& buffer);
+-  static bool readBool(Buffer::Instance& buffer);
+-  static int readInt(Buffer::Instance& buffer);
+-  static double readDouble(Buffer::Instance& buffer);
+-  static void readNull(Buffer::Instance& buffer);
+-  static std::chrono::milliseconds readDate(Buffer::Instance& buffer);
+-  static std::string readByte(Buffer::Instance& buffer);
+-
+-  static size_t writeString(Buffer::Instance& buffer, absl::string_view str);
+-  static size_t writeInt(Buffer::Instance& buffer, uint8_t value);
++  static uint32_t getParametersNumber(const std::string& parameters_type);
++};
++
++class BufferWriter : public Hessian2::Writer {
++public:
++  BufferWriter(Envoy::Buffer::Instance& buffer) : buffer_(buffer) {}
++
++  // Hessian2::Writer
++  void rawWrite(const void* data, uint64_t size) override;
++  void rawWrite(absl::string_view data) override;
++
++private:
++  Envoy::Buffer::Instance& buffer_;
++};
++
++class BufferReader : public Hessian2::Reader {
++public:
++  BufferReader(Envoy::Buffer::Instance& buffer, uint64_t initial_offset = 0) : buffer_(buffer) {
++    initial_offset_ = initial_offset;
++  }
++
++  // Hessian2::Reader
++  uint64_t length() const override { return buffer_.length(); }
++  void rawReadNBytes(void* data, size_t len, size_t peek_offset) override;
++
++private:
++  Envoy::Buffer::Instance& buffer_;
+ };
+ 
+ } // namespace DubboProxy
+diff --git a/source/extensions/filters/network/dubbo_proxy/message.h b/source/extensions/filters/network/dubbo_proxy/message.h
+index 08a399fae8b75..3aa194a8c922a 100644
+--- a/source/extensions/filters/network/dubbo_proxy/message.h
++++ b/source/extensions/filters/network/dubbo_proxy/message.h
+@@ -89,23 +89,18 @@ enum class RpcResponseType : uint8_t {
+ 
+ class Context {
+ public:
+-  using AttachmentMap = absl::node_hash_map<std::string, std::string>;
++  virtual ~Context() = default;
+ 
+-  bool hasAttachments() const { return !attachments_.empty(); }
+-  const AttachmentMap& attachments() const { return attachments_; }
+-
+-  Buffer::Instance& messageOriginData() { return message_origin_buffer_; }
++  Buffer::Instance& originMessage() { return origin_message_; }
+   size_t messageSize() const { return headerSize() + bodySize(); }
+ 
+-  virtual size_t bodySize() const PURE;
+   virtual size_t headerSize() const PURE;
++  virtual size_t bodySize() const PURE;
+ 
+-protected:
+-  Context() = default;
+-  virtual ~Context() { attachments_.clear(); }
++  virtual bool isHeartbeat() const PURE;
+ 
+-  AttachmentMap attachments_;
+-  Buffer::OwnedImpl message_origin_buffer_;
++protected:
++  Buffer::OwnedImpl origin_message_;
+ };
+ 
+ using ContextSharedPtr = std::shared_ptr<Context>;
+@@ -135,6 +130,7 @@ using RpcInvocationSharedPtr = std::shared_ptr<RpcInvocation>;
+ class RpcResult {
+ public:
+   virtual ~RpcResult() = default;
++
+   virtual bool hasException() const PURE;
+ };
+ 
+diff --git a/source/extensions/filters/network/dubbo_proxy/message_impl.cc b/source/extensions/filters/network/dubbo_proxy/message_impl.cc
+new file mode 100644
+index 0000000000000..5e76711ee832b
+--- /dev/null
++++ b/source/extensions/filters/network/dubbo_proxy/message_impl.cc
+@@ -0,0 +1,109 @@
++#include "extensions/filters/network/dubbo_proxy/message_impl.h"
++
++#include "common/http/header_map_impl.h"
++
++namespace Envoy {
++namespace Extensions {
++namespace NetworkFilters {
++namespace DubboProxy {
++
++RpcInvocationImpl::Attachment::Attachment(MapPtr&& value, size_t offset)
++    : attachment_(std::move(value)), attachment_offset_(offset) {
++  headers_ = Http::RequestHeaderMapImpl::create();
++
++  ASSERT(attachment_);
++  ASSERT(attachment_->toMutableUntypedMap());
++
++  for (const auto& pair : *attachment_->toMutableUntypedMap()) {
++    const auto key = pair.first->toString();
++    const auto value = pair.second->toString();
++    if (!key.has_value() || !value.has_value()) {
++      continue;
++    }
++    headers_->addCopy(Http::LowerCaseString(*(key.value())), *(value.value()));
++  }
++}
++
++void RpcInvocationImpl::Attachment::insert(const std::string& key, const std::string& value) {
++  attachment_updated_ = true;
++
++  ASSERT(attachment_->toMutableUntypedMap());
++
++  attachment_->toMutableUntypedMap()->emplace(std::make_unique<String>(key),
++                                              std::make_unique<String>(value));
++
++  auto lowcase_key = Http::LowerCaseString(key);
++  headers_->remove(lowcase_key);
++  headers_->addCopy(lowcase_key, value);
++}
++
++void RpcInvocationImpl::Attachment::remove(const std::string& key) {
++  attachment_updated_ = true;
++
++  ASSERT(attachment_->toMutableUntypedMap());
++
++  attachment_->toMutableUntypedMap()->erase(std::make_unique<String>(key));
++  headers_->remove(Http::LowerCaseString(key));
++}
++
++const std::string* RpcInvocationImpl::Attachment::lookup(const std::string& key) const {
++  ASSERT(attachment_->toMutableUntypedMap());
++
++  auto map = attachment_->toMutableUntypedMap();
++  auto result = map->find(std::make_unique<String>(key));
++  if (result != map->end() && result->second->toString().has_value()) {
++    return result->second->toString().value();
++  }
++  return nullptr;
++}
++
++void RpcInvocationImpl::assignParametersIfNeed() const {
++  ASSERT(parameters_lazy_callback_ != nullptr);
++  if (parameters_ == nullptr) {
++    parameters_ = parameters_lazy_callback_();
++  }
++}
++
++void RpcInvocationImpl::assignAttachmentIfNeed() const {
++  ASSERT(attachment_lazy_callback_ != nullptr);
++  if (attachment_ != nullptr) {
++    return;
++  }
++
++  assignParametersIfNeed();
++  attachment_ = attachment_lazy_callback_();
++
++  if (auto g = attachment_->lookup("group"); g != nullptr) {
++    const_cast<RpcInvocationImpl*>(this)->group_ = *g;
++  }
++}
++
++const absl::optional<std::string>& RpcInvocationImpl::serviceGroup() const {
++  assignAttachmentIfNeed();
++  return group_;
++}
++
++const RpcInvocationImpl::Attachment& RpcInvocationImpl::attachment() const {
++  assignAttachmentIfNeed();
++  return *attachment_;
++}
++
++RpcInvocationImpl::AttachmentPtr& RpcInvocationImpl::mutableAttachment() const {
++  assignAttachmentIfNeed();
++  return attachment_;
++}
++
++const RpcInvocationImpl::Parameters& RpcInvocationImpl::parameters() const {
++  assignParametersIfNeed();
++  return *parameters_;
++}
++
++RpcInvocationImpl::ParametersPtr& RpcInvocationImpl::mutableParameters() const {
++  assignParametersIfNeed();
++  return parameters_;
++}
++
++} // namespace DubboProxy
++} // namespace NetworkFilters
++} // namespace Extensions
++} // namespace Envoy
+diff --git a/source/extensions/filters/network/dubbo_proxy/message_impl.h b/source/extensions/filters/network/dubbo_proxy/message_impl.h
+index c535b522e90e7..952cbb3dc5c80 100644
+--- a/source/extensions/filters/network/dubbo_proxy/message_impl.h
++++ b/source/extensions/filters/network/dubbo_proxy/message_impl.h
+@@ -1,5 +1,8 @@
+ #pragma once
+ 
++#include "envoy/http/header_map.h"
++
++#include "extensions/filters/network/dubbo_proxy/hessian_utils.h"
+ #include "extensions/filters/network/dubbo_proxy/message.h"
+ 
+ namespace Envoy {
+@@ -7,32 +10,21 @@ namespace Extensions {
+ namespace NetworkFilters {
+ namespace DubboProxy {
+ 
+-class ContextBase : public Context {
++class ContextImpl : public Context {
+ public:
+-  ContextBase() = default;
+-  ~ContextBase() override = default;
+-
+-  // Override from Context
+-  size_t bodySize() const override { return body_size_; }
++  // DubboProxy::Context
+   size_t headerSize() const override { return header_size_; }
++  size_t bodySize() const override { return body_size_; }
++  bool isHeartbeat() const override { return is_heartbeat_; }
+ 
+-  void setBodySize(size_t size) { body_size_ = size; }
+   void setHeaderSize(size_t size) { header_size_ = size; }
++  void setBodySize(size_t size) { body_size_ = size; }
++  void setHeartbeat(bool heartbeat) { is_heartbeat_ = heartbeat; }
+ 
+-protected:
+-  size_t body_size_{0};
++private:
+   size_t header_size_{0};
+-};
+-
+-class ContextImpl : public ContextBase {
+-public:
+-  ContextImpl() = default;
+-  ~ContextImpl() override = default;
+-
+-  bool isHeartbeat() const { return is_heartbeat_; }
+-  void setHeartbeat(bool is_heartbeat) { is_heartbeat_ = is_heartbeat; }
++  size_t body_size_{0};
+ 
+-private:
+   bool is_heartbeat_{false};
+ };
+ 
+@@ -59,6 +51,91 @@ class RpcInvocationBase : public RpcInvocation {
+   absl::optional<std::string> group_;
+ };
+ 
++class RpcInvocationImpl : public RpcInvocationBase {
++public:
++  // Each parameter consists of a parameter binary size and Hessian2::Object.
++  using Parameters = std::vector<Hessian2::ObjectPtr>;
++  using ParametersPtr = std::unique_ptr<Parameters>;
++
++  class Attachment {
++  public:
++    using Map = Hessian2::UntypedMapObject;
++    using MapPtr = std::unique_ptr<Hessian2::UntypedMapObject>;
++    using String = Hessian2::StringObject;
++
++    Attachment(MapPtr&& value, size_t offset);
++
++    const Map& attachment() const { return *attachment_; }
++
++    void insert(const std::string& key, const std::string& value);
++    void remove(const std::string& key);
++    const std::string* lookup(const std::string& key) const;
++
++    // Http::HeaderMap wrapper to attachment.
++    const Http::HeaderMap& headers() const { return *headers_; }
++
++    // Whether the attachment should be re-serialized.
++    bool attachmentUpdated() const { return attachment_updated_; }
++
++    size_t attachmentOffset() const { return attachment_offset_; }
++
++  private:
++    bool attachment_updated_{false};
++
++    MapPtr attachment_;
++
++    // The binary offset of attachment in the original message. Retaining this value can help
++    // subsequent re-serialization of the attachment without re-serializing the parameters.
++    size_t attachment_offset_{};
++
++    // To reuse the HeaderMatcher API and related tools provided by Envoy, we store the key/value
++    // pair of the string type in the attachment in the Http::HeaderMap. This introduces additional
++    // overhead and ignores the case of the key in the attachment. But for now, it's acceptable.
++    Http::HeaderMapPtr headers_;
++  };
++  using AttachmentPtr = std::unique_ptr<Attachment>;
++
++  using AttachmentLazyCallback = std::function<AttachmentPtr()>;
++  using ParametersLazyCallback = std::function<ParametersPtr()>;
++
++  bool hasParameters() const { return parameters_ != nullptr; }
++  const Parameters& parameters() const;
++  ParametersPtr& mutableParameters() const;
++
++  bool hasAttachment() const { return attachment_ != nullptr; }
++  const Attachment& attachment() const;
++  AttachmentPtr& mutableAttachment() const;
++
++  void setParametersLazyCallback(ParametersLazyCallback&& callback) {
++    parameters_lazy_callback_ = std::move(callback);
++  }
++
++  void setAttachmentLazyCallback(AttachmentLazyCallback&& callback) {
++    attachment_lazy_callback_ = std::move(callback);
++  }
++
++  const absl::optional<std::string>& serviceGroup() const override;
++
++private:
++  void assignParametersIfNeed() const;
++  void assignAttachmentIfNeed() const;
++
++  AttachmentLazyCallback attachment_lazy_callback_;
++  ParametersLazyCallback parameters_lazy_callback_;
++
++  mutable ParametersPtr parameters_{};
++  mutable AttachmentPtr attachment_{};
++};
++
++class RpcResultImpl : public RpcResult {
++public:
++  bool hasException() const override { return has_exception_; }
++  void setException(bool has_exception) { has_exception_ = has_exception; }
++
++private:
++  bool has_exception_{false};
++};
++
+ } // namespace DubboProxy
+ } // namespace NetworkFilters
+ } // namespace Extensions
+diff --git a/source/extensions/filters/network/dubbo_proxy/router/route_matcher.cc b/source/extensions/filters/network/dubbo_proxy/router/route_matcher.cc
+index 934035d5a391a..7a5f5d26f944d 100644
+--- a/source/extensions/filters/network/dubbo_proxy/router/route_matcher.cc
++++ b/source/extensions/filters/network/dubbo_proxy/router/route_matcher.cc
+@@ -5,8 +5,6 @@
+ 
+ #include "common/protobuf/utility.h"
+ 
+-#include "extensions/filters/network/dubbo_proxy/serializer_impl.h"
+-
+ namespace Envoy {
+ namespace Extensions {
+ namespace NetworkFilters {
+@@ -43,7 +41,13 @@ RouteConstSharedPtr RouteEntryImplBase::clusterEntry(uint64_t random_value) cons
+                                           false);
+ }
+ 
+-bool RouteEntryImplBase::headersMatch(const Http::HeaderMap& headers) const {
++bool RouteEntryImplBase::headersMatch(const RpcInvocationImpl& invocation) const {
++  if (config_headers_.empty()) {
++    ENVOY_LOG(debug, "dubbo route matcher: no headers match");
++    return true;
++  }
++
++  const auto& headers = invocation.attachment().headers();
+   ENVOY_LOG(debug, "dubbo route matcher: headers size {}, metadata headers size {}",
+             config_headers_.size(), headers.size());
+   return Http::HeaderUtility::matchHeaders(headers, config_headers_);
+@@ -84,24 +88,34 @@ RouteConstSharedPtr ParameterRouteEntryImpl::matches(const MessageMetadata& meta
+   ASSERT(metadata.hasInvocationInfo());
+   const auto invocation = dynamic_cast<const RpcInvocationImpl*>(&metadata.invocationInfo());
+   ASSERT(invocation);
+-  if (!invocation->hasParameters()) {
++
++  const auto& parameters = invocation->parameters();
++  if (parameters.empty()) {
+     return nullptr;
+   }
+ 
+   ENVOY_LOG(debug, "dubbo route matcher: parameter name match");
+   for (auto& config_data : parameter_data_list_) {
+-    const std::string& data = invocation->getParameterValue(config_data.index_);
+-    if (data.empty()) {
++    if (config_data.index_ >= parameters.size()) {
+       ENVOY_LOG(debug,
+-                "dubbo route matcher: parameter matching failed, there are no parameters in the "
++                "dubbo route matcher: parameter matching failed, there is no parameter in the "
+                 "user request, index '{}'",
+                 config_data.index_);
+       return nullptr;
+     }
+ 
+-    if (!matchParameter(data, config_data)) {
++    const auto data = parameters.at(config_data.index_)->toString();
++    if (!data.has_value()) {
++      ENVOY_LOG(debug,
++                "dubbo route matcher: parameter matching failed, the parameter cannot be converted "
++                "to string, index '{}'",
++                config_data.index_);
++      return nullptr;
++    }
++
++    if (!matchParameter(absl::string_view(*data.value()), config_data)) {
+       ENVOY_LOG(debug, "dubbo route matcher: parameter matching failed, index '{}', value '{}'",
+-                config_data.index_, data);
++                config_data.index_, *data.value());
+       return nullptr;
+     }
+   }
+@@ -144,7 +158,7 @@ RouteConstSharedPtr MethodRouteEntryImpl::matches(const MessageMetadata& metadat
+   const auto invocation = dynamic_cast<const RpcInvocationImpl*>(&metadata.invocationInfo());
+   ASSERT(invocation);
+ 
+-  if (invocation->hasHeaders() && !RouteEntryImplBase::headersMatch(invocation->headers())) {
++  if (!RouteEntryImplBase::headersMatch(*invocation)) {
+     ENVOY_LOG(error, "dubbo route matcher: headers not match");
+     return nullptr;
+   }
+@@ -179,16 +193,57 @@ SingleRouteMatcherImpl::SingleRouteMatcherImpl(const RouteConfig& config,
+   ENVOY_LOG(debug, "dubbo route matcher: routes list size {}", routes_.size());
+ }
+ 
++bool SingleRouteMatcherImpl::matchServiceGroup(const RpcInvocationImpl& invocation) const {
++  if (!group_.has_value() || group_.value().empty()) {
++    return true;
++  }
++
++  return invocation.serviceGroup().has_value() && invocation.serviceGroup().value() == group_;
++}
++
++bool SingleRouteMatcherImpl::matchServiceVersion(const RpcInvocationImpl& invocation) const {
++  if (!version_.has_value() || version_.value().empty()) {
++    return true;
++  }
++  return invocation.serviceVersion().has_value() && invocation.serviceVersion().value() == version_;
++}
++
++bool SingleRouteMatcherImpl::matchServiceName(const RpcInvocationImpl& invocation) const {
++  return interface_matcher_.match(invocation.serviceName());
++}
++
++SingleRouteMatcherImpl::InterfaceMatcher::InterfaceMatcher(const std::string& interface_name) {
++  if (interface_name == "*") {
++    impl_ = [](const absl::string_view interface) { return !interface.empty(); };
++    return;
++  }
++  if (absl::StartsWith(interface_name, "*")) {
++    const std::string suffix = interface_name.substr(1);
++    impl_ = [suffix](const absl::string_view interface) {
++      return interface.size() > suffix.size() && absl::EndsWith(interface, suffix);
++    };
++    return;
++  }
++  if (absl::EndsWith(interface_name, "*")) {
++    const std::string prefix = interface_name.substr(0, interface_name.size() - 1);
++    impl_ = [prefix](const absl::string_view interface) {
++      return interface.size() > prefix.size() && absl::StartsWith(interface, prefix);
++    };
++    return;
++  }
++  impl_ = [interface_name](const absl::string_view interface) {
++    return interface == interface_name;
++  };
++}
++
+ RouteConstSharedPtr SingleRouteMatcherImpl::route(const MessageMetadata& metadata,
+                                                   uint64_t random_value) const {
+   ASSERT(metadata.hasInvocationInfo());
+-  const auto& invocation = metadata.invocationInfo();
++  const auto invocation = dynamic_cast<const RpcInvocationImpl*>(&metadata.invocationInfo());
++  ASSERT(invocation);
+ 
+-  if (interface_matcher_.match(invocation.serviceName()) &&
+-      (group_.value().empty() ||
+-       (invocation.serviceGroup().has_value() && invocation.serviceGroup().value() == group_)) &&
+-      (version_.value().empty() || (invocation.serviceVersion().has_value() &&
+-                                    invocation.serviceVersion().value() == version_))) {
++  if (matchServiceName(*invocation) && matchServiceVersion(*invocation) &&
++      matchServiceGroup(*invocation)) {
+     for (const auto& route : routes_) {
+       RouteConstSharedPtr route_entry = route->matches(metadata, random_value);
+       if (nullptr != route_entry) {
+diff --git a/source/extensions/filters/network/dubbo_proxy/router/route_matcher.h b/source/extensions/filters/network/dubbo_proxy/router/route_matcher.h
+index b75c6d5be8dc6..79ab71db3b135 100644
+--- a/source/extensions/filters/network/dubbo_proxy/router/route_matcher.h
++++ b/source/extensions/filters/network/dubbo_proxy/router/route_matcher.h
+@@ -13,6 +13,7 @@
+ #include "common/http/header_utility.h"
+ #include "common/protobuf/protobuf.h"
+ 
++#include "extensions/filters/network/dubbo_proxy/message_impl.h"
+ #include "extensions/filters/network/dubbo_proxy/metadata.h"
+ #include "extensions/filters/network/dubbo_proxy/router/route.h"
+ #include "extensions/filters/network/dubbo_proxy/router/router.h"
+@@ -47,7 +48,7 @@ class RouteEntryImplBase : public RouteEntry,
+ 
+ protected:
+   RouteConstSharedPtr clusterEntry(uint64_t random_value) const;
+-  bool headersMatch(const Http::HeaderMap& headers) const;
++  bool headersMatch(const RpcInvocationImpl& invocation) const;
+ 
+ private:
+   class WeightedClusterEntry : public RouteEntry, public Route {
+@@ -131,35 +132,11 @@ class SingleRouteMatcherImpl : public RouteMatcher, public Logger::Loggable<Logg
+ public:
+   class InterfaceMatcher {
+   public:
+-    using MatcherImpl = std::function<bool(const absl::string_view)>;
+-    InterfaceMatcher(const std::string& interface_name) {
+-      if (interface_name == "*") {
+-        impl_ = [](const absl::string_view interface) { return !interface.empty(); };
+-        return;
+-      }
+-      if (absl::StartsWith(interface_name, "*")) {
+-        const std::string suffix = interface_name.substr(1);
+-        impl_ = [suffix](const absl::string_view interface) {
+-          return interface.size() > suffix.size() && absl::EndsWith(interface, suffix);
+-        };
+-        return;
+-      }
+-      if (absl::EndsWith(interface_name, "*")) {
+-        const std::string prefix = interface_name.substr(0, interface_name.size() - 1);
+-        impl_ = [prefix](const absl::string_view interface) {
+-          return interface.size() > prefix.size() && absl::StartsWith(interface, prefix);
+-        };
+-        return;
+-      }
+-      impl_ = [interface_name](const absl::string_view interface) {
+-        return interface == interface_name;
+-      };
+-    }
+-
++    InterfaceMatcher(const std::string& interface_name);
+     bool match(const absl::string_view interface) const { return impl_(interface); }
+ 
+   private:
+-    MatcherImpl impl_;
++    std::function<bool(const absl::string_view)> impl_;
+   };
+ 
+   using RouteConfig = envoy::extensions::filters::network::dubbo_proxy::v3::RouteConfiguration;
+@@ -168,6 +145,10 @@ class SingleRouteMatcherImpl : public RouteMatcher, public Logger::Loggable<Logg
+   RouteConstSharedPtr route(const MessageMetadata& metadata, uint64_t random_value) const override;
+ 
+ private:
++  bool matchServiceName(const RpcInvocationImpl& invocation) const;
++  bool matchServiceVersion(const RpcInvocationImpl& invocation) const;
++  bool matchServiceGroup(const RpcInvocationImpl& invocation) const;
++
+   std::vector<RouteEntryImplBaseConstSharedPtr> routes_;
+   const InterfaceMatcher interface_matcher_;
+   const absl::optional<std::string> group_;
+diff --git a/source/extensions/filters/network/dubbo_proxy/router/router_impl.cc b/source/extensions/filters/network/dubbo_proxy/router/router_impl.cc
+index 2d9e96a9d8e7a..17e57fd49989a 100644
+--- a/source/extensions/filters/network/dubbo_proxy/router/router_impl.cc
++++ b/source/extensions/filters/network/dubbo_proxy/router/router_impl.cc
+@@ -4,6 +4,7 @@
+ #include "envoy/upstream/thread_local_cluster.h"
+ 
+ #include "extensions/filters/network/dubbo_proxy/app_exception.h"
++#include "extensions/filters/network/dubbo_proxy/message_impl.h"
+ 
+ namespace Envoy {
+ namespace Extensions {
+@@ -76,7 +77,40 @@ FilterStatus Router::onMessageDecoded(MessageMetadataSharedPtr metadata, Context
+   }
+ 
+   ENVOY_STREAM_LOG(debug, "dubbo router: decoding request", *callbacks_);
+-  upstream_request_buffer_.move(ctx->messageOriginData(), ctx->messageSize());
++
++  const auto* invocation_impl = dynamic_cast<const RpcInvocationImpl*>(&invocation);
++  ASSERT(invocation_impl);
++
++  if (invocation_impl->hasAttachment() && invocation_impl->attachment().attachmentUpdated()) {
++    constexpr size_t body_length_size = sizeof(uint32_t);
++
++    const size_t attachment_offset = invocation_impl->attachment().attachmentOffset();
++    const size_t request_header_size = ctx->headerSize();
++
++    ASSERT(attachment_offset <= ctx->originMessage().length());
++
++    // Move the other parts of the request headers except the body size to the upstream request
++    // buffer.
++    upstream_request_buffer_.move(ctx->originMessage(), request_header_size - body_length_size);
++    // Discard the old body size.
++    ctx->originMessage().drain(body_length_size);
++
++    // Re-serialize the updated attachment.
++    Buffer::OwnedImpl attachment_buffer;
++    Hessian2::Encoder encoder(std::make_unique<BufferWriter>(attachment_buffer));
++    encoder.encode(invocation_impl->attachment().attachment());
++
++    size_t new_body_size = attachment_offset - request_header_size + attachment_buffer.length();
++
++    upstream_request_buffer_.writeBEInt<uint32_t>(new_body_size);
++    upstream_request_buffer_.move(ctx->originMessage(), attachment_offset - request_header_size);
++    upstream_request_buffer_.move(attachment_buffer);
++
++    // Discard the old attachment.
++    ctx->originMessage().drain(ctx->messageSize() - attachment_offset);
++  } else {
++    upstream_request_buffer_.move(ctx->originMessage(), ctx->messageSize());
++  }
+ 
+   upstream_request_ = std::make_unique<UpstreamRequest>(
+       *this, *conn_pool, metadata, callbacks_->serializationType(), callbacks_->protocolType());
+diff --git a/source/extensions/filters/network/dubbo_proxy/router/router_impl.h b/source/extensions/filters/network/dubbo_proxy/router/router_impl.h
+index 8eb73cc122ffa..84a746d1f8a9a 100644
+--- a/source/extensions/filters/network/dubbo_proxy/router/router_impl.h
++++ b/source/extensions/filters/network/dubbo_proxy/router/router_impl.h
+@@ -42,6 +42,9 @@ class Router : public Tcp::ConnectionPool::UpstreamCallbacks,
+   void onAboveWriteBufferHighWatermark() override {}
+   void onBelowWriteBufferLowWatermark() override {}
+ 
++  // This function is for testing only.
++  Envoy::Buffer::Instance& upstreamRequestBufferForTest() { return upstream_request_buffer_; }
++
+ private:
+   struct UpstreamRequest : public Tcp::ConnectionPool::Callbacks {
+     UpstreamRequest(Router& parent, Tcp::ConnectionPool::Instance& pool,
+diff --git a/source/extensions/filters/network/dubbo_proxy/serializer_impl.cc b/source/extensions/filters/network/dubbo_proxy/serializer_impl.cc
+deleted file mode 100644
+index 550e847cc4d21..0000000000000
+--- a/source/extensions/filters/network/dubbo_proxy/serializer_impl.cc
++++ /dev/null
+@@ -1,48 +0,0 @@
+-#include "extensions/filters/network/dubbo_proxy/serializer_impl.h"
+-
+-namespace Envoy {
+-namespace Extensions {
+-namespace NetworkFilters {
+-namespace DubboProxy {
+-
+-void RpcInvocationImpl::addParameterValue(uint32_t index, const std::string& value) {
+-  assignParameterIfNeed();
+-  parameter_map_->emplace(index, value);
+-}
+-
+-const std::string& RpcInvocationImpl::getParameterValue(uint32_t index) const {
+-  if (parameter_map_) {
+-    auto itor = parameter_map_->find(index);
+-    if (itor != parameter_map_->end()) {
+-      return itor->second;
+-    }
+-  }
+-
+-  return EMPTY_STRING;
+-}
+-
+-const RpcInvocationImpl::ParameterValueMap& RpcInvocationImpl::parameters() {
+-  ASSERT(hasParameters());
+-  return *parameter_map_;
+-}
+-
+-const Http::HeaderMap& RpcInvocationImpl::headers() const {
+-  ASSERT(hasHeaders());
+-  return *headers_;
+-}
+-
+-void RpcInvocationImpl::addHeader(const std::string& key, const std::string& value) {
+-  assignHeaderIfNeed();
+-  headers_->addCopy(Http::LowerCaseString(key), value);
+-}
+-
+-void RpcInvocationImpl::addHeaderReference(const Http::LowerCaseString& key,
+-                                           const std::string& value) {
+-  assignHeaderIfNeed();
+-  headers_->addReference(key, value);
+-}
+-
+-} // namespace DubboProxy
+-} // namespace NetworkFilters
+-} // namespace Extensions
+-} // namespace Envoy
+diff --git a/source/extensions/filters/network/dubbo_proxy/serializer_impl.h b/source/extensions/filters/network/dubbo_proxy/serializer_impl.h
+deleted file mode 100644
+index 1c9bcd7ccf0ba..0000000000000
+--- a/source/extensions/filters/network/dubbo_proxy/serializer_impl.h
++++ /dev/null
+@@ -1,62 +0,0 @@
+-#pragma once
+-
+-#include "extensions/filters/network/dubbo_proxy/message_impl.h"
+-#include "extensions/filters/network/dubbo_proxy/serializer.h"
+-
+-namespace Envoy {
+-namespace Extensions {
+-namespace NetworkFilters {
+-namespace DubboProxy {
+-
+-class RpcInvocationImpl : public RpcInvocationBase {
+-public:
+-  // TODO(gengleilei) Add parameter data types and implement Dubbo data type mapping.
+-  using ParameterValueMap = absl::node_hash_map<uint32_t, std::string>;
+-  using ParameterValueMapPtr = std::unique_ptr<ParameterValueMap>;
+-
+-  RpcInvocationImpl() = default;
+-  ~RpcInvocationImpl() override = default;
+-
+-  void addParameterValue(uint32_t index, const std::string& value);
+-  const ParameterValueMap& parameters();
+-  const std::string& getParameterValue(uint32_t index) const;
+-  bool hasParameters() const { return parameter_map_ != nullptr; }
+-
+-  void addHeader(const std::string& key, const std::string& value);
+-  void addHeaderReference(const Http::LowerCaseString& key, const std::string& value);
+-  const Http::HeaderMap& headers() const;
+-  bool hasHeaders() const { return headers_ != nullptr; }
+-
+-private:
+-  inline void assignHeaderIfNeed() {
+-    if (!headers_) {
+-      headers_ = Http::RequestHeaderMapImpl::create();
+-    }
+-  }
+-
+-  inline void assignParameterIfNeed() {
+-    if (!parameter_map_) {
+-      parameter_map_ = std::make_unique<ParameterValueMap>();
+-    }
+-  }
+-
+-  ParameterValueMapPtr parameter_map_;
+-  Http::HeaderMapPtr headers_; // attachment
+-};
+-
+-class RpcResultImpl : public RpcResult {
+-public:
+-  RpcResultImpl() = default;
+-  ~RpcResultImpl() override = default;
+-
+-  bool hasException() const override { return has_exception_; }
+-  void setException(bool has_exception) { has_exception_ = has_exception; }
+-
+-private:
+-  bool has_exception_ = false;
+-};
+-
+-} // namespace DubboProxy
+-} // namespace NetworkFilters
+-} // namespace Extensions
+-} // namespace Envoy
+diff --git a/test/extensions/filters/network/dubbo_proxy/BUILD b/test/extensions/filters/network/dubbo_proxy/BUILD
+index 1a2b5e0aa8790..6eb15466f4fa6 100644
+--- a/test/extensions/filters/network/dubbo_proxy/BUILD
++++ b/test/extensions/filters/network/dubbo_proxy/BUILD
+@@ -55,6 +55,17 @@ envoy_extension_cc_test(
+     ],
+ )
+ 
++envoy_extension_cc_test(
++    name = "message_impl_test",
++    srcs = ["message_impl_test.cc"],
++    extension_name = "envoy.filters.network.dubbo_proxy",
++    deps = [
++        "//source/extensions/filters/network/dubbo_proxy:message_lib",
++        "//test/test_common:printers_lib",
++        "//test/test_common:utility_lib",
++    ],
++)
++
+ envoy_extension_cc_test(
+     name = "dubbo_protocol_impl_test",
+     srcs = ["dubbo_protocol_impl_test.cc"],
+@@ -123,6 +134,7 @@ envoy_extension_cc_test(
+     extension_name = "envoy.filters.network.dubbo_proxy",
+     deps = [
+         ":mocks_lib",
++        ":utility_lib",
+         "//source/extensions/filters/network/dubbo_proxy:app_exception_lib",
+         "//source/extensions/filters/network/dubbo_proxy:dubbo_hessian2_serializer_impl_lib",
+         "//source/extensions/filters/network/dubbo_proxy:dubbo_protocol_impl_lib",
+@@ -148,6 +160,20 @@ envoy_extension_cc_test(
+     ],
+ )
+ 
++envoy_extension_cc_test(
++    name = "heartbeat_response_test",
++    srcs = ["heartbeat_response_test.cc"],
++    extension_name = "envoy.filters.network.dubbo_proxy",
++    deps = [
++        ":mocks_lib",
++        ":utility_lib",
++        "//source/extensions/filters/network/dubbo_proxy:dubbo_protocol_impl_lib",
++        "//source/extensions/filters/network/dubbo_proxy:heartbeat_response_lib",
++        "//source/extensions/filters/network/dubbo_proxy:hessian_utils_lib",
++        "//source/extensions/filters/network/dubbo_proxy:metadata_lib",
++    ],
++)
++
+ envoy_extension_cc_test(
+     name = "router_filter_config_test",
+     srcs = ["router_filter_config_test.cc"],
+diff --git a/test/extensions/filters/network/dubbo_proxy/app_exception_test.cc b/test/extensions/filters/network/dubbo_proxy/app_exception_test.cc
+index d58bea0e47e6d..49403617d9f91 100644
+--- a/test/extensions/filters/network/dubbo_proxy/app_exception_test.cc
++++ b/test/extensions/filters/network/dubbo_proxy/app_exception_test.cc
+@@ -3,8 +3,8 @@
+ #include "extensions/filters/network/dubbo_proxy/dubbo_protocol_impl.h"
+ #include "extensions/filters/network/dubbo_proxy/filters/filter.h"
+ #include "extensions/filters/network/dubbo_proxy/hessian_utils.h"
++#include "extensions/filters/network/dubbo_proxy/message_impl.h"
+ #include "extensions/filters/network/dubbo_proxy/metadata.h"
+-#include "extensions/filters/network/dubbo_proxy/serializer_impl.h"
+ 
+ #include "test/extensions/filters/network/dubbo_proxy/mocks.h"
+ 
+@@ -12,6 +12,7 @@
+ #include "gtest/gtest.h"
+ 
+ using testing::_;
++using testing::NiceMock;
+ using testing::Return;
+ 
+ namespace Envoy {
+@@ -19,6 +20,8 @@ namespace Extensions {
+ namespace NetworkFilters {
+ namespace DubboProxy {
+ 
++namespace {
++
+ class AppExceptionTest : public testing::Test {
+ public:
+   AppExceptionTest() : metadata_(std::make_shared<MessageMetadata>()) {
+@@ -34,9 +37,14 @@ TEST_F(AppExceptionTest, Encode) {
+   AppException app_exception(ResponseStatus::ServiceNotFound, mock_message);
+ 
+   Buffer::OwnedImpl buffer;
+-  size_t expect_body_size =
+-      HessianUtils::writeString(buffer, mock_message) +
+-      HessianUtils::writeInt(buffer, static_cast<uint8_t>(app_exception.response_type_));
++
++  Hessian2::Encoder encoder(std::make_unique<BufferWriter>(buffer));
++
++  encoder.encode(mock_message);
++  encoder.encode(static_cast<uint8_t>(app_exception.response_type_));
++
++  size_t expect_body_size = buffer.length();
++
+   buffer.drain(buffer.length());
+ 
+   metadata_->setSerializationType(SerializationType::Hessian2);
+@@ -54,15 +62,15 @@ TEST_F(AppExceptionTest, Encode) {
+   buffer.drain(context->headerSize());
+ 
+   // Verify the response type and content.
+-  size_t hessian_int_size;
+-  int type_value = HessianUtils::peekInt(buffer, &hessian_int_size);
++  Hessian2::Decoder decoder(std::make_unique<BufferReader>(buffer));
++
++  int type_value = *decoder.decode<int32_t>();
+   EXPECT_EQ(static_cast<uint8_t>(app_exception.response_type_), static_cast<uint8_t>(type_value));
+ 
+-  size_t hessian_string_size;
+-  std::string message = HessianUtils::peekString(buffer, &hessian_string_size, sizeof(uint8_t));
++  std::string message = *decoder.decode<std::string>();
+   EXPECT_EQ(mock_message, message);
+ 
+-  EXPECT_EQ(buffer.length(), hessian_int_size + hessian_string_size);
++  EXPECT_EQ(buffer.length(), decoder.offset());
+ 
+   auto rpc_result = protocol_.serializer()->deserializeRpcResult(buffer, result.first);
+   EXPECT_TRUE(rpc_result.second);
+@@ -77,6 +85,28 @@ TEST_F(AppExceptionTest, Encode) {
+   EXPECT_THROW(app_exception.encode(*(metadata_.get()), mock_protocol, buffer), EnvoyException);
+ }
+ 
++class AppExceptionTestWithMock : public testing::Test {
++public:
++  AppExceptionTestWithMock() : metadata_(std::make_shared<MessageMetadata>()) {}
++
++  NiceMock<MockProtocol> mock_protocol_;
++  MessageMetadataSharedPtr metadata_;
++};
++
++TEST_F(AppExceptionTestWithMock, AppExceptionTestWithMock) {
++  std::string mock_message("MOCK_MESSAGE");
++  AppException app_exception(ResponseStatus::ServiceNotFound, mock_message);
++
++  Buffer::OwnedImpl buffer;
++
++  ON_CALL(mock_protocol_, encode(_, _, _, _)).WillByDefault(Return(false));
++
++  EXPECT_THROW_WITH_MESSAGE(app_exception.encode(*metadata_, mock_protocol_, buffer),
++                            EnvoyException, "Failed to encode local reply message");
++}
++
++} // namespace
++
+ } // namespace DubboProxy
+ } // namespace NetworkFilters
+ } // namespace Extensions
+diff --git a/test/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl_test.cc b/test/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl_test.cc
+index 4bc08cb93c458..19113bba6b5b2 100644
+--- a/test/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl_test.cc
++++ b/test/extensions/filters/network/dubbo_proxy/dubbo_hessian2_serializer_impl_test.cc
+@@ -51,19 +51,319 @@ TEST(HessianProtocolTest, deserializeRpcInvocation) {
+         0x05, '0', '.', '0', '.', '0', // Service version
+         0x04, 't', 'e', 's', 't',      // method name
+     }));
+-    std::string exception_string = fmt::format("RpcInvocation size({}) large than body size({})",
++    std::string exception_string = fmt::format("RpcInvocation size({}) larger than body size({})",
+                                                buffer.length(), buffer.length() - 1);
+     std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
+     context->setBodySize(buffer.length() - 1);
+     EXPECT_THROW_WITH_MESSAGE(serializer.deserializeRpcInvocation(buffer, context), EnvoyException,
+                               exception_string);
+   }
++
++  // Missing key metadata.
++  {
++    Buffer::OwnedImpl buffer;
++    buffer.add(std::string({
++        0x05, '2', '.', '0', '.', '2', // Dubbo version
++        0x04, 't', 'e', 's', 't',      // Service name
++        0x05, '0', '.', '0', '.', '0', // Service version
++    }));
++    std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
++    context->setBodySize(buffer.length());
++    EXPECT_THROW_WITH_MESSAGE(serializer.deserializeRpcInvocation(buffer, context), EnvoyException,
++                              "RpcInvocation has no request metadata");
++  }
++}
++
++TEST(HessianProtocolTest, deserializeRpcInvocationWithParametersOrAttachment) {
++  RpcInvocationImpl::Attachment attach(std::make_unique<RpcInvocationImpl::Attachment::Map>(), 0);
++  attach.insert("test1", "test_value1");
++  attach.insert("test2", "test_value2");
++  attach.insert("test3", "test_value3");
++
++  RpcInvocationImpl::Parameters params;
++
++  params.push_back(std::make_unique<Hessian2::StringObject>("test_string"));
++
++  std::vector<uint8_t> test_binary{0, 1, 2, 3, 4};
++  params.push_back(std::make_unique<Hessian2::BinaryObject>(test_binary));
++
++  params.push_back(std::make_unique<Hessian2::LongObject>(233333));
++
++  // 4 parameters. We will encode attachment as a map type parameter.
++  std::string parameters_type = "Ljava.lang.String;[BJLjava.util.Map;";
++
++  {
++    DubboHessian2SerializerImpl serializer;
++    Buffer::OwnedImpl buffer;
++    buffer.add(std::string({
++        0x05, '2', '.', '0', '.', '2', // Dubbo version
++        0x04, 't', 'e', 's', 't',      // Service name
++        0x05, '0', '.', '0', '.', '0', // Service version
++        0x04, 't', 'e', 's', 't',      // method name
++    }));
++
++    Hessian2::Encoder encoder(std::make_unique<BufferWriter>(buffer));
++
++    encoder.encode<std::string>(parameters_type);
++
++    for (const auto& param : params) {
++      encoder.encode<Hessian2::Object>(*param);
++    }
++    // Encode an untyped map object as fourth parameter.
++    encoder.encode<Hessian2::Object>(attach.attachment());
++
++    size_t expected_attachment_offset = buffer.length();
++
++    // Encode attachment
++    encoder.encode<Hessian2::Object>(attach.attachment());
++
++    std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
++
++    context->setBodySize(buffer.length());
++
++    auto result = serializer.deserializeRpcInvocation(buffer, context);
++    EXPECT_EQ(true, result.second);
++
++    auto invo = dynamic_cast<RpcInvocationImpl*>(result.first.get());
++
++    context->originMessage().move(buffer, buffer.length());
++
++    EXPECT_EQ(false, invo->hasAttachment());
++    EXPECT_EQ(false, invo->hasParameters());
++
++    auto& result_params = invo->mutableParameters();
++
++    // When parsing parameters, attachment will not be parsed.
++    EXPECT_EQ(false, invo->hasAttachment());
++    EXPECT_EQ(true, invo->hasParameters());
++
++    EXPECT_EQ(4, result_params->size());
++
++    EXPECT_EQ("test_string", *result_params->at(0)->toString().value());
++    EXPECT_EQ(4, result_params->at(1)->toBinary().value()->at(4));
++    EXPECT_EQ(233333, *result_params->at(2)->toLong());
++    EXPECT_EQ(3, result_params->at(3)->toUntypedMap().value()->size());
++    EXPECT_EQ("test_value2", *(result_params->at(3)
++                                   ->toUntypedMap()
++                                   .value()
++                                   ->find(std::make_unique<Hessian2::StringObject>("test2"))
++                                   ->second->toString()
++                                   .value()));
++
++    auto& result_attach = invo->mutableAttachment();
++    EXPECT_EQ("test_value2", *(result_attach->attachment()
++                                   .toUntypedMap()
++                                   .value()
++                                   ->find(std::make_unique<Hessian2::StringObject>("test2"))
++                                   ->second->toString()
++                                   .value()));
++
++    EXPECT_EQ(expected_attachment_offset, result_attach->attachmentOffset());
++  }
++  {
++    DubboHessian2SerializerImpl serializer;
++    Buffer::OwnedImpl buffer;
++    buffer.add(std::string({
++        0x05, '2', '.', '0', '.', '2', // Dubbo version
++        0x04, 't', 'e', 's', 't',      // Service name
++        0x05, '0', '.', '0', '.', '0', // Service version
++        0x04, 't', 'e', 's', 't',      // method name
++    }));
++
++    Hessian2::Encoder encoder(std::make_unique<BufferWriter>(buffer));
++
++    encoder.encode<std::string>(parameters_type);
++
++    for (const auto& param : params) {
++      encoder.encode<Hessian2::Object>(*param);
++    }
++    // Encode an untyped map object as fourth parameter.
++    encoder.encode<Hessian2::Object>(attach.attachment());
++
++    // Encode attachment
++    encoder.encode<Hessian2::Object>(attach.attachment());
++
++    std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
++
++    context->setBodySize(buffer.length());
++
++    auto result = serializer.deserializeRpcInvocation(buffer, context);
++    EXPECT_EQ(true, result.second);
++
++    auto invo = dynamic_cast<RpcInvocationImpl*>(result.first.get());
++
++    context->originMessage().move(buffer, buffer.length());
++
++    EXPECT_EQ(false, invo->hasAttachment());
++    EXPECT_EQ(false, invo->hasParameters());
++
++    auto& result_attach = invo->mutableAttachment();
++
++    // When parsing attachment, parameters will also be parsed.
++    EXPECT_EQ(true, invo->hasAttachment());
++    EXPECT_EQ(true, invo->hasParameters());
++
++    EXPECT_EQ("test_value2", *(result_attach->attachment()
++                                   .toUntypedMap()
++                                   .value()
++                                   ->find(std::make_unique<Hessian2::StringObject>("test2"))
++                                   ->second->toString()
++                                   .value()));
++
++    auto& result_params = invo->parameters();
++    EXPECT_EQ("test_value2", *(result_params.at(3)
++                                   ->toUntypedMap()
++                                   .value()
++                                   ->find(std::make_unique<Hessian2::StringObject>("test2"))
++                                   ->second->toString()
++                                   .value()));
++  }
++  // Test case that request only have parameters.
++  {
++    DubboHessian2SerializerImpl serializer;
++    Buffer::OwnedImpl buffer;
++    buffer.add(std::string({
++        0x05, '2', '.', '0', '.', '2', // Dubbo version
++        0x04, 't', 'e', 's', 't',      // Service name
++        0x05, '0', '.', '0', '.', '0', // Service version
++        0x04, 't', 'e', 's', 't',      // method name
++    }));
++
++    Hessian2::Encoder encoder(std::make_unique<BufferWriter>(buffer));
++
++    encoder.encode<std::string>(parameters_type);
++
++    for (const auto& param : params) {
++      encoder.encode<Hessian2::Object>(*param);
++    }
++    // Encode an untyped map object as fourth parameter.
++    encoder.encode<Hessian2::Object>(attach.attachment());
++
++    std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
++
++    context->setBodySize(buffer.length());
++
++    auto result = serializer.deserializeRpcInvocation(buffer, context);
++    EXPECT_EQ(true, result.second);
++
++    auto invo = dynamic_cast<RpcInvocationImpl*>(result.first.get());
++
++    context->originMessage().move(buffer, buffer.length());
++
++    EXPECT_EQ(false, invo->hasAttachment());
++    EXPECT_EQ(false, invo->hasParameters());
++
++    auto& result_attach = invo->mutableAttachment();
++
++    // When parsing attachment, parameters will also be parsed.
++    EXPECT_EQ(true, invo->hasAttachment());
++    EXPECT_EQ(true, invo->hasParameters());
++
++    auto& result_params = invo->parameters();
++    EXPECT_EQ("test_value2", *(result_params.at(3)
++                                   ->toUntypedMap()
++                                   .value()
++                                   ->find(std::make_unique<Hessian2::StringObject>("test2"))
++                                   ->second->toString()
++                                   .value()));
++
++    EXPECT_EQ(true, result_attach->attachment().toUntypedMap().value()->empty());
++  }
++  // Test the case where there are not enough parameters in the request buffer.
++  {
++    DubboHessian2SerializerImpl serializer;
++    Buffer::OwnedImpl buffer;
++    buffer.add(std::string({
++        0x05, '2', '.', '0', '.', '2', // Dubbo version
++        0x04, 't', 'e', 's', 't',      // Service name
++        0x05, '0', '.', '0', '.', '0', // Service version
++        0x04, 't', 'e', 's', 't',      // method name
++    }));
++
++    Hessian2::Encoder encoder(std::make_unique<BufferWriter>(buffer));
++
++    encoder.encode<std::string>(parameters_type);
++
++    // There are actually only three parameters in the request.
++    for (const auto& param : params) {
++      encoder.encode<Hessian2::Object>(*param);
++    }
++
++    std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
++
++    context->setBodySize(buffer.length());
++
++    auto result = serializer.deserializeRpcInvocation(buffer, context);
++    EXPECT_EQ(true, result.second);
++
++    auto invo = dynamic_cast<RpcInvocationImpl*>(result.first.get());
++
++    context->originMessage().move(buffer, buffer.length());
++
++    // There are not enough parameters and throws an exception.
++    EXPECT_THROW_WITH_MESSAGE(invo->mutableParameters(), EnvoyException,
++                              "Cannot parse RpcInvocation parameter from buffer");
++  }
++  // Test for incorrect attachment types.
++  {
++    DubboHessian2SerializerImpl serializer;
++    Buffer::OwnedImpl buffer;
++    buffer.add(std::string({
++        0x05, '2', '.', '0', '.', '2', // Dubbo version
++        0x04, 't', 'e', 's', 't',      // Service name
++        0x05, '0', '.', '0', '.', '0', // Service version
++        0x04, 't', 'e', 's', 't',      // method name
++    }));
++
++    Hessian2::Encoder encoder(std::make_unique<BufferWriter>(buffer));
++
++    encoder.encode<std::string>(parameters_type);
++
++    for (const auto& param : params) {
++      encoder.encode<Hessian2::Object>(*param);
++    }
++    // Encode an untyped map object as fourth parameter.
++    encoder.encode<Hessian2::Object>(attach.attachment());
++
++    // Encode a string object as attachment.
++    encoder.encode<Hessian2::Object>(*params[0]);
++
++    std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
++
++    context->setBodySize(buffer.length());
++
++    auto result = serializer.deserializeRpcInvocation(buffer, context);
++    EXPECT_EQ(true, result.second);
++
++    auto invo = dynamic_cast<RpcInvocationImpl*>(result.first.get());
++
++    context->originMessage().move(buffer, buffer.length());
++
++    auto& result_attach = invo->mutableAttachment();
++    EXPECT_EQ(true, result_attach->attachment().toUntypedMap().value()->empty());
++  }
+ }
+ 
+ TEST(HessianProtocolTest, deserializeRpcResult) {
+   DubboHessian2SerializerImpl serializer;
+   std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
+ 
++  {
++    Buffer::OwnedImpl buffer;
++    buffer.add(std::string({
++        0x04,
++        't',
++        'e',
++        's',
++        't',
++    }));
++
++    context->setBodySize(4);
++
++    EXPECT_THROW_WITH_MESSAGE(serializer.deserializeRpcResult(buffer, context), EnvoyException,
++                              "Cannot parse RpcResult type from buffer");
++  }
++
+   {
+     Buffer::OwnedImpl buffer;
+     buffer.add(std::string({
+@@ -168,15 +468,15 @@ TEST(HessianProtocolTest, serializeRpcResult) {
+ 
+   EXPECT_NE(serializer.serializeRpcResult(buffer, mock_response, mock_response_type), 0);
+ 
+-  size_t hessian_int_size;
+-  int type_value = HessianUtils::peekInt(buffer, &hessian_int_size);
++  Hessian2::Decoder decoder(std::make_unique<BufferReader>(buffer));
++
++  int type_value = *decoder.decode<int32_t>();
+   EXPECT_EQ(static_cast<uint8_t>(mock_response_type), static_cast<uint8_t>(type_value));
+ 
+-  size_t hessian_string_size;
+-  std::string content = HessianUtils::peekString(buffer, &hessian_string_size, sizeof(uint8_t));
++  std::string content = *decoder.decode<std::string>();
+   EXPECT_EQ(mock_response, content);
+ 
+-  EXPECT_EQ(buffer.length(), hessian_int_size + hessian_string_size);
++  EXPECT_EQ(buffer.length(), decoder.offset());
+ 
+   size_t body_size = mock_response.size() + sizeof(mock_response_type);
+   std::shared_ptr<ContextImpl> context = std::make_shared<ContextImpl>();
+diff --git a/test/extensions/filters/network/dubbo_proxy/dubbo_protocol_impl_test.cc b/test/extensions/filters/network/dubbo_proxy/dubbo_protocol_impl_test.cc
+index 0dafbc8fef707..2501f0adfabac 100644
+--- a/test/extensions/filters/network/dubbo_proxy/dubbo_protocol_impl_test.cc
++++ b/test/extensions/filters/network/dubbo_proxy/dubbo_protocol_impl_test.cc
+@@ -146,8 +146,6 @@ TEST(DubboProtocolImplTest, encode) {
+       body_buffer, content, RpcResponseType::ResponseWithValue);
+   auto context = result.first;
+   EXPECT_EQ(context->bodySize(), serialized_body_size);
+-  EXPECT_EQ(false, context->hasAttachments());
+-  EXPECT_EQ(0, context->attachments().size());
+ 
+   buffer.drain(context->headerSize());
+   EXPECT_TRUE(dubbo_protocol.decodeData(buffer, context, output_metadata));
+diff --git a/test/extensions/filters/network/dubbo_proxy/heartbeat_response_test.cc b/test/extensions/filters/network/dubbo_proxy/heartbeat_response_test.cc
+new file mode 100644
+index 0000000000000..1313da2da0669
+--- /dev/null
++++ b/test/extensions/filters/network/dubbo_proxy/heartbeat_response_test.cc
+@@ -0,0 +1,63 @@
++#include "extensions/filters/network/dubbo_proxy/heartbeat_response.h"
++#include "extensions/filters/network/dubbo_proxy/hessian_utils.h"
++#include "extensions/filters/network/dubbo_proxy/message_impl.h"
++#include "extensions/filters/network/dubbo_proxy/metadata.h"
++
++#include "test/extensions/filters/network/dubbo_proxy/mocks.h"
++
++#include "gmock/gmock.h"
++#include "gtest/gtest.h"
++
++using testing::_;
++using testing::NiceMock;
++using testing::Return;
++
++namespace Envoy {
++namespace Extensions {
++namespace NetworkFilters {
++namespace DubboProxy {
++
++namespace {
++
++class HeartbeatResponseTestWithMock : public testing::Test {
++public:
++  HeartbeatResponseTestWithMock() : metadata_(std::make_shared<MessageMetadata>()) {
++    metadata_->setResponseStatus(ResponseStatus::Ok);
++    metadata_->setMessageType(MessageType::HeartbeatResponse);
++  }
++
++  NiceMock<MockProtocol> mock_protocol_;
++  MessageMetadataSharedPtr metadata_;
++};
++
++TEST_F(HeartbeatResponseTestWithMock, HeartbeatResponseTestWithMock) {
++  {
++    std::string mock_message("MOCK_MESSAGE");
++    HeartbeatResponse heartbeat_response;
++
++    Buffer::OwnedImpl buffer;
++
++    ON_CALL(mock_protocol_, encode(_, _, _, _)).WillByDefault(Return(false));
++
++    EXPECT_THROW_WITH_MESSAGE(heartbeat_response.encode(*metadata_, mock_protocol_, buffer),
++                              EnvoyException, "failed to encode heartbeat message");
++  }
++  {
++    std::string mock_message("MOCK_MESSAGE");
++    HeartbeatResponse heartbeat_response;
++
++    Buffer::OwnedImpl buffer;
++
++    ON_CALL(mock_protocol_, encode(_, _, _, _)).WillByDefault(Return(true));
++
++    EXPECT_EQ(heartbeat_response.encode(*metadata_, mock_protocol_, buffer),
++              DubboFilters::DirectResponse::ResponseType::SuccessReply);
++  }
++}
++
++} // namespace
++
++} // namespace DubboProxy
++} // namespace NetworkFilters
++} // namespace Extensions
++} // namespace Envoy
+diff --git a/test/extensions/filters/network/dubbo_proxy/hessian_utils_test.cc b/test/extensions/filters/network/dubbo_proxy/hessian_utils_test.cc
+index 6f5d6387af07e..daf167ef1deac 100644
+--- a/test/extensions/filters/network/dubbo_proxy/hessian_utils_test.cc
++++ b/test/extensions/filters/network/dubbo_proxy/hessian_utils_test.cc
+@@ -12,899 +12,74 @@ namespace Extensions {
+ namespace NetworkFilters {
+ namespace DubboProxy {
+ 
+-TEST(HessianUtilsTest, peekString) {
+-  // Insufficient data
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x02, 't'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekString(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x30}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekString(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x30, 't'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekString(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x53, 't'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekString(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x53, 't', 'e'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekString(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x52, 't'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekString(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  // Incorrect type
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x20, 't'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekString(buffer, &size), EnvoyException,
+-                              "hessian type is not string 32");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01, 't'}));
+-    size_t size;
+-    EXPECT_STREQ("t", HessianUtils::peekString(buffer, &size).c_str());
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  // empty string
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x00}));
+-    size_t size;
+-    EXPECT_STREQ("", HessianUtils::peekString(buffer, &size).c_str());
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01, 0x00}));
+-    size_t size;
+-    EXPECT_STREQ("", HessianUtils::peekString(buffer, &size, 1).c_str());
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x53, 0x00, 0x05, 'h', 'e', 'l', 'l', 'o'}));
+-    size_t size;
+-    EXPECT_STREQ("hello", HessianUtils::peekString(buffer, &size).c_str());
+-    EXPECT_EQ(8, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string(
+-        {0x52, 0x00, 0x07, 'h', 'e', 'l', 'l', 'o', ',', ' ', 0x05, 'w', 'o', 'r', 'l', 'd'}));
+-    size_t size;
+-    EXPECT_STREQ("hello, world", HessianUtils::peekString(buffer, &size).c_str());
+-    EXPECT_EQ(16, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x31, 0x01}) + std::string(256 + 0x01, 't'));
+-    size_t size;
+-    EXPECT_STREQ(std::string(256 + 0x01, 't').c_str(),
+-                 HessianUtils::peekString(buffer, &size).c_str());
+-    EXPECT_EQ(256 + 0x01 + 2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x31, 0x01}) + std::string(256 + 0x01, 't'));
+-    EXPECT_STREQ(std::string(256 + 0x01, 't').c_str(), HessianUtils::readString(buffer).c_str());
+-    EXPECT_EQ(0, buffer.length());
+-  }
+-}
++namespace {
+ 
+-TEST(HessianUtilsTest, peekLong) {
+-  // Insufficient data
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xf0'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekLong(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x38, '1'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekLong(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x59, '1'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekLong(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4c, '1'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekLong(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  // Incorrect type
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x40}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekLong(buffer, &size), EnvoyException,
+-                              "hessian type is not long 64");
+-  }
+-
+-  // Single octet longs
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xeb'}));
+-    size_t size;
+-    EXPECT_EQ(11, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xec'}));
+-    size_t size;
+-    EXPECT_EQ(12, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xed'}));
+-    size_t size;
+-    EXPECT_EQ(13, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xef'}));
+-    size_t size;
+-    EXPECT_EQ(15, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xe0'}));
+-    size_t size;
+-    EXPECT_EQ(0, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xd8'}));
+-    size_t size;
+-    EXPECT_EQ(-8, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  // Two octet longs
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xf8', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(0, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xf0', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(-2048, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xf7', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(-256, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xfc', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(1024, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xfc', '\xff'}));
+-    size_t size;
+-    EXPECT_EQ(1279, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xfd', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(1280, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xfd', '\xff'}));
+-    size_t size;
+-    EXPECT_EQ(1535, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xff', '\xff'}));
+-    size_t size;
+-    EXPECT_EQ(2047, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  // Three octet longs
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x3c, 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_EQ(0, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x38, 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_EQ(-262144, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\x3f', '\xff', '\xff'}));
+-    size_t size;
+-    EXPECT_EQ(262143, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  // four octet longs
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x59, 0x00, 0x00, 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_EQ(0, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(5, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01, 0x59, 0x00, 0x00, 0x01, 0x2c}));
+-    size_t size;
+-    EXPECT_EQ(300, HessianUtils::peekLong(buffer, &size, 1));
+-    EXPECT_EQ(5, size);
+-  }
+-
+-  // eight octet longs
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x2c}));
+-    size_t size;
+-    EXPECT_EQ(300, HessianUtils::peekLong(buffer, &size));
+-    EXPECT_EQ(9, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x2c}));
+-    EXPECT_EQ(300, HessianUtils::readLong(buffer));
+-    EXPECT_EQ(0, buffer.length());
+-  }
+-}
++TEST(BufferReaderTest, BufferReaderTest) {
++  Envoy::Buffer::OwnedImpl buffer;
++  buffer.add("test");
+ 
+-TEST(HessianUtilsTest, peekBool) {
+-  // Incorrect type
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekBool(buffer, &size), EnvoyException,
+-                              "hessian type is not bool 1");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'T'}));
+-    size_t size;
+-    EXPECT_TRUE(HessianUtils::peekBool(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'F'}));
+-    size_t size;
+-    EXPECT_FALSE(HessianUtils::peekBool(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'F'}));
+-    EXPECT_FALSE(HessianUtils::readBool(buffer));
+-    EXPECT_EQ(0, buffer.length());
+-  }
+-}
++  BufferReader reader_1(buffer);
+ 
+-TEST(HessianUtilsTest, peekInt) {
+-  // Insufficient data
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xc1'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekInt(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xd0'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekInt(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x49}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekInt(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  // Incorrect type
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekInt(buffer, &size), EnvoyException,
+-                              "hessian type is not int 1");
+-  }
+-
+-  // Single octet integers
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\x90'}));
+-    size_t size;
+-    EXPECT_EQ(0, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\x80'}));
+-    size_t size;
+-    EXPECT_EQ(-16, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xbf'}));
+-    size_t size;
+-    EXPECT_EQ(47, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  // Two octet integers
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xc8', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(0, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xc0', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(-2048, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xc7', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(-256, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xcc', 0x00}));
+-    size_t size;
+-    EXPECT_EQ(1024, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xcc', '\xff'}));
+-    size_t size;
+-    EXPECT_EQ(1279, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xcf', '\xff'}));
+-    size_t size;
+-    EXPECT_EQ(2047, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  // Three octet integers
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xd4', 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_EQ(0, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xd0', 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_EQ(-262144, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({'\xd7', '\xff', '\xff'}));
+-    size_t size;
+-    EXPECT_EQ(262143, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  // Four octet integers
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x49, 0x00, 0x00, 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_EQ(0, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(5, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x49, 0x00, 0x00, 0x01, 0x2c}));
+-    size_t size;
+-    EXPECT_EQ(300, HessianUtils::peekInt(buffer, &size));
+-    EXPECT_EQ(5, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x49, 0x00, 0x00, 0x01, 0x2c}));
+-    EXPECT_EQ(300, HessianUtils::readInt(buffer));
+-    EXPECT_EQ(0, buffer.length());
+-  }
+-}
++  EXPECT_EQ(0, reader_1.offset());
++  EXPECT_EQ(4, reader_1.length());
+ 
+-TEST(HessianUtilsTest, peekDouble) {
+-  // Insufficient data
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5d}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekDouble(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5e}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekDouble(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5f}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekDouble(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x44}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekDouble(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  // Incorrect type
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekDouble(buffer, &size), EnvoyException,
+-                              "hessian type is not double 1");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5b}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(0.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5c}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(1.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5d, 0x00}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(0.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5d, '\x80'}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(-128.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5d, '\x7f'}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(127.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(2, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5e, 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(0.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5e, '\x80', 0x00}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(-32768.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5e, '\x7f', '\xff'}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(32767.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(3, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5f, 0x00, 0x00, 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(0.0, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(5, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x44, 0x40, 0x28, '\x80', 0x00, 0x00, 0x00, 0x00, 0x00}));
+-    size_t size;
+-    EXPECT_DOUBLE_EQ(12.25, HessianUtils::peekDouble(buffer, &size));
+-    EXPECT_EQ(9, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x5f, 0x00, 0x00, 0x00, 0x00}));
+-    EXPECT_DOUBLE_EQ(0.0, HessianUtils::readDouble(buffer));
+-    EXPECT_EQ(0, buffer.length());
+-  }
+-}
++  std::string test_string(4, 0);
+ 
+-TEST(HessianUtilsTest, peekNull) {
+-  // Incorrect type
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekNull(buffer, &size), EnvoyException,
+-                              "hessian type is not null 1");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4e}));
+-    size_t size = 0;
+-    HessianUtils::peekNull(buffer, &size);
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4e}));
+-    HessianUtils::readNull(buffer);
+-    EXPECT_EQ(0, buffer.length());
+-  }
+-}
++  reader_1.readNBytes(test_string.data(), 4);
++
++  EXPECT_EQ("test", test_string);
++  EXPECT_EQ(4, reader_1.offset());
+ 
+-TEST(HessianUtilsTest, peekDate) {
+-  // Insufficient data
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4a}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekDate(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4b}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekDate(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  // Incorrect type
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekDate(buffer, &size), EnvoyException,
+-                              "hessian type is not date 1");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4b, 0x00, 0x00, 0x00, 0x00}));
+-    size_t size;
+-    auto t = HessianUtils::peekDate(buffer, &size);
+-    EXPECT_EQ(5, size);
+-    EXPECT_EQ(0, t.count());
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4b, 0x00, '\xe3', '\x83', '\x8f'}));
+-    size_t size;
+-    auto t = HessianUtils::peekDate(buffer, &size);
+-    EXPECT_EQ(5, size);
+-    EXPECT_EQ(894621060000, t.count());
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4a, 0x00, 0x00, 0x00, '\xd0', 0x4b, '\x92', '\x84', '\xb8'}));
+-    size_t size = 0;
+-    auto t = HessianUtils::peekDate(buffer, &size);
+-    EXPECT_EQ(9, size);
+-    // Time zone was UTC
+-    EXPECT_EQ(894621091000, t.count());
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x4a, 0x00, 0x00, 0x00, '\xd0', 0x4b, '\x92', '\x84', '\xb8'}));
+-    auto t = HessianUtils::readDate(buffer);
+-    // Time zone was UTC
+-    EXPECT_EQ(894621091000, t.count());
+-    EXPECT_EQ(0, buffer.length());
+-  }
++  BufferReader reader_2(buffer, 2);
++
++  EXPECT_EQ(2, reader_2.offset());
+ }
+ 
+-TEST(HessianUtilsTest, peekByte) {
+-  // Insufficient data
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x23}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekByte(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x42}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekByte(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x42, 't', 'e'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekByte(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x41, 't'}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekByte(buffer, &size), EnvoyException,
+-                              "buffer underflow");
+-  }
+-
+-  // Incorrect type
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x01}));
+-    size_t size;
+-    EXPECT_THROW_WITH_MESSAGE(HessianUtils::peekByte(buffer, &size), EnvoyException,
+-                              "hessian type is not byte 1");
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x20}));
+-    size_t size = 0;
+-    EXPECT_STREQ("", HessianUtils::peekByte(buffer, &size).c_str());
+-    EXPECT_EQ(1, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x23, 0x01, 0x02, 0x03}));
+-    size_t size = 0;
+-    EXPECT_STREQ("\x1\x2\x3", HessianUtils::peekByte(buffer, &size).c_str());
+-    EXPECT_EQ(4, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x42, 0x10, 0x00}) + std::string(0x10 * 256, 't'));
+-    size_t size = 0;
+-    EXPECT_STREQ(std::string(0x10 * 256, 't').c_str(),
+-                 HessianUtils::peekByte(buffer, &size).c_str());
+-    EXPECT_EQ(3 + 0x10 * 256, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x41, 0x04, 0x00}) + std::string(0x04 * 256, 't') +
+-               std::string({0x23, 0x01, 0x02, 0x03}));
+-    size_t size = 0;
+-    std::string expect_string = std::string(0x04 * 256, 't') + "\x1\x2\x3";
+-    EXPECT_STREQ(expect_string.c_str(), HessianUtils::peekByte(buffer, &size).c_str());
+-    EXPECT_EQ(3 + 0x04 * 256 + 4, size);
+-  }
+-
+-  {
+-    Buffer::OwnedImpl buffer;
+-    buffer.add(std::string({0x23, 0x01, 0x02, 0x03}));
+-    EXPECT_STREQ("\x1\x2\x3", HessianUtils::readByte(buffer).c_str());
+-    EXPECT_EQ(0, buffer.length());
+-  }
++TEST(BufferWriterTest, BufferWriterTest) {
++  Envoy::Buffer::OwnedImpl buffer;
++  buffer.add("test");
++
++  BufferWriter writer_1(buffer);
++
++  std::string test_string("123456789");
++
++  writer_1.rawWrite(test_string);
++
++  writer_1.rawWrite(test_string.data(), 5);
++
++  EXPECT_EQ("test12345678912345", buffer.toString());
+ }
+ 
+-TEST(HessianUtilsTest, writeString) {
+-  const size_t max = 65535;
+-  const size_t segment_mark_length = 3;
+-
+-  {
+-    const std::string append_content("b");
+-    const size_t append_content_hessian_length = 1;
+-    std::string message(max, 'a');
+-    message.append(append_content);
+-    size_t expect_serialized_size =
+-        max + segment_mark_length + append_content_hessian_length + append_content.size();
+-
+-    Buffer::OwnedImpl buffer;
+-    size_t size = HessianUtils::writeString(buffer, message);
+-    EXPECT_EQ(size, expect_serialized_size);
+-  }
+-
+-  {
+-    const std::string append_content(33, 'b');
+-    const size_t append_content_hessian_length = 2;
+-    std::string message(max, 'a');
+-    message.append(append_content);
+-    size_t expect_serialized_size =
+-        max + segment_mark_length + append_content_hessian_length + append_content.size();
+-
+-    Buffer::OwnedImpl buffer;
+-    size_t size = HessianUtils::writeString(buffer, message);
+-    EXPECT_EQ(size, expect_serialized_size);
+-  }
+-
+-  {
+-    const std::string append_content(1025, 'b');
+-    const size_t append_content_hessian_length = 3;
+-    std::string message(max, 'a');
+-    message.append(append_content);
+-    size_t expect_serialized_size =
+-        max + segment_mark_length + append_content_hessian_length + append_content.size();
+-
+-    Buffer::OwnedImpl buffer;
+-    size_t size = HessianUtils::writeString(buffer, message);
+-    EXPECT_EQ(size, expect_serialized_size);
+-  }
+-
+-  {
+-    const std::string append_content(1025, 'b');
+-    const size_t append_content_hessian_length = 3;
+-    const size_t max_size = 2 * max;
+-    std::string message(max_size, 'a');
+-    message.append(append_content);
+-    size_t expect_serialized_size =
+-        max * 2 + segment_mark_length * 2 + append_content_hessian_length + append_content.size();
+-
+-    Buffer::OwnedImpl buffer;
+-    size_t size = HessianUtils::writeString(buffer, message);
+-    EXPECT_EQ(size, expect_serialized_size);
+-  }
++TEST(HessianUtilsTest, GetParametersNumberTest) {
++  const std::string test_empty_types = "";
++
++  EXPECT_EQ(0, HessianUtils::getParametersNumber(test_empty_types));
++
++  // "[B" stands for binary type.
++  const std::string test_normal_types = "VZ[BBCDFIJS";
++
++  EXPECT_EQ(10, HessianUtils::getParametersNumber(test_normal_types));
++
++  const std::string test_with_arrays = "[V[Z[B[C[D[F[I[J[S";
++
++  EXPECT_EQ(9, HessianUtils::getParametersNumber(test_with_arrays));
++
++  const std::string test_with_object = "Ljava.lang.String;[BCDLjava.lang.Date;CDFIJ";
++
++  EXPECT_EQ(10, HessianUtils::getParametersNumber(test_with_object));
++
++  const std::string test_hybrid_types =
++      "CD[B[Ljava.lang.String;[Ljava.lang.Date;DLjava.lang.String;FIJ";
++
++  EXPECT_EQ(10, HessianUtils::getParametersNumber(test_hybrid_types));
++
++  const std::string test_error_types = "abcdefg";
++
++  EXPECT_EQ(0, HessianUtils::getParametersNumber(test_error_types));
+ }
+ 
++} // namespace
++
+ } // namespace DubboProxy
+ } // namespace NetworkFilters
+ } // namespace Extensions
+diff --git a/test/extensions/filters/network/dubbo_proxy/message_impl_test.cc b/test/extensions/filters/network/dubbo_proxy/message_impl_test.cc
+new file mode 100644
+index 0000000000000..82767f6cb8db4
+--- /dev/null
++++ b/test/extensions/filters/network/dubbo_proxy/message_impl_test.cc
+@@ -0,0 +1,164 @@
++#include "extensions/filters/network/dubbo_proxy/message_impl.h"
++
++#include "test/test_common/printers.h"
++#include "test/test_common/utility.h"
++
++#include "gtest/gtest.h"
++#include "hessian2/object.hpp"
++
++namespace Envoy {
++namespace Extensions {
++namespace NetworkFilters {
++namespace DubboProxy {
++
++namespace {
++
++TEST(ContextImplTest, ContextImplTest) {
++  ContextImpl test;
++
++  test.setHeaderSize(13);
++  EXPECT_EQ(13, test.headerSize());
++
++  test.setBodySize(13);
++  EXPECT_EQ(13, test.bodySize());
++
++  test.setHeartbeat(true);
++  EXPECT_EQ(true, test.isHeartbeat());
++
++  EXPECT_EQ(26, test.messageSize());
++}
++
++TEST(RpcInvocationImplAttachmentTest, RpcInvocationImplAttachmentTest) {
++  auto map = std::make_unique<RpcInvocationImpl::Attachment::Map>();
++
++  map->toMutableUntypedMap()->emplace(std::make_unique<Hessian2::StringObject>("group"),
++                                      std::make_unique<Hessian2::StringObject>("fake_group"));
++  map->toMutableUntypedMap()->emplace(std::make_unique<Hessian2::StringObject>("fake_key"),
++                                      std::make_unique<Hessian2::StringObject>("fake_value"));
++
++  map->toMutableUntypedMap()->emplace(std::make_unique<Hessian2::NullObject>(),
++                                      std::make_unique<Hessian2::LongObject>(0));
++
++  map->toMutableUntypedMap()->emplace(std::make_unique<Hessian2::StringObject>("map_key"),
++                                      std::make_unique<Hessian2::UntypedMapObject>());
++
++  RpcInvocationImpl::Attachment attachment(std::move(map), 23333);
++
++  EXPECT_EQ(4, attachment.attachment().toUntypedMap().value()->size());
++  // Only string type key/value pairs will be inserted to header map.
++  EXPECT_EQ(2, attachment.headers().size());
++
++  // Test lookup.
++  EXPECT_EQ(nullptr, attachment.lookup("map_key"));
++  EXPECT_EQ("fake_group", *attachment.lookup("group"));
++
++  EXPECT_FALSE(attachment.attachmentUpdated());
++
++  // Test remove. Remove a normal string type key/value pair.
++  EXPECT_EQ("fake_value", *attachment.lookup("fake_key"));
++  attachment.remove("fake_key");
++  EXPECT_EQ(nullptr, attachment.lookup("fake_key"));
++
++  EXPECT_EQ(3, attachment.attachment().toUntypedMap().value()->size());
++  EXPECT_EQ(1, attachment.headers().size());
++
++  // Test remove. Delete a key/value pair whose value type is map.
++  attachment.remove("map_key");
++  EXPECT_EQ(2, attachment.attachment().toUntypedMap().value()->size());
++  EXPECT_EQ(1, attachment.headers().size());
++
++  // Test insert.
++  attachment.insert("test", "test_value");
++  EXPECT_EQ(3, attachment.attachment().toUntypedMap().value()->size());
++  EXPECT_EQ(2, attachment.headers().size());
++
++  EXPECT_EQ("test_value", *attachment.lookup("test"));
++
++  EXPECT_TRUE(attachment.attachmentUpdated());
++  EXPECT_EQ(23333, attachment.attachmentOffset());
++}
++
++TEST(RpcInvocationImplTest, RpcInvocationImplTest) {
++  RpcInvocationImpl invo;
++
++  invo.setServiceName("fake_service");
++  EXPECT_EQ("fake_service", invo.serviceName());
++
++  invo.setMethodName("fake_method");
++  EXPECT_EQ("fake_method", invo.methodName());
++
++  EXPECT_EQ(false, invo.serviceVersion().has_value());
++  invo.setServiceVersion("fake_version");
++  EXPECT_EQ("fake_version", invo.serviceVersion().value());
++
++  bool set_parameters{false};
++  bool set_attachment{false};
++
++  invo.setParametersLazyCallback([&set_parameters]() -> RpcInvocationImpl::ParametersPtr {
++    set_parameters = true;
++    return std::make_unique<RpcInvocationImpl::Parameters>();
++  });
++
++  invo.setAttachmentLazyCallback([&set_attachment]() -> RpcInvocationImpl::AttachmentPtr {
++    auto map = std::make_unique<RpcInvocationImpl::Attachment::Map>();
++
++    map->toMutableUntypedMap()->emplace(std::make_unique<Hessian2::StringObject>("group"),
++                                        std::make_unique<Hessian2::StringObject>("fake_group"));
++
++    auto attach = std::make_unique<RpcInvocationImpl::Attachment>(std::move(map), 0);
++
++    set_attachment = true;
++
++    return attach;
++  });
++
++  EXPECT_EQ(false, invo.hasParameters());
++  EXPECT_EQ(false, invo.hasAttachment());
++
++  // When parsing attachment, parameters will also be parsed.
++  EXPECT_NE(nullptr, invo.mutableAttachment());
++  invo.attachment();
++  EXPECT_EQ(true, set_parameters);
++  EXPECT_EQ(true, set_attachment);
++  EXPECT_EQ(true, invo.hasParameters());
++  EXPECT_EQ(true, invo.hasAttachment());
++  EXPECT_EQ("fake_group", invo.serviceGroup().value());
++
++  invo.setServiceGroup("new_fake_group");
++  EXPECT_EQ("new_fake_group", invo.serviceGroup().value());
++
++  // If parameters and attachment have values, the callback function will not be executed.
++  set_parameters = false;
++  set_attachment = false;
++  EXPECT_NE(nullptr, invo.mutableParameters());
++  EXPECT_NE(nullptr, invo.mutableAttachment());
++  EXPECT_EQ(false, set_parameters);
++  EXPECT_EQ(false, set_attachment);
++
++  // Reset attachment and parameters.
++  invo.mutableParameters() = nullptr;
++  invo.mutableAttachment() = nullptr;
++
++  // When parsing parameters, attachment will not be parsed.
++  invo.mutableParameters();
++  EXPECT_EQ(true, set_parameters);
++  EXPECT_EQ(false, set_attachment);
++  EXPECT_EQ(true, invo.hasParameters());
++  EXPECT_EQ(false, invo.hasAttachment());
++}
++
++TEST(RpcResultImplTest, RpcResultImplTest) {
++  RpcResultImpl result;
++
++  EXPECT_EQ(false, result.hasException());
++
++  result.setException(true);
++
++  EXPECT_EQ(true, result.hasException());
++}
++
++} // namespace
++} // namespace DubboProxy
++} // namespace NetworkFilters
++} // namespace Extensions
++} // namespace Envoy
+diff --git a/test/extensions/filters/network/dubbo_proxy/metadata_test.cc b/test/extensions/filters/network/dubbo_proxy/metadata_test.cc
+index 4ac1e14e6301a..c014b7ff5611c 100644
+--- a/test/extensions/filters/network/dubbo_proxy/metadata_test.cc
++++ b/test/extensions/filters/network/dubbo_proxy/metadata_test.cc
+@@ -1,6 +1,5 @@
+ #include "extensions/filters/network/dubbo_proxy/message_impl.h"
+ #include "extensions/filters/network/dubbo_proxy/metadata.h"
+-#include "extensions/filters/network/dubbo_proxy/serializer_impl.h"
+ 
+ #include "gtest/gtest.h"
+ 
+@@ -9,53 +8,45 @@ namespace Extensions {
+ namespace NetworkFilters {
+ namespace DubboProxy {
+ 
+-TEST(MessageMetadataTest, Fields) {
+-  MessageMetadata metadata;
+-  auto invo = std::make_shared<RpcInvocationImpl>();
++TEST(MessageMetadataTest, MessageMetadataTest) {
++  auto invocation_info = std::make_shared<RpcInvocationImpl>();
++  MessageMetadata meta;
+ 
+-  EXPECT_FALSE(metadata.hasInvocationInfo());
+-  metadata.setInvocationInfo(invo);
+-  EXPECT_TRUE(metadata.hasInvocationInfo());
++  EXPECT_EQ(false, meta.hasInvocationInfo());
+ 
+-  EXPECT_THROW(metadata.timeout().value(), absl::bad_optional_access);
+-  metadata.setTimeout(3);
+-  EXPECT_TRUE(metadata.timeout().has_value());
++  meta.setInvocationInfo(invocation_info);
+ 
+-  invo->setMethodName("method");
+-  EXPECT_EQ("method", invo->methodName());
++  EXPECT_EQ(true, meta.hasInvocationInfo());
++  EXPECT_EQ(invocation_info.get(), &meta.invocationInfo());
+ 
+-  EXPECT_FALSE(invo->serviceVersion().has_value());
+-  EXPECT_THROW(invo->serviceVersion().value(), absl::bad_optional_access);
+-  invo->setServiceVersion("1.0.0");
+-  EXPECT_TRUE(invo->serviceVersion().has_value());
+-  EXPECT_EQ("1.0.0", invo->serviceVersion().value());
++  meta.setProtocolType(ProtocolType::Dubbo);
++  EXPECT_EQ(ProtocolType::Dubbo, meta.protocolType());
+ 
+-  EXPECT_FALSE(invo->serviceGroup().has_value());
+-  EXPECT_THROW(invo->serviceGroup().value(), absl::bad_optional_access);
+-  invo->setServiceGroup("group");
+-  EXPECT_TRUE(invo->serviceGroup().has_value());
+-  EXPECT_EQ("group", invo->serviceGroup().value());
+-}
++  meta.setProtocolVersion(27);
++  EXPECT_EQ(27, meta.protocolVersion());
+ 
+-TEST(MessageMetadataTest, Headers) {
+-  MessageMetadata metadata;
+-  auto invo = std::make_shared<RpcInvocationImpl>();
++  meta.setMessageType(MessageType::Request);
++  EXPECT_EQ(MessageType::Request, meta.messageType());
+ 
+-  EXPECT_FALSE(invo->hasHeaders());
+-  invo->addHeader("k", "v");
+-  EXPECT_EQ(invo->headers().size(), 1);
+-}
++  meta.setRequestId(1234567);
++  EXPECT_EQ(1234567, meta.requestId());
++
++  EXPECT_EQ(false, meta.timeout().has_value());
++  meta.setTimeout(6000);
++  EXPECT_EQ(6000, meta.timeout().value());
++
++  meta.setTwoWayFlag(true);
++  EXPECT_EQ(true, meta.isTwoWay());
++
++  meta.setSerializationType(SerializationType::Hessian2);
++  EXPECT_EQ(SerializationType::Hessian2, meta.serializationType());
++
++  EXPECT_EQ(false, meta.hasResponseStatus());
+ 
+-TEST(MessageMetadataTest, Parameters) {
+-  MessageMetadata metadata;
+-  auto invo = std::make_shared<RpcInvocationImpl>();
++  meta.setResponseStatus(ResponseStatus::ServerTimeout);
++  EXPECT_EQ(ResponseStatus::ServerTimeout, meta.responseStatus());
+ 
+-  EXPECT_FALSE(invo->hasParameters());
+-  invo->addParameterValue(0, "test");
+-  EXPECT_TRUE(invo->hasParameters());
+-  EXPECT_EQ(invo->parameters().size(), 1);
+-  EXPECT_EQ(invo->getParameterValue(0), "test");
+-  EXPECT_EQ(invo->getParameterValue(1), "");
++  EXPECT_EQ(true, meta.hasResponseStatus());
+ }
+ 
+ } // namespace DubboProxy
+diff --git a/test/extensions/filters/network/dubbo_proxy/route_matcher_test.cc b/test/extensions/filters/network/dubbo_proxy/route_matcher_test.cc
+index 93adeb624df50..31a4ef785cee5 100644
+--- a/test/extensions/filters/network/dubbo_proxy/route_matcher_test.cc
++++ b/test/extensions/filters/network/dubbo_proxy/route_matcher_test.cc
+@@ -5,8 +5,8 @@
+ 
+ #include "common/protobuf/protobuf.h"
+ 
++#include "extensions/filters/network/dubbo_proxy/message_impl.h"
+ #include "extensions/filters/network/dubbo_proxy/router/route_matcher.h"
+-#include "extensions/filters/network/dubbo_proxy/serializer_impl.h"
+ 
+ #include "test/mocks/server/factory_context.h"
+ 
+@@ -36,6 +36,17 @@ parseDubboProxyFromV2Yaml(const std::string& yaml) {
+   return config;
+ }
+ 
++void setDefaultInvocationCallback(RpcInvocationImpl& invo) {
++  invo.setParametersLazyCallback([]() -> RpcInvocationImpl::ParametersPtr {
++    return std::make_unique<RpcInvocationImpl::Parameters>();
++  });
++
++  invo.setAttachmentLazyCallback([]() -> RpcInvocationImpl::AttachmentPtr {
++    auto map = std::make_unique<RpcInvocationImpl::Attachment::Map>();
++    return std::make_unique<RpcInvocationImpl::Attachment>(std::move(map), 0);
++  });
++}
++
+ } // namespace
+ 
+ TEST(DubboRouteMatcherTest, RouteByServiceNameWithWildcard) {
+@@ -227,12 +238,16 @@ group: test
+     metadata.setInvocationInfo(invo);
+     invo->setMethodName("test");
+     invo->setServiceName("org.apache.dubbo.demo.DemoService");
++
++    setDefaultInvocationCallback(*invo);
++
+     EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+ 
+     invo->setServiceGroup("test");
+     EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+ 
+     invo->setServiceVersion("1.0.0");
++
+     EXPECT_EQ("user_service_dubbo_server", matcher.route(metadata, 0)->routeEntry()->clusterName());
+   }
+ 
+@@ -304,6 +319,9 @@ group: HSF
+     metadata.setInvocationInfo(invo);
+     invo->setMethodName("test");
+     invo->setServiceName("org.apache.dubbo.demo.DemoService");
++
++    setDefaultInvocationCallback(*invo);
++
+     EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+ 
+     invo->setServiceGroup("test");
+@@ -449,6 +467,107 @@ interface: org.apache.dubbo.demo.DemoService
+   EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+ }
+ 
++TEST(DubboRouteMatcherTest, RouteByParamterWithNoParameter) {
++  const std::string yaml = R"EOF(
++name: local_route
++interface: org.apache.dubbo.demo.DemoService
++routes:
++  - match:
++      method:
++        name:
++          exact: "add"
++        params_match:
++          0:
++            range_match:
++              start: 100
++              end: 200
++    route:
++        cluster: user_service_dubbo_server
++)EOF";
++
++  envoy::extensions::filters::network::dubbo_proxy::v3::RouteConfiguration config =
++      parseRouteConfigurationFromV2Yaml(yaml);
++  auto invo = std::make_shared<RpcInvocationImpl>();
++  MessageMetadata metadata;
++  metadata.setInvocationInfo(invo);
++  invo->setServiceName("org.apache.dubbo.demo.DemoService");
++  invo->setMethodName("add");
++
++  setDefaultInvocationCallback(*invo);
++
++  NiceMock<Server::Configuration::MockFactoryContext> context;
++  SingleRouteMatcherImpl matcher(config, context);
++  EXPECT_EQ(nullptr, matcher.route(metadata, 0));
++}
++
++TEST(DubboRouteMatcherTest, RouteByParamterWithErrorIndex) {
++  const std::string yaml = R"EOF(
++name: local_route
++interface: org.apache.dubbo.demo.DemoService
++routes:
++  - match:
++      method:
++        name:
++          exact: "add"
++        params_match:
++          3:
++            range_match:
++              start: 100
++              end: 200
++    route:
++        cluster: user_service_dubbo_server
++)EOF";
++
++  envoy::extensions::filters::network::dubbo_proxy::v3::RouteConfiguration config =
++      parseRouteConfigurationFromV2Yaml(yaml);
++  auto invo = std::make_shared<RpcInvocationImpl>();
++  MessageMetadata metadata;
++  metadata.setInvocationInfo(invo);
++  invo->setServiceName("org.apache.dubbo.demo.DemoService");
++  invo->setMethodName("add");
++
++  setDefaultInvocationCallback(*invo);
++  invo->mutableParameters()->push_back(std::make_unique<Hessian2::StringObject>("150"));
++
++  NiceMock<Server::Configuration::MockFactoryContext> context;
++  SingleRouteMatcherImpl matcher(config, context);
++  EXPECT_EQ(nullptr, matcher.route(metadata, 0));
++}
++
++TEST(DubboRouteMatcherTest, RouteByParameterWithErrorType) {
++  const std::string yaml = R"EOF(
++name: local_route
++interface: org.apache.dubbo.demo.DemoService
++routes:
++  - match:
++      method:
++        name:
++          exact: "add"
++        params_match:
++          0:
++            range_match:
++              start: 100
++              end: 200
++    route:
++        cluster: user_service_dubbo_server
++)EOF";
++
++  envoy::extensions::filters::network::dubbo_proxy::v3::RouteConfiguration config =
++      parseRouteConfigurationFromV2Yaml(yaml);
++  auto invo = std::make_shared<RpcInvocationImpl>();
++  MessageMetadata metadata;
++  metadata.setInvocationInfo(invo);
++  invo->setServiceName("org.apache.dubbo.demo.DemoService");
++  invo->setMethodName("add");
++
++  setDefaultInvocationCallback(*invo);
++  invo->mutableParameters()->push_back(std::make_unique<Hessian2::NullObject>());
++
++  NiceMock<Server::Configuration::MockFactoryContext> context;
++  SingleRouteMatcherImpl matcher(config, context);
++  EXPECT_EQ(nullptr, matcher.route(metadata, 0));
++}
++
+ TEST(DubboRouteMatcherTest, RouteByParameterWithRangeMatch) {
+   const std::string yaml = R"EOF(
+ name: local_route
+@@ -474,13 +593,49 @@ interface: org.apache.dubbo.demo.DemoService
+   metadata.setInvocationInfo(invo);
+   invo->setServiceName("org.apache.dubbo.demo.DemoService");
+   invo->setMethodName("add");
+-  invo->addParameterValue(0, "150");
++
++  setDefaultInvocationCallback(*invo);
++  invo->mutableParameters()->push_back(std::make_unique<Hessian2::StringObject>("150"));
+ 
+   NiceMock<Server::Configuration::MockFactoryContext> context;
+   SingleRouteMatcherImpl matcher(config, context);
+   EXPECT_EQ("user_service_dubbo_server", matcher.route(metadata, 0)->routeEntry()->clusterName());
+ }
+ 
++TEST(DubboRouteMatcherTest, RouteByParameterWithRangeMatchButNotMatch) {
++  const std::string yaml = R"EOF(
++name: local_route
++interface: org.apache.dubbo.demo.DemoService
++routes:
++  - match:
++      method:
++        name:
++          exact: "add"
++        params_match:
++          0:
++            range_match:
++              start: 100
++              end: 200
++    route:
++        cluster: user_service_dubbo_server
++)EOF";
++
++  envoy::extensions::filters::network::dubbo_proxy::v3::RouteConfiguration config =
++      parseRouteConfigurationFromV2Yaml(yaml);
++  auto invo = std::make_shared<RpcInvocationImpl>();
++  MessageMetadata metadata;
++  metadata.setInvocationInfo(invo);
++  invo->setServiceName("org.apache.dubbo.demo.DemoService");
++  invo->setMethodName("add");
++
++  setDefaultInvocationCallback(*invo);
++  invo->mutableParameters()->push_back(std::make_unique<Hessian2::StringObject>("300"));
++
++  NiceMock<Server::Configuration::MockFactoryContext> context;
++  SingleRouteMatcherImpl matcher(config, context);
++  EXPECT_EQ(nullptr, matcher.route(metadata, 0));
++}
++
+ TEST(DubboRouteMatcherTest, RouteByParameterWithExactMatch) {
+   const std::string yaml = R"EOF(
+ name: local_route
+@@ -504,7 +659,10 @@ interface: org.apache.dubbo.demo.DemoService
+   metadata.setInvocationInfo(invo);
+   invo->setServiceName("org.apache.dubbo.demo.DemoService");
+   invo->setMethodName("add");
+-  invo->addParameterValue(1, "user_id:94562");
++
++  setDefaultInvocationCallback(*invo);
++  invo->mutableParameters()->resize(2);
++  invo->mutableParameters()->back() = std::make_unique<Hessian2::StringObject>("user_id:94562");
+ 
+   NiceMock<Server::Configuration::MockFactoryContext> context;
+   SingleRouteMatcherImpl matcher(config, context);
+@@ -537,21 +695,21 @@ interface: org.apache.dubbo.demo.DemoService
+   metadata.setInvocationInfo(invo);
+   invo->setServiceName("org.apache.dubbo.demo.DemoService");
+   invo->setMethodName("add");
+-  invo->addHeader("custom", "123");
+-  std::string test_value("123");
+ 
+-  Envoy::Http::LowerCaseString test_key("custom1");
+-  invo->addHeaderReference(test_key, test_value);
++  setDefaultInvocationCallback(*invo);
++
++  invo->mutableAttachment()->insert("custom", "123");
++  invo->mutableAttachment()->insert("custom1", "123");
+ 
+   NiceMock<Server::Configuration::MockFactoryContext> context;
+   SingleRouteMatcherImpl matcher(config, context);
+   EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+ 
+-  test_value = "456";
++  invo->mutableAttachment()->insert("custom1", "456");
+   EXPECT_EQ("user_service_dubbo_server", matcher.route(metadata, 0)->routeEntry()->clusterName());
+   EXPECT_EQ(nullptr, matcher.route(metadata, 0)->routeEntry()->metadataMatchCriteria());
+ 
+-  test_value = "123";
++  invo->mutableAttachment()->insert("custom1", "123");
+   EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+ }
+ 
+@@ -591,7 +749,10 @@ serialization_type: Hessian2
+   metadata.setInvocationInfo(invo);
+   invo->setServiceName("org.apache.dubbo.demo.DemoService");
+   invo->setMethodName("add");
+-  invo->addParameterValue(1, "user_id");
++
++  setDefaultInvocationCallback(*invo);
++  invo->mutableParameters()->resize(2);
++  invo->mutableParameters()->back() = std::make_unique<Hessian2::StringObject>("user_id");
+ 
+   NiceMock<Server::Configuration::MockFactoryContext> context;
+   MultiRouteMatcher matcher(config.route_config(), context);
+@@ -628,22 +789,32 @@ interface: org.apache.dubbo.demo.DemoService
+   invo->setServiceName("org.apache.dubbo.demo.DemoService");
+   invo->setMethodName("add");
+ 
++  setDefaultInvocationCallback(*invo);
++
+   // There is no parameter information in metadata.
+   NiceMock<Server::Configuration::MockFactoryContext> context;
+   SingleRouteMatcherImpl matcher(config, context);
+   EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+ 
+   // The parameter is empty.
+-  invo->addParameterValue(1, "");
++  invo->mutableParameters()->resize(2);
++  invo->mutableParameters()->back() = std::make_unique<Hessian2::StringObject>("");
++
+   EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+ 
+   {
+     auto invo = std::make_shared<RpcInvocationImpl>();
++
++    setDefaultInvocationCallback(*invo);
++
++    // Error parameter.
++    invo->mutableParameters()->resize(2);
++    invo->mutableParameters()->back() = std::make_unique<Hessian2::StringObject>("user_id:562");
++
+     MessageMetadata metadata;
+     metadata.setInvocationInfo(invo);
+     invo->setServiceName("org.apache.dubbo.demo.DemoService");
+     invo->setMethodName("add");
+-    invo->addParameterValue(1, "user_id:562");
+     EXPECT_EQ(nullptr, matcher.route(metadata, 0));
+   }
+ }
+diff --git a/test/extensions/filters/network/dubbo_proxy/router_test.cc b/test/extensions/filters/network/dubbo_proxy/router_test.cc
+index 7b580f9f609b7..e8945775b3ea9 100644
+--- a/test/extensions/filters/network/dubbo_proxy/router_test.cc
++++ b/test/extensions/filters/network/dubbo_proxy/router_test.cc
+@@ -5,9 +5,9 @@
+ #include "extensions/filters/network/dubbo_proxy/message_impl.h"
+ #include "extensions/filters/network/dubbo_proxy/protocol.h"
+ #include "extensions/filters/network/dubbo_proxy/router/router_impl.h"
+-#include "extensions/filters/network/dubbo_proxy/serializer_impl.h"
+ 
+ #include "test/extensions/filters/network/dubbo_proxy/mocks.h"
++#include "test/extensions/filters/network/dubbo_proxy/utility.h"
+ #include "test/mocks/network/mocks.h"
+ #include "test/mocks/server/factory_context.h"
+ #include "test/test_common/printers.h"
+@@ -58,6 +58,20 @@ class TestNamedProtocolConfigFactory : public NamedProtocolConfigFactory {
+   std::function<MockProtocol*()> f_;
+ };
+ 
++void writeRequest(Buffer::Instance& buffer) {
++  buffer.add(std::string({'\xda', '\xbb', 0x42, 20})); // Header
++  addInt64(buffer, 1);
++  addInt32(buffer, 5);
++
++  buffer.add(std::string({
++      0x04,
++      't',
++      'e',
++      's',
++      't',
++  })); // Body
++}
++
+ } // namespace
+ 
+ class DubboRouterTestBase {
+@@ -95,6 +109,10 @@ class DubboRouterTestBase {
+   }
+ 
+   void initializeMetadata(MessageType msg_type) {
++    if (metadata_ != nullptr) {
++      return;
++    }
++
+     msg_type_ = msg_type;
+ 
+     metadata_ = std::make_shared<MessageMetadata>();
+@@ -391,12 +409,42 @@ TEST_F(DubboRouterTest, UnexpectedRouterDestroy) {
+   buffer.add("test");                                  // Body
+ 
+   auto ctx = static_cast<ContextImpl*>(message_context_.get());
+-  ctx->messageOriginData().move(buffer, buffer.length());
++  ctx->originMessage().move(buffer, buffer.length());
+   startRequest(MessageType::Request);
+   connectUpstream();
+   destroyRouter();
+ }
+ 
++TEST_F(DubboRouterTest, UpstreamRemoteCloseNoRequest) {
++  initializeRouter();
++
++  startRequest(MessageType::Request);
++  connectUpstream();
++  returnResponse();
++
++  upstream_callbacks_->onEvent(Network::ConnectionEvent::RemoteClose);
++  destroyRouter();
++}
++
++TEST_F(DubboRouterTest, UpstreamLocalCloseAndRequestReset) {
++  initializeRouter();
++
++  startRequest(MessageType::Request);
++  connectUpstream();
++
++  Buffer::OwnedImpl buffer;
++
++  EXPECT_CALL(callbacks_, startUpstreamResponse());
++
++  EXPECT_CALL(callbacks_, upstreamData(Ref(buffer)))
++      .WillOnce(Return(DubboFilters::UpstreamResponseStatus::Reset));
++
++  upstream_callbacks_->onUpstreamData(buffer, false);
++
++  upstream_callbacks_->onEvent(Network::ConnectionEvent::LocalClose);
++  destroyRouter();
++}
++
+ TEST_F(DubboRouterTest, UpstreamRemoteCloseMidResponse) {
+   initializeRouter();
+ 
+@@ -446,6 +494,55 @@ TEST_F(DubboRouterTest, Call) {
+   destroyRouter();
+ }
+ 
++// Test the attachment being updated.
++TEST_F(DubboRouterTest, AttachmentUpdated) {
++  initializeRouter();
++  initializeMetadata(MessageType::Request);
++
++  auto* invo = const_cast<RpcInvocationImpl*>(
++      dynamic_cast<const RpcInvocationImpl*>(&metadata_->invocationInfo()));
++
++  EXPECT_CALL(upstream_connection_, write(_, false));
++
++  writeRequest(message_context_->originMessage());
++  dynamic_cast<ContextImpl*>(message_context_.get())->setHeaderSize(16);
++
++  const size_t origin_message_size = message_context_->originMessage().length();
++
++  invo->setParametersLazyCallback([]() -> RpcInvocationImpl::ParametersPtr {
++    return std::make_unique<RpcInvocationImpl::Parameters>();
++  });
++
++  invo->setAttachmentLazyCallback([origin_message_size]() -> RpcInvocationImpl::AttachmentPtr {
++    auto map = std::make_unique<RpcInvocationImpl::Attachment::Map>();
++    return std::make_unique<RpcInvocationImpl::Attachment>(std::move(map), origin_message_size);
++  });
++
++  invo->mutableAttachment()->insert("fake_attach_key", "fake_attach_value");
++
++  startRequest(MessageType::Request);
++
++  auto& upstream_request_buffer = router_->upstreamRequestBufferForTest();
++
++  // Verify that the attachment is properly serialized.
++  Hessian2::Decoder decoder(
++      std::make_unique<BufferReader>(upstream_request_buffer, origin_message_size));
++  EXPECT_EQ("fake_attach_value",
++            *(decoder.decode<Hessian2::Object>()
++                  ->toUntypedMap()
++                  .value()
++                  ->at(std::make_unique<Hessian2::StringObject>("fake_attach_key"))
++                  ->toString()
++                  .value()));
++
++  // Check new body size value.
++  EXPECT_EQ(upstream_request_buffer.peekBEInt<int32_t>(12), upstream_request_buffer.length() - 16);
++
++  connectUpstream();
++  returnResponse();
++  destroyRouter();
++}
++
+ TEST_F(DubboRouterTest, DecoderFilterCallbacks) {
+   initializeRouter();
+   initializeMetadata(MessageType::Request);

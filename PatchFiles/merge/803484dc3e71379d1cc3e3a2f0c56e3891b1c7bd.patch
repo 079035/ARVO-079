@@ -1,0 +1,9 @@
+commit 803484dc3e71379d1cc3e3a2f0c56e3891b1c7bd
+Merge: 3bb323fbd 7a24f4c9e
+Author: eugene7646 <elivis@basistech.com>
+Date:   Wed Aug 17 14:13:17 2022 -0400
+
+    Merge pull request #2726 from sashashura/patch-2
+    
+    Fixes Heap-buffer-overflow READ in ntfs_make_data_run
+

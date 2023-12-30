@@ -1,0 +1,22 @@
+From d5a65e6cb59bfd31fdabf28bd29c1fca6800735a Mon Sep 17 00:00:00 2001
+From: Guy Harris <gharris@sonic.net>
+Date: Mon, 19 Oct 2020 16:05:22 -0700
+Subject: [PATCH] Undo temporary test hack inadvertently committed.
+
+---
+ configure | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure b/configure
+index d3b7c50ecd..496338611e 100755
+--- a/configure
++++ b/configure
+@@ -8515,7 +8515,7 @@ fi
+ #
+ # Look for yacc/bison/byacc.
+ #
+-for ac_prog in 'boson -y' byacc
++for ac_prog in 'bison -y' byacc
+ do
+   # Extract the first word of "$ac_prog", so it can be a program name with args.
+ set dummy $ac_prog; ac_word=$2

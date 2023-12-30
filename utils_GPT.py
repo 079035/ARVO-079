@@ -1,4 +1,4 @@
-from OpenAI_gpt import GPT,GPTfix
+from OpenAI_gpt import GPT4,GPT4_Preview
 from pathlib import Path
 from Diff import getDiff
 REPORTS_DIR = Path("./Reports")
@@ -18,8 +18,11 @@ def oss_fuzz_vul_labeler(localID):
     diff = oss_fuzz_get_patch(localID)
     if diff == False:
         return False
-    ins = GPT()
-    res = ins.api_call(f"Can you describe what vulnerability could be patched in following diff file?\nDiff information:\n```\n{diff}\n```")
+    message = f"Can you describe what vulnerability could be patched in following diff file?\nDiff information:\n```\n{diff}\n```"
+    res = GPT4().api_call(message)
+    if res == False:
+        res = GPT4_Preview().api_call(message)
+        print(res)
     return res
 if __name__ == "__main__":
     res = oss_fuzz_vul_labeler(31585)

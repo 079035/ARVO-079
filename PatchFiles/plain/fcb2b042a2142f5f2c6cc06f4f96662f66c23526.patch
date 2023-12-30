@@ -1,0 +1,60 @@
+From fcb2b042a2142f5f2c6cc06f4f96662f66c23526 Mon Sep 17 00:00:00 2001
+From: Tim Kientzle <tkientzle@apple.com>
+Date: Mon, 20 Sep 2021 18:58:21 -0700
+Subject: [PATCH] Don't overrun string when parsing timestamps
+
+The format is a fixed-length layout except for the
+trailing part.  So we can optimize the initial
+part with a single check to make sure the string
+is long enough, but we need to be more careful
+at the end.
+
+Thanks to oss-fuzz for finding this!
+---
+ .../Google_Protobuf_Timestamp+Extensions.swift      |  6 ++++--
+ Tests/SwiftProtobufTests/Test_Timestamp.swift       | 13 +++++++++++++
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/Sources/SwiftProtobuf/Google_Protobuf_Timestamp+Extensions.swift b/Sources/SwiftProtobuf/Google_Protobuf_Timestamp+Extensions.swift
+index 646ef9308..ab0a68b87 100644
+--- a/Sources/SwiftProtobuf/Google_Protobuf_Timestamp+Extensions.swift
++++ b/Sources/SwiftProtobuf/Google_Protobuf_Timestamp+Extensions.swift
+@@ -147,8 +147,10 @@ private func parseTimestamp(s: String) throws -> (Int64, Int32) {
+   }
+ 
+   var seconds: Int64 = 0
+-  // "+" or "-" starts Timezone offset
+-  if value[pos] == plus || value[pos] == dash {
++  // "Z" or "+" or "-" starts Timezone offset
++  if pos >= value.count {
++    throw JSONDecodingError.malformedTimestamp
++  } else if value[pos] == plus || value[pos] == dash {
+     if pos + 6 > value.count {
+       throw JSONDecodingError.malformedTimestamp
+     }
+diff --git a/Tests/SwiftProtobufTests/Test_Timestamp.swift b/Tests/SwiftProtobufTests/Test_Timestamp.swift
+index bcc250988..d3a247cad 100644
+--- a/Tests/SwiftProtobufTests/Test_Timestamp.swift
++++ b/Tests/SwiftProtobufTests/Test_Timestamp.swift
+@@ -167,8 +167,21 @@ class Test_Timestamp: XCTestCase, PBTestHelpers {
+             o.seconds = -62135596800
+             o.nanos = 0
+         }
++
++        // Truncated forms w/o timezone should not read past end of string
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.00000000\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.0000000\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.000000\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.00000\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.0000\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.000\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.00\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.0\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00.\"")
++        assertJSONDecodeFails("\"9999-12-31T00:00:00\"")
+     }
+ 
++
+     func testJSON_range() throws {
+         // Check that JSON timestamps round-trip correctly over a wide range.
+         // This checks about 15,000 dates scattered over a 10,000 year period

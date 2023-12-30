@@ -1,8 +1,8 @@
-Vulnerability:
-There is an out of array access vulnerability in the code.
+1. Vulnerability:
+The vulnerability in the code was an out-of-array access issue. This could potentially lead to a buffer overflow, which is a serious security risk as it can lead to arbitrary code execution or denial of service.
 
-Summary of the Fix:
-The fix checks if the width of the video is divisible by 8 in addition to the existing checks for buffer size and width.
+2. Short Summary of the Fix:
+The fix added a check to ensure that the width of the AVCodecContext is not only greater than or equal to 8, but also a multiple of 8. This prevents the out-of-array access by ensuring that the width value is always valid for the operations performed on it.
 
-Detailed Description of the Fix:
-The fix modifies the conditional statement on line 61 to check if the width of the video is divisible by 8 using the modulus operator (%). If the width is not divisible by 8, the function returns AVERROR_INVALIDDATA, indicating an error. This additional check ensures that the width is a multiple of 8 and prevents out of array access.
+3. Detailed Description of the Fix:
+In the function `speedhq_decode_frame`, a check was added to the if-statement that returns an error if the buffer size is less than 4 or the width of the AVCodecContext is less than 8. The added check ensures that the width of the AVCodecContext is also a multiple of 8. This is done by using the modulus operator (`%`) to check if the remainder of the width divided by 8 is 0. If it is not, the function returns an error. This additional check ensures that the width value is always valid for the operations performed on it, preventing out-of-array access and potential buffer overflow.

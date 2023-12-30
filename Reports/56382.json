@@ -1,0 +1,82 @@
+{
+    "fix": "https://git.libreoffice.org/core21bb933f381321a58bffee8d3d392dee0e8b0c87",
+    "verify": "0",
+    "localId": 56382,
+    "project": "libreoffice",
+    "fuzzer": "honggfuzz",
+    "sanitizer": "asan",
+    "crash_type": "Heap-buffer-overflow WRITE 8",
+    "severity": "High",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 56382,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1677407954,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5767361245609984\n\nProject: libreoffice\nFuzzing Engine: honggfuzz\nFuzz Target: htmlfuzzer\nJob Type: honggfuzz_asan_libreoffice\nPlatform Id: linux\n\nCrash Type: Heap-buffer-overflow WRITE 8\nCrash Address: 0x60a003ae7c08\nCrash State:\n  SwTextINetFormat::SwTextINetFormat\n  MakeTextAttr\n  SwTextNode::SetAttr\n  \nSanitizer: address (ASAN)\n\nRecommended Security Severity: High\n\nRegressed: https://oss-fuzz.com/revisions?job=honggfuzz_asan_libreoffice&range=202302240609:202302241800\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5767361245609984\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 56382,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1677441372,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2023-05-29"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 56382,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1677756285,
+                "content": "ClusterFuzz testcase 5767361245609984 is verified as fixed in https://oss-fuzz.com/revisions?job=honggfuzz_asan_libreoffice&range=202303010604:202303011800\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 56382,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1677786432,
+                "content": "This bug has been fixed. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "21bb933f381321a58bffee8d3d392dee0e8b0c87",
+    "repo_addr": "https://git.libreoffice.org/core"
+}

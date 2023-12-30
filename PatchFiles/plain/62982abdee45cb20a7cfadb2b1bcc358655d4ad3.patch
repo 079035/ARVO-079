@@ -1,0 +1,339 @@
+commit 62982abdee45cb20a7cfadb2b1bcc358655d4ad3
+Author: Simon Marchi <simon.marchi@efficios.com>
+Date:   Tue May 19 12:18:04 2020 -0400
+
+    gdb: allocate symfile_segment_data with new
+    
+    - Allocate this structure with new instead of XNEW, use a unique pointer
+      to manage its lifetime.
+    - Change a few functions to return a unique   pointer instead of a
+      plain pointer.
+    - Change free_symfile_segment_data to be symfile_segment_data's
+      destructor.
+    
+    gdb/ChangeLog:
+    
+            * symfile.h (struct symfile_segment_data): Initialize fields.
+            <~symfile_segment_data>: Add.
+            (symfile_segment_data_up): New.
+            (struct sym_fns) <sym_segments>: Return a
+            symfile_segment_data_up.
+            (default_symfile_segments): Return a symfile_segment_data_up.
+            (free_symfile_segment_data): Remove.
+            (get_symfile_segment_data): Return a symfile_segment_data_up.
+            * symfile.c (default_symfile_segments): Likewise.
+            (get_symfile_segment_data): Likewise.
+            (free_symfile_segment_data): Remove.
+            (symfile_find_segment_sections): Update.
+            * elfread.c (elf_symfile_segments): Return a
+            symfile_segment_data_up.
+            * remote.c (remote_target::get_offsets): Update.
+            * solib-target.c (solib_target_relocate_section_addresses):
+            Update.
+            * symfile-debug.c (debug_sym_segments): Return a
+            symfile_segment_data_up.
+
+diff --git a/gdb/ChangeLog b/gdb/ChangeLog
+index cc13e41c649..ac9e1ccccaa 100644
+--- a/gdb/ChangeLog
++++ b/gdb/ChangeLog
+@@ -1,3 +1,25 @@
++2020-05-19  Simon Marchi  <simon.marchi@efficios.com>
++
++	* symfile.h (struct symfile_segment_data): Initialize fields.
++	<~symfile_segment_data>: Add.
++	(symfile_segment_data_up): New.
++	(struct sym_fns) <sym_segments>: Return a
++	symfile_segment_data_up.
++	(default_symfile_segments): Return a symfile_segment_data_up.
++	(free_symfile_segment_data): Remove.
++	(get_symfile_segment_data): Return a symfile_segment_data_up.
++	* symfile.c (default_symfile_segments): Likewise.
++	(get_symfile_segment_data): Likewise.
++	(free_symfile_segment_data): Remove.
++	(symfile_find_segment_sections): Update.
++	* elfread.c (elf_symfile_segments): Return a
++	symfile_segment_data_up.
++	* remote.c (remote_target::get_offsets): Update.
++	* solib-target.c (solib_target_relocate_section_addresses):
++	Update.
++	* symfile-debug.c (debug_sym_segments): Return a
++	symfile_segment_data_up.
++
+ 2020-05-18  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+ 
+ 	PR build/25981
+diff --git a/gdb/elfread.c b/gdb/elfread.c
+index 2f2fef93996..4804d62074c 100644
+--- a/gdb/elfread.c
++++ b/gdb/elfread.c
+@@ -85,14 +85,13 @@ static const struct bfd_key<elfread_data> probe_key;
+ 
+ /* Locate the segments in ABFD.  */
+ 
+-static struct symfile_segment_data *
++static symfile_segment_data_up
+ elf_symfile_segments (bfd *abfd)
+ {
+   Elf_Internal_Phdr *phdrs, **segments;
+   long phdrs_size;
+   int num_phdrs, num_segments, num_sections, i;
+   asection *sect;
+-  struct symfile_segment_data *data;
+ 
+   phdrs_size = bfd_get_elf_phdr_upper_bound (abfd);
+   if (phdrs_size == -1)
+@@ -112,7 +111,7 @@ elf_symfile_segments (bfd *abfd)
+   if (num_segments == 0)
+     return NULL;
+ 
+-  data = XCNEW (struct symfile_segment_data);
++  symfile_segment_data_up data (new symfile_segment_data);
+   data->num_segments = num_segments;
+   data->segment_bases = XCNEWVEC (CORE_ADDR, num_segments);
+   data->segment_sizes = XCNEWVEC (CORE_ADDR, num_segments);
+diff --git a/gdb/remote.c b/gdb/remote.c
+index 812ab8bc1b3..a28f34d157a 100644
+--- a/gdb/remote.c
++++ b/gdb/remote.c
+@@ -4105,7 +4105,6 @@ remote_target::get_offsets ()
+   char *ptr;
+   int lose, num_segments = 0, do_sections, do_segments;
+   CORE_ADDR text_addr, data_addr, bss_addr, segments[2];
+-  struct symfile_segment_data *data;
+ 
+   if (symfile_objfile == NULL)
+     return;
+@@ -4185,7 +4184,8 @@ remote_target::get_offsets ()
+ 
+   section_offsets offs = symfile_objfile->section_offsets;
+ 
+-  data = get_symfile_segment_data (symfile_objfile->obfd);
++  symfile_segment_data_up data
++    = get_symfile_segment_data (symfile_objfile->obfd);
+   do_segments = (data != NULL);
+   do_sections = num_segments == 0;
+ 
+@@ -4220,8 +4220,9 @@ remote_target::get_offsets ()
+ 
+   if (do_segments)
+     {
+-      int ret = symfile_map_offsets_to_segments (symfile_objfile->obfd, data,
+-						 offs, num_segments, segments);
++      int ret = symfile_map_offsets_to_segments (symfile_objfile->obfd,
++						 data.get (), offs,
++						 num_segments, segments);
+ 
+       if (ret == 0 && !do_sections)
+ 	error (_("Can not handle qOffsets TextSeg "
+@@ -4231,9 +4232,6 @@ remote_target::get_offsets ()
+ 	do_sections = 0;
+     }
+ 
+-  if (data)
+-    free_symfile_segment_data (data);
+-
+   if (do_sections)
+     {
+       offs[SECT_OFF_TEXT (symfile_objfile)] = text_addr;
+diff --git a/gdb/solib-target.c b/gdb/solib-target.c
+index 93d95fdda65..35e50a3e00b 100644
+--- a/gdb/solib-target.c
++++ b/gdb/solib-target.c
+@@ -364,9 +364,9 @@ Could not relocate shared library \"%s\": wrong number of ALLOC sections"),
+ 	}
+       else if (!li->segment_bases.empty ())
+ 	{
+-	  struct symfile_segment_data *data;
++	  symfile_segment_data_up data
++	    = get_symfile_segment_data (so->abfd);
+ 
+-	  data = get_symfile_segment_data (so->abfd);
+ 	  if (data == NULL)
+ 	    warning (_("\
+ Could not relocate shared library \"%s\": no segments"), so->so_name);
+@@ -375,7 +375,7 @@ Could not relocate shared library \"%s\": no segments"), so->so_name);
+ 	      ULONGEST orig_delta;
+ 	      int i;
+ 
+-	      if (!symfile_map_offsets_to_segments (so->abfd, data,
++	      if (!symfile_map_offsets_to_segments (so->abfd, data.get (),
+ 						    li->offsets,
+ 						    li->segment_bases.size (),
+ 						    li->segment_bases.data ()))
+@@ -407,8 +407,6 @@ Could not relocate shared library \"%s\": bad offsets"), so->so_name);
+ 			       + data->segment_sizes[i - 1]
+ 			       + orig_delta);
+ 	      gdb_assert (so->addr_low <= so->addr_high);
+-
+-	      free_symfile_segment_data (data);
+ 	    }
+ 	}
+     }
+diff --git a/gdb/symfile-debug.c b/gdb/symfile-debug.c
+index 203609c326b..bd806fdfee4 100644
+--- a/gdb/symfile-debug.c
++++ b/gdb/symfile-debug.c
+@@ -475,7 +475,7 @@ debug_sym_offsets (struct objfile *objfile,
+   debug_data->real_sf->sym_offsets (objfile, info);
+ }
+ 
+-static struct symfile_segment_data *
++static symfile_segment_data_up
+ debug_sym_segments (bfd *abfd)
+ {
+   /* This API function is annoying, it doesn't take a "this" pointer.
+diff --git a/gdb/symfile.c b/gdb/symfile.c
+index 946443f07a8..9d5e2824b2a 100644
+--- a/gdb/symfile.c
++++ b/gdb/symfile.c
+@@ -717,12 +717,11 @@ default_symfile_offsets (struct objfile *objfile,
+    It assumes that object files do not have segments, and fully linked
+    files have a single segment.  */
+ 
+-struct symfile_segment_data *
++symfile_segment_data_up
+ default_symfile_segments (bfd *abfd)
+ {
+   int num_sections, i;
+   asection *sect;
+-  struct symfile_segment_data *data;
+   CORE_ADDR low, high;
+ 
+   /* Relocatable files contain enough information to position each
+@@ -745,7 +744,7 @@ default_symfile_segments (bfd *abfd)
+   low = bfd_section_vma (sect);
+   high = low + bfd_section_size (sect);
+ 
+-  data = XCNEW (struct symfile_segment_data);
++  symfile_segment_data_up data (new symfile_segment_data);
+   data->num_segments = 1;
+   data->segment_bases = XCNEW (CORE_ADDR);
+   data->segment_sizes = XCNEW (CORE_ADDR);
+@@ -3621,7 +3620,7 @@ symfile_relocate_debug_section (struct objfile *objfile,
+   return (*objfile->sf->sym_relocate) (objfile, sectp, buf);
+ }
+ 
+-struct symfile_segment_data *
++symfile_segment_data_up
+ get_symfile_segment_data (bfd *abfd)
+ {
+   const struct sym_fns *sf = find_sym_fns (abfd);
+@@ -3632,15 +3631,6 @@ get_symfile_segment_data (bfd *abfd)
+   return sf->sym_segments (abfd);
+ }
+ 
+-void
+-free_symfile_segment_data (struct symfile_segment_data *data)
+-{
+-  xfree (data->segment_bases);
+-  xfree (data->segment_sizes);
+-  xfree (data->segment_info);
+-  xfree (data);
+-}
+-
+ /* Given:
+    - DATA, containing segment addresses from the object file ABFD, and
+      the mapping from ABFD's sections onto the segments that own them,
+@@ -3703,17 +3693,14 @@ symfile_find_segment_sections (struct objfile *objfile)
+   bfd *abfd = objfile->obfd;
+   int i;
+   asection *sect;
+-  struct symfile_segment_data *data;
+ 
+-  data = get_symfile_segment_data (objfile->obfd);
++  symfile_segment_data_up data
++    = get_symfile_segment_data (objfile->obfd);
+   if (data == NULL)
+     return;
+ 
+   if (data->num_segments != 1 && data->num_segments != 2)
+-    {
+-      free_symfile_segment_data (data);
+-      return;
+-    }
++    return;
+ 
+   for (i = 0, sect = abfd->sections; sect != NULL; i++, sect = sect->next)
+     {
+@@ -3736,8 +3723,6 @@ symfile_find_segment_sections (struct objfile *objfile)
+ 	    objfile->sect_index_bss = sect->index;
+ 	}
+     }
+-
+-  free_symfile_segment_data (data);
+ }
+ 
+ /* Listen for free_objfile events.  */
+diff --git a/gdb/symfile.h b/gdb/symfile.h
+index 5ada6c370e7..2dfa6556d47 100644
+--- a/gdb/symfile.h
++++ b/gdb/symfile.h
+@@ -80,26 +80,35 @@ typedef std::vector<other_sections> section_addr_info;
+    each BFD section belongs to.  */
+ struct symfile_segment_data
+ {
++  ~symfile_segment_data ()
++  {
++    xfree (this->segment_bases);
++    xfree (this->segment_sizes);
++    xfree (this->segment_info);
++  }
++
+   /* How many segments are present in this file.  If there are
+      two, the text segment is the first one and the data segment
+      is the second one.  */
+-  int num_segments;
++  int num_segments = 0;
+ 
+   /* If NUM_SEGMENTS is greater than zero, the original base address
+      of each segment.  */
+-  CORE_ADDR *segment_bases;
++  CORE_ADDR *segment_bases = nullptr;
+ 
+   /* If NUM_SEGMENTS is greater than zero, the memory size of each
+      segment.  */
+-  CORE_ADDR *segment_sizes;
++  CORE_ADDR *segment_sizes = nullptr;
+ 
+   /* If NUM_SEGMENTS is greater than zero, this is an array of entries
+      recording which segment contains each BFD section.
+      SEGMENT_INFO[I] is S+1 if the I'th BFD section belongs to segment
+      S, or zero if it is not in any segment.  */
+-  int *segment_info;
++  int *segment_info = nullptr;
+ };
+ 
++using symfile_segment_data_up = std::unique_ptr<symfile_segment_data>;
++
+ /* Callback for quick_symbol_functions->map_symbol_filenames.  */
+ 
+ typedef void (symbol_filename_ftype) (const char *filename,
+@@ -360,7 +369,7 @@ struct sym_fns
+      the segments of ABFD.  Each segment is a unit of the file
+      which may be relocated independently.  */
+ 
+-  struct symfile_segment_data *(*sym_segments) (bfd *abfd);
++  symfile_segment_data_up (*sym_segments) (bfd *abfd);
+ 
+   /* This function should read the linetable from the objfile when
+      the line table cannot be read while processing the debugging
+@@ -401,7 +410,7 @@ extern void default_symfile_offsets (struct objfile *objfile,
+ /* The default version of sym_fns.sym_segments for readers that don't
+    do anything special.  */
+ 
+-extern struct symfile_segment_data *default_symfile_segments (bfd *abfd);
++extern symfile_segment_data_up default_symfile_segments (bfd *abfd);
+ 
+ /* The default version of sym_fns.sym_relocate for readers that don't
+    do anything special.  */
+@@ -530,8 +539,7 @@ extern int symfile_map_offsets_to_segments (bfd *,
+ 					    const struct symfile_segment_data *,
+ 					    section_offsets &,
+ 					    int, const CORE_ADDR *);
+-struct symfile_segment_data *get_symfile_segment_data (bfd *abfd);
+-void free_symfile_segment_data (struct symfile_segment_data *data);
++symfile_segment_data_up get_symfile_segment_data (bfd *abfd);
+ 
+ extern scoped_restore_tmpl<int> increment_reading_symtab (void);
+ 

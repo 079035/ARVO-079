@@ -1,0 +1,38 @@
+commit a9e6b8a36b9ecf4f9471a9915cdfab3c99c8bcff
+Author: Stephan Bergmann <sbergman@redhat.com>
+Date:   Wed Mar 2 17:32:24 2022 +0100
+
+    memcpy-param-overlap
+    
+    ...seen during CppunitTest_sw_filters_test, regression introduced by
+    b871d057c45fdd231aa5e1d2b94e7d0a039f4292 "use OUStringBuffer for a string that's
+    modified often (tdf#145862)" turning SvParser::aToken from OUString to
+    OUStringBuffer:
+    
+    > ==768636==ERROR: AddressSanitizer: memcpy-param-overlap: memory ranges [0x6250003ed112,0x6250003ed12e) and [0x6250003ed108, 0x6250003ed124) overlap
+    >  #0 in __asan_memcpy at ~/github.com/llvm/llvm-project/compiler-rt/lib/asan/asan_interceptors_memintrinsics.cpp:22:3
+    >  #1 in rtl::addDataHelper(char16_t*, char16_t const*, unsigned long) at include/rtl/stringconcat.hxx:89:9
+    >  #2 in rtl::ToStringHelper<rtl::OUStringBuffer>::addData(char16_t*, rtl::OUStringBuffer const&) at include/rtl/ustrbuf.hxx:1750:14
+    >  #3 in rtl::OUStringConcat<rtl::OUString, rtl::OUStringBuffer>::addData(char16_t*) const at include/rtl/stringconcat.hxx:252:88
+    >  #4 in rtl::OUStringBuffer& rtl::OUStringBuffer::operator=<rtl::OUString, rtl::OUStringBuffer>(rtl::OUStringConcat<rtl::OUString, rtl::OUStringBuffer>&&) at include/rtl/ustrbuf.hxx:369:17
+    >  #5 in HTMLParser::FilterXMP(HtmlTokenId) at svtools/source/svhtml/parhtml.cxx:1795:24
+    [...]
+    
+    Change-Id: Ifc0a36de6503a06799ee4cd50ce57a6110c7d5c4
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/130889
+    Reviewed-by: Luboš Luňák <l.lunak@collabora.com>
+    Tested-by: Jenkins
+
+diff --git a/svtools/source/svhtml/parhtml.cxx b/svtools/source/svhtml/parhtml.cxx
+index f8abfa7c694e..b33734208edc 100644
+--- a/svtools/source/svhtml/parhtml.cxx
++++ b/svtools/source/svhtml/parhtml.cxx
+@@ -1792,7 +1792,7 @@ HtmlTokenId HTMLParser::FilterXMP( HtmlTokenId nToken )
+             {
+                 UnescapeToken();
+                 sSaveToken += " ";
+-                aToken = sSaveToken + aToken;
++                aToken.insert(0, sSaveToken);
+             }
+             else
+                 aToken = sSaveToken;

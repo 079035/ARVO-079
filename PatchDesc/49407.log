@@ -1,15 +1,10 @@
-Vulnerability: The vulnerability in the given diff file is an out-of-bounds memory access when mapping coordinates in the `map_coords` function of the `avar` struct.
+1. Vulnerability:
+The vulnerability in this case is related to the handling of coordinates in the 'avar' table of a font file. If the length of the coordinates array does not match the axis count, it could lead to incorrect mapping of coordinates, potentially causing unexpected behavior or crashes.
 
-Summary of the Fix: The fix corrects the out-of-bounds memory access issue in the `map_coords` function.
+2. Short Summary of the Fix:
+The fix involves adding a loop that iterates over the remaining axes when the coordinates length is less than the axis count. This ensures that the 'map' pointer is correctly advanced to the right position, even when the coordinates array is shorter than expected.
 
-Detailed Description of the Fix:
-1. The `map_coords` function iterates through each coordinate in the `coords` array and maps it using the `map` function from the `SegmentMaps` struct.
-2. In the fixed code, a check is added to ensure that the value of `count` (the number of coordinates to map) is not greater than `axisCount` (the number of variation axes in the font).
-3. If `count` is less than `axisCount`, a loop is added to iterate over the remaining axes and update the `map` pointer accordingly.
-4. The remaining code uses the updated `map` pointer to access the `v2` object and perform coordinate mapping.
-5. The fixed code properly initializes the `out` vector and allocates memory for it using the `alloc` function.
-6. The `for` loop now iterates over all coordinates, not just the first `count` coordinates, and performs the coordinate mapping operations.
-7. The fixes include proper memory management by destroying the `var_store_cache` and freeing the memory allocated for the `out` vector using the `destroy_cache` and `free` functions, respectively.
-8. Finally, the `coords` array is updated with the mapped values from the `out` vector.
+3. Detailed Description of the Fix:
+The fix is implemented in the 'map_coords' function of the 'avar' struct. Previously, the function would iterate over the minimum of 'coords_length' and 'axisCount', mapping each coordinate to a segment map. However, if 'coords_length' was less than 'axisCount', the 'map' pointer would not be advanced to the correct position for the following operations.
 
-Note: The patch file also includes an addition of a new file, which is not related to the vulnerability fix mentioned above.
+The fix adds a new loop that continues to advance the 'map' pointer for the remaining axes when 'coords_length' is less than 'axisCount'. This is done by iterating from 'count' (which is the minimum of 'coords_length' and 'axisCount') up to 'axisCount', advancing the 'map' pointer at each step. This ensures that the 'map' pointer is at the correct position for the operations that follow, regardless of the length of the coordinates array.

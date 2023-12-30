@@ -1,0 +1,29 @@
+commit 910c489a4a77b297052873be2e018bc98f0f77be
+Author: Guy Harris <gharris@sonic.net>
+Date:   Sat Feb 6 13:07:12 2021 -0800
+
+    pcapng: fix build without plugins.
+    
+    Just remove some HAVE_PLUGINS checks.  Those tables will eventually
+    handle built-in block and option types as well.
+
+diff --git a/wiretap/pcapng.c b/wiretap/pcapng.c
+index c71c1e7fc3..7a10caba98 100644
+--- a/wiretap/pcapng.c
++++ b/wiretap/pcapng.c
+@@ -239,7 +239,6 @@ typedef struct {
+     wtap_new_ipv6_callback_t add_new_ipv6;
+ } pcapng_t;
+ 
+-#ifdef HAVE_PLUGINS
+ /*
+  * Table for plugins to handle particular block types.
+  *
+@@ -490,7 +489,6 @@ register_pcapng_option_handler(guint block_type, guint option_code,
+     g_hash_table_insert(option_handlers[bt_index],
+                         GUINT_TO_POINTER(option_code), handler);
+ }
+-#endif /* HAVE_PLUGINS */
+ 
+ static int
+ pcapng_read_option(FILE_T fh, const section_info_t *section_info,

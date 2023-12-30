@@ -1,0 +1,23 @@
+From 72c109ea85f1434237a292de3478f53554989453 Mon Sep 17 00:00:00 2001
+From: "Victor M. Alvarez" <vmalvarez@virustotal.com>
+Date: Tue, 30 Apr 2019 15:09:31 +0200
+Subject: [PATCH] Fix bug in dotnet module.
+
+Found by Vitaly Kamluk (@vkamluk)
+---
+ libyara/modules/dotnet.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libyara/modules/dotnet.c b/libyara/modules/dotnet.c
+index b3a0468b9b..4a65c754a1 100644
+--- a/libyara/modules/dotnet.c
++++ b/libyara/modules/dotnet.c
+@@ -1145,7 +1145,7 @@ void dotnet_parse_tilde_2(
+ 
+         for (i = 0; i < num_rows; i++)
+         {
+-          if (!fits_in_pe(pe, table_offset, row_size))
++          if (!fits_in_pe(pe, row_ptr, row_size))
+             break;
+ 
+           assemblyref_table = (PASSEMBLYREF_TABLE) row_ptr;

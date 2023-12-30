@@ -1,0 +1,61 @@
+From a169fef00bb998d27bbbe57642a367cb951b60a4 Mon Sep 17 00:00:00 2001
+From: Georg Brandl <georg@python.org>
+Date: Sat, 6 Feb 2021 17:00:39 +0100
+Subject: [PATCH] Remove the alias for the RawTokenLexer. (#1643)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+RawTokenLexer was broken until 2.7.4, so it seems pretty much unused,
+and it led to tracebacks when the "raw" alias was used from some
+markup that allows specifying a language alias.
+
+We'll still keep the class for special usage as intended.
+
+Co-authored-by: Matthäus G. Chajdas <Anteru@users.noreply.github.com>
+---
+ CHANGES                     | 3 ++-
+ pygments/lexers/_mapping.py | 2 +-
+ pygments/lexers/special.py  | 2 +-
+ 3 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/CHANGES b/CHANGES
+index e62bc411e5..67eeb1b39d 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -32,7 +32,8 @@ Version 2.8.0
+ - Changed setuptools to use a declarative config through ``setup.cfg``.
+   Building Pygments now requires setuptools 39.2+.
+ - Added markdown to MarkdownLexer aliases (#1687)
+-
++- Removed "raw" alias from RawTokenLexer, so that it cannot be
++  selected by alias.
+ 
+ Version 2.7.4
+ -------------
+diff --git a/pygments/lexers/_mapping.py b/pygments/lexers/_mapping.py
+index 5f4473f6bf..cb983148bc 100644
+--- a/pygments/lexers/_mapping.py
++++ b/pygments/lexers/_mapping.py
+@@ -376,7 +376,7 @@
+     'RagelLexer': ('pygments.lexers.parsers', 'Ragel', ('ragel',), (), ()),
+     'RagelObjectiveCLexer': ('pygments.lexers.parsers', 'Ragel in Objective C Host', ('ragel-objc',), ('*.rl',), ()),
+     'RagelRubyLexer': ('pygments.lexers.parsers', 'Ragel in Ruby Host', ('ragel-ruby', 'ragel-rb'), ('*.rl',), ()),
+-    'RawTokenLexer': ('pygments.lexers.special', 'Raw token data', ('raw',), (), ('application/x-pygments-tokens',)),
++    'RawTokenLexer': ('pygments.lexers.special', 'Raw token data', (), (), ('application/x-pygments-tokens',)),
+     'RdLexer': ('pygments.lexers.r', 'Rd', ('rd',), ('*.Rd',), ('text/x-r-doc',)),
+     'ReasonLexer': ('pygments.lexers.ml', 'ReasonML', ('reason', 'reasonml'), ('*.re', '*.rei'), ('text/x-reasonml',)),
+     'RebolLexer': ('pygments.lexers.rebol', 'REBOL', ('rebol',), ('*.r', '*.r3', '*.reb'), ('text/x-rebol',)),
+diff --git a/pygments/lexers/special.py b/pygments/lexers/special.py
+index 630eae9bb7..8ca1ad6a71 100644
+--- a/pygments/lexers/special.py
++++ b/pygments/lexers/special.py
+@@ -54,7 +54,7 @@ class RawTokenLexer(Lexer):
+         the given compression algorithm before lexing (default: ``""``).
+     """
+     name = 'Raw token data'
+-    aliases = ['raw']
++    aliases = []
+     filenames = []
+     mimetypes = ['application/x-pygments-tokens']
+ 

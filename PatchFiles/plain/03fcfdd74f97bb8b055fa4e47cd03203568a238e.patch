@@ -1,0 +1,25 @@
+commit 03fcfdd74f97bb8b055fa4e47cd03203568a238e
+Author: Eric Seckler <eseckler@google.com>
+Date:   Tue Apr 28 11:54:58 2020 +0100
+
+    processor: Fix a potential use-after-free
+    
+    Make sure that the raw pointer to descendents_uuids is reset when the
+    owned vector is freed.
+    
+    Bug: oss-fuzz:21908
+    Change-Id: I85e35e78dc20e2e2482e376f8a69a0417852dcc1
+
+diff --git a/src/trace_processor/importers/common/track_tracker.cc b/src/trace_processor/importers/common/track_tracker.cc
+index 6fffbdb4f..d4e357f3e 100644
+--- a/src/trace_processor/importers/common/track_tracker.cc
++++ b/src/trace_processor/importers/common/track_tracker.cc
+@@ -362,6 +362,8 @@ TrackId TrackTracker::ResolveDescriptorTrack(
+     }
+ 
+     descendent_uuids->pop_back();
++    if (owned_descendent_uuids)
++      descendent_uuids = nullptr;
+   }
+ 
+   if (reservation.tid) {

@@ -1,0 +1,485 @@
+From 1e1bdcc693086f89bfcfe79173e98bc9ae97dde3 Mon Sep 17 00:00:00 2001
+From: asraa <asraa@google.com>
+Date: Fri, 15 May 2020 12:29:02 -0400
+Subject: [PATCH] [fuzz] misc HCM fuzz bugs (#11169)
+
+Fixes two minor HCM fuzz bugs
+
+Signed-off-by: Asra Ali <asraa@google.com>
+---
+ .../clusterfuzz-testcase-failed-dispatch      | 294 ++++++++++++++++++
+ .../clusterfuzz-testcase-invalidhost          | 108 +++++++
+ test/common/http/conn_manager_impl_fuzz.proto |   4 +-
+ .../http/conn_manager_impl_fuzz_test.cc       |   6 +-
+ test/fuzz/utility.h                           |   6 +-
+ 5 files changed, 412 insertions(+), 6 deletions(-)
+ create mode 100644 test/common/http/conn_manager_impl_corpus/clusterfuzz-testcase-failed-dispatch
+ create mode 100644 test/common/http/conn_manager_impl_corpus/clusterfuzz-testcase-invalidhost
+
+diff --git a/test/common/http/conn_manager_impl_corpus/clusterfuzz-testcase-failed-dispatch b/test/common/http/conn_manager_impl_corpus/clusterfuzz-testcase-failed-dispatch
+new file mode 100644
+index 0000000000000..485481def130b
+--- /dev/null
++++ b/test/common/http/conn_manager_impl_corpus/clusterfuzz-testcase-failed-dispatch
+@@ -0,0 +1,294 @@
++actions {
++}
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: ":scheme"
++        value: "t"
++      }
++      headers {
++        key: ":method"
++        value: "GET"
++      }
++      headers {
++        key: "blah"
++        value: "nosniff"
++      }
++      headers {
++        key: "blah"
++        value: "nosniff"
++      }
++      headers {
++        key: "\'"
++      }
++      headers {
++        key: ":path"
++        value: "/"
++      }
++      headers {
++        key: ":authority"
++        value: "foo.com"
++      }
++    }
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  stream_action {
++    stream_id: 1634017305
++    request {
++      trailers {
++        headers {
++          headers {
++            key: "&"
++          }
++        }
++      }
++    }
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  stream_action {
++    stream_id: 1073741824
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  new_stream {
++    end_stream: true
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  stream_action {
++    stream_id: 1073741824
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++}
++actions {
++  new_stream {
++    end_stream: true
++  }
++}
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: ":scheme"
++        value: "\'"
++      }
++      headers {
++        key: ":method"
++        value: "GOT"
++      }
++      headers {
++        key: ":path"
++        value: "/"
++      }
++      headers {
++        key: ":authority"
++        value: "foo.com"
++      }
++    }
++    end_stream: true
++  }
++}
++actions {
++}
++actions {
++}
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: ":scheme"
++        value: "t"
++      }
++      headers {
++        key: ":method"
++        value: "GET"
++      }
++      headers {
++        key: "blah"
++        value: "nosniff"
++      }
++      headers {
++        key: "blah"
++        value: "nosniff"
++      }
++      headers {
++        key: "\'"
++      }
++      headers {
++        key: ":path"
++        value: "/"
++      }
++      headers {
++        key: "/"
++        value: "foo.com"
++      }
++    }
++  }
++}
++actions {
++  new_stream {
++    end_stream: true
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  stream_action {
++    request {
++      throw_decoder_exception {
++      }
++    }
++  }
++}
++actions {
++  stream_action {
++    request {
++      data {
++        status: DATA_STOP_ITERATION_NO_BUFFER
++      }
++    }
++  }
++}
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: "\'"
++      }
++    }
++  }
++}
++actions {
++  stream_action {
++    stream_id: 1073741824
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++}
++actions {
++  new_stream {
++    end_stream: true
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
++      }
++    }
++  }
++}
++actions {
++  stream_action {
++    request {
++      data {
++        decoder_filter_callback_action {
++          add_decoded_data {
++            size: 262144
++          }
++        }
++      }
++    }
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++}
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: ":scheme"
++        value: "t"
++      }
++      headers {
++        key: ":method"
++        value: "GET"
++      }
++      headers {
++        key: "blah"
++        value: "nosniff"
++      }
++      headers {
++        key: "blah"
++        value: "nosniff"
++      }
++      headers {
++        key: "\'"
++      }
++      headers {
++        key: ":path"
++        value: "/"
++      }
++      headers {
++        key: ":authority"
++        value: "foo.com"
++      }
++    }
++  }
++}
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: "&"
++      }
++    }
++  }
++}
++actions {
++  stream_action {
++    stream_id: 4294967295
++  }
++}
++actions {
++  stream_action {
++    stream_id: 4
++  }
++}
+\ No newline at end of file
+diff --git a/test/common/http/conn_manager_impl_corpus/clusterfuzz-testcase-invalidhost b/test/common/http/conn_manager_impl_corpus/clusterfuzz-testcase-invalidhost
+new file mode 100644
+index 0000000000000..c6ab3140f0f2d
+--- /dev/null
++++ b/test/common/http/conn_manager_impl_corpus/clusterfuzz-testcase-invalidhost
+@@ -0,0 +1,108 @@
++actions {
++  stream_action {
++    response {
++      data: 2683
++    }
++  }
++}
++actions {
++  new_stream {
++    request_headers {
++      headers {
++        key: ":scheme"
++        value: "t"
++      }
++      headers {
++        key: ":method"
++        value: "GET"
++      }
++      headers {
++        key: "blah"
++        value: "nosniff"
++      }
++      headers {
++        key: "blah"
++        value: "nosniff"
++      }
++      headers {
++        key: "\'"
++      }
++      headers {
++        key: ":path"
++        value: "/"
++      }
++      headers {
++        key: ":authority"
++        value: "foKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKjKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKAKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKEKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKZKKKKKKKKKKKKKdKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK>KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK2KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK]KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK957191215689797641957=bar1"
++      }
++    }
++    end_stream: true
++  }
++}
++actions {
++}
++actions {
++  new_stream {
++    end_stream: true
++    status: HEADER_STOP_ALL_ITERATION_AND_WATERMARK
++  }
++}
++actions {
++  new_stream {
++    end_stream: true
++  }
++}
++actions {
++  stream_action {
++    stream_id: 721420288
++  }
++}
++actions {
++  stream_action {
++    stream_id: 1024
++  }
++}
++actions {
++  stream_action {
++    request {
++      trailers {
++        status: TRAILER_STOP_ITERATION
++      }
++    }
++  }
++}
++actions {
++  new_stream {
++    end_stream: true
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++}
++actions {
++}
++actions {
++  new_stream {
++  }
++}
++actions {
++  new_stream {
++  }
++}
+\ No newline at end of file
+diff --git a/test/common/http/conn_manager_impl_fuzz.proto b/test/common/http/conn_manager_impl_fuzz.proto
+index 5cc690eb838aa..58a7d8ba0d535 100644
+--- a/test/common/http/conn_manager_impl_fuzz.proto
++++ b/test/common/http/conn_manager_impl_fuzz.proto
+@@ -61,7 +61,9 @@ message RequestAction {
+     DataAction data = 1;
+     TrailerAction trailers = 2;
+     google.protobuf.Empty continue_decoding = 3;
+-    google.protobuf.Empty throw_decoder_exception = 4;
++    // Dispatch no longer throws, but rather returns an error status.
++    google.protobuf.Empty throw_decoder_exception = 4 [deprecated = true];
++    google.protobuf.Empty return_decoder_error = 5;
+     // TODO(htuch): Model and fuzz watermark events.
+   }
+ }
+diff --git a/test/common/http/conn_manager_impl_fuzz_test.cc b/test/common/http/conn_manager_impl_fuzz_test.cc
+index de381823f7db1..7e503275e15d1 100644
+--- a/test/common/http/conn_manager_impl_fuzz_test.cc
++++ b/test/common/http/conn_manager_impl_fuzz_test.cc
+@@ -383,10 +383,12 @@ class FuzzStream {
+       }
+       break;
+     }
+-    case test::common::http::RequestAction::kThrowDecoderException: {
++    case test::common::http::RequestAction::kThrowDecoderException:
++    // Dispatch no longer throws, execute subsequent kReturnDecoderError case.
++    case test::common::http::RequestAction::kReturnDecoderError: {
+       if (state == StreamState::PendingDataOrTrailers) {
+         EXPECT_CALL(*config_.codec_, dispatch(_))
+-            .WillOnce(testing::Throw(CodecProtocolException("blah")));
++            .WillOnce(testing::Return(codecProtocolError("blah")));
+         fakeOnData();
+         FUZZ_ASSERT(testing::Mock::VerifyAndClearExpectations(config_.codec_));
+         state = StreamState::Closed;
+diff --git a/test/fuzz/utility.h b/test/fuzz/utility.h
+index bb9f6020a0e1d..b0a16930fbeb1 100644
+--- a/test/fuzz/utility.h
++++ b/test/fuzz/utility.h
+@@ -51,9 +51,9 @@ inline std::string replaceInvalidCharacters(absl::string_view string) {
+ inline std::string replaceInvalidHostCharacters(absl::string_view string) {
+   std::string filtered;
+   filtered.reserve(string.length());
+-  for (const uint8_t* c = reinterpret_cast<const uint8_t*>(string.data()); *c; ++c) {
+-    if (nghttp2_check_authority(c, 1)) {
+-      filtered.push_back(*c);
++  for (const char& c : string) {
++    if (nghttp2_check_authority(reinterpret_cast<const uint8_t*>(&c), 1)) {
++      filtered.push_back(c);
+     } else {
+       filtered.push_back('0');
+     }

@@ -1,0 +1,47 @@
+commit 1cfc1dc496821d3c5d8d160cc10941b25b9f95a0
+Author: paulhsia <paulhsia@chromium.org>
+Date:   Wed Jul 8 16:11:58 2020 +0800
+
+    CRAS: Access num_channels only for valid message
+    
+    Fix usage in 144bf3828e41b26c7746be463d17d6ea55dd7163
+    
+    Since message from clients could be truncated, we should use inner
+    fields after passing MSG_LEN_VALID check.
+    
+    BUG=oss-fuzz:23965
+    BUG=chromium:1102860
+    TEST=rclient_message in oss-fuzz
+    TEST=cras_rclient_message_fuzzer in clusterfuzz
+    
+    Change-Id: I5bc1a97f224c33dd6f84ac9c234266dcbeda59ea
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/adhd/+/2286830
+    Tested-by: Chih-Yang Hsia <paulhsia@chromium.org>
+    Commit-Queue: Chih-Yang Hsia <paulhsia@chromium.org>
+    Reviewed-by: Cheng-Yi Chiang <cychiang@chromium.org>
+
+diff --git a/cras/src/server/cras_control_rclient.c b/cras/src/server/cras_control_rclient.c
+index 1e5f9462..2b30fe51 100644
+--- a/cras/src/server/cras_control_rclient.c
++++ b/cras/src/server/cras_control_rclient.c
+@@ -458,15 +458,15 @@ static int ccr_handle_message_from_client(struct cras_rclient *client,
+ 		const struct cras_config_global_remix *m =
+ 			(const struct cras_config_global_remix *)msg;
+ 		float *coefficient;
+-		const size_t coefficient_len =
+-			m->num_channels * m->num_channels;
+ 
+ 		if (!MSG_LEN_VALID(msg, struct cras_config_global_remix) ||
+ 		    m->num_channels > CRAS_MAX_REMIX_CHANNELS)
+ 			return -EINVAL;
+-		size_t size_with_coefficients =
+-			sizeof(*m) + m->num_channels * m->num_channels *
+-					     sizeof(m->coefficient[0]);
++		const size_t coefficient_len =
++			m->num_channels * m->num_channels;
++		const size_t size_with_coefficients =
++			sizeof(*m) +
++			coefficient_len * sizeof(m->coefficient[0]);
+ 		if (size_with_coefficients != msg->length)
+ 			return -EINVAL;
+ 

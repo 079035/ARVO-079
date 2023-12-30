@@ -1,3 +1,8 @@
-Vulnerability: Possible null pointer dereference
-Summary of the fix: Check the status after acquiring image and return if it is false to avoid null pointer dereference
-Detailed description of the fix: In the function `ReadPSDImage`, after acquiring the image using `AcquireImage`, the status is checked to see if it is false. If the status is false, the function returns with a NULL image. This prevents null pointer dereference if the status is false.
+1. Vulnerability:
+The vulnerability in the code is related to memory allocation and image handling. The code does not properly handle the case where the `SetImageExtent` function fails, which can lead to memory leaks or crashes when working with large images or under memory pressure.
+
+2. Short Summary of the Fix:
+The fix adds a check for the return status of the `SetImageExtent` function. If the function fails, the image is destroyed and the function returns immediately, preventing further processing of an invalid image.
+
+3. Detailed Description of the Fix:
+The fix is applied in the `ReadPSDImage` function. After the `SetImageExtent` function is called, the return status is checked. If the function fails (returns `MagickFalse`), the image is destroyed using the `DestroyImageList` function and the `ReadPSDImage` function returns immediately. This prevents further processing of an invalid image, which could lead to memory leaks or crashes. The same check is also added after the `ResetImagePixels` function call. This fix ensures that the code properly handles failures of these two critical functions.

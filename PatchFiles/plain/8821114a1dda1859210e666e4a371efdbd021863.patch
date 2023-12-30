@@ -1,0 +1,340 @@
+From 8821114a1dda1859210e666e4a371efdbd021863 Mon Sep 17 00:00:00 2001
+From: danielaparker <danielaparker@yahoo.com>
+Date: Thu, 29 Apr 2021 05:33:12 -0400
+Subject: [PATCH] unicode_traits to_codepoint
+
+---
+ fuzzers/fuzz_json_encoder.cpp                 |  18 +-
+ include/jsoncons/json_encoder.hpp             |  17 +-
+ include/jsoncons/unicode_traits.hpp           | 214 ------------------
+ .../src/fuzz_regression_tests.cpp             |  18 +-
+ 4 files changed, 12 insertions(+), 255 deletions(-)
+
+diff --git a/fuzzers/fuzz_json_encoder.cpp b/fuzzers/fuzz_json_encoder.cpp
+index 57fb3c09de..9776bc56b4 100644
+--- a/fuzzers/fuzz_json_encoder.cpp
++++ b/fuzzers/fuzz_json_encoder.cpp
+@@ -8,19 +8,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, std::size_t size)
+     std::string s(reinterpret_cast<const char*>(data), size);
+     std::istringstream is(s);
+ 
+-    try
+-    {
+-        std::string s2;
+-        json_string_encoder visitor(s2);
+-        json_reader reader(is, visitor);
+-        std::error_code ec;
+-        reader.read(ec);
+-        std::cout << ec.message() << "\n";
+-    }
+-    catch (const std::excption& e)
+-    {
+-        std::cout << e.what() << "\n";
+-    }
++    std::string s2;
++    json_string_encoder visitor(s2);
++    json_reader reader(is, visitor);
++    std::error_code ec;
++    reader.read(ec);
+ 
+     return 0;
+ }
+diff --git a/include/jsoncons/json_encoder.hpp b/include/jsoncons/json_encoder.hpp
+index 5b35303146..fc179d98e5 100644
+--- a/include/jsoncons/json_encoder.hpp
++++ b/include/jsoncons/json_encoder.hpp
+@@ -97,22 +97,13 @@ namespace detail {
+                     else if (is_control_character(c) || escape_all_non_ascii)
+                     {
+                         // convert to codepoint
+-                        unicode_traits::sequence_generator<const CharT*> g(it, end, unicode_traits::conv_flags::strict);
+-                        if (g.done() || g.status() != unicode_traits::conv_errc())
++                        uint32_t cp;
++                        auto r = unicode_traits::to_codepoint(it, end, cp, unicode_traits::conv_flags::strict);
++                        if (r.ec != unicode_traits::conv_errc())
+                         {
+                             JSONCONS_THROW(ser_error(json_errc::illegal_codepoint));
+                         }
+-                        uint32_t cp = g.get().codepoint();
+-                        it += (g.get().length() - 1);
+-
+-                        //uint32_t cp;
+-                        //auto r = unicode_traits::to_codepoint(it, end, cp, unicode_traits::conv_flags::strict);
+-                        //if (r.ec != unicode_traits::conv_errc())
+-                        //{
+-                        //    JSONCONS_THROW(ser_error(json_errc::illegal_codepoint));
+-                        //}
+-                        //it = r.ptr;
+-
++                        it = r.ptr - 1;
+                         if (is_non_ascii_codepoint(cp) || is_control_character(c))
+                         {
+                             if (cp > 0xFFFF)
+diff --git a/include/jsoncons/unicode_traits.hpp b/include/jsoncons/unicode_traits.hpp
+index 1ea541339c..481a91e557 100644
+--- a/include/jsoncons/unicode_traits.hpp
++++ b/include/jsoncons/unicode_traits.hpp
+@@ -1589,220 +1589,6 @@ namespace jsoncons { namespace unicode_traits {
+             return skip_bom_result<Iterator>{first,encoding_errc()};
+         }
+     }
+-// sequence 
+-
+-    template <class Iterator>
+-    class sequence
+-    {
+-        Iterator first_;
+-        std::size_t length_;
+-    public:
+-        sequence(Iterator first, std::size_t length)
+-            : first_(first), length_(length)
+-        {
+-        }
+-
+-        Iterator begin() const
+-        {
+-            return first_;
+-        }
+-
+-        std::size_t length() const
+-        {
+-            return length_;
+-        }
+-
+-        template <class CharT = typename std::iterator_traits<Iterator>::value_type>
+-        typename std::enable_if<sizeof(CharT) == sizeof(uint8_t),uint32_t>::type 
+-        codepoint() const noexcept
+-        {
+-            uint32_t ch = 0;
+-            Iterator it = first_;
+-            switch (length_) 
+-            {
+-            default:
+-                return replacement_char;
+-                break;
+-            case 4:
+-                ch += static_cast<uint8_t>(*it++); ch <<= 6;
+-                JSONCONS_FALLTHROUGH;
+-            case 3:
+-                ch += static_cast<uint8_t>(*it++); ch <<= 6;
+-                JSONCONS_FALLTHROUGH;
+-            case 2:
+-                ch += static_cast<uint8_t>(*it++); ch <<= 6;
+-                JSONCONS_FALLTHROUGH;
+-            case 1:
+-                ch += static_cast<uint8_t>(*it++);
+-                ch -= offsets_from_utf8[length_ - 1];
+-                break;
+-            }
+-            if (ch <= max_legal_utf32) 
+-            {
+-                if (is_surrogate(ch)) 
+-                {
+-                    ch = replacement_char;
+-                }
+-            }
+-            else // ch > max_legal_utf32
+-            {
+-                ch = replacement_char;
+-            }
+-            return ch;
+-        }
+-
+-        template <class CharT = typename std::iterator_traits<Iterator>::value_type>
+-        typename std::enable_if<sizeof(CharT) == sizeof(uint16_t),uint32_t>::type 
+-        codepoint() const noexcept
+-        {
+-            if (length_ == 0)
+-            {
+-                return replacement_char;
+-            }
+-            if (length_ == 2)
+-            {
+-                uint32_t ch = *first_;
+-                uint32_t ch2 = *(first_+ 1);
+-                ch = ((ch - sur_high_start) << half_shift)
+-                     + (ch2 - sur_low_start) + half_base;
+-                return ch;
+-            }
+-            else 
+-            {
+-                return *first_;
+-            }
+-        }
+-
+-        template <class CharT = typename std::iterator_traits<Iterator>::value_type>
+-        typename std::enable_if<sizeof(CharT) == sizeof(uint32_t),uint32_t>::type 
+-        codepoint() const noexcept
+-        {
+-            if (length_ == 0)
+-            {
+-                return replacement_char;
+-            }
+-            return *(first_);
+-        }
+-    };
+-
+-    // sequence_generator
+-
+-    template <class Iterator>
+-    class sequence_generator
+-    {
+-        Iterator begin_;
+-        Iterator last_;
+-        conv_flags flags_;
+-        std::size_t length_;
+-        conv_errc err_cd_;
+-    public:
+-        using sequence_type = sequence<Iterator>;
+-
+-        sequence_generator(Iterator first, Iterator last, 
+-                           conv_flags flags = conv_flags::strict) noexcept
+-            : begin_(first), last_(last), flags_(flags), 
+-              length_(0), err_cd_(conv_errc())
+-        {
+-            next();
+-        }
+-
+-        bool done() const noexcept
+-        {
+-            return err_cd_ != conv_errc() || begin_ == last_;
+-        }
+-
+-        conv_errc status() const noexcept
+-        {
+-            return err_cd_;
+-        }
+-
+-        sequence_type get() const noexcept
+-        {
+-            return sequence<Iterator>(begin_,length_);
+-        }
+-
+-        template <class CharT = typename std::iterator_traits<Iterator>::value_type>
+-        typename std::enable_if<sizeof(CharT) == sizeof(uint8_t)>::type 
+-        next() noexcept
+-        {
+-            begin_ += length_;
+-            if (begin_ != last_)
+-            {
+-                std::size_t length = trailing_bytes_for_utf8[static_cast<uint8_t>(*begin_)] + 1;
+-                if (length > (std::size_t)(last_ - begin_))
+-                {
+-                    err_cd_ = conv_errc::source_exhausted;
+-                }
+-                else if ((err_cd_ = is_legal_utf8(begin_, length)) != conv_errc())
+-                {
+-                }
+-                else
+-                {
+-                    length_ = length;
+-                }
+-            }
+-        }
+-
+-        template <class CharT = typename std::iterator_traits<Iterator>::value_type>
+-        typename std::enable_if<sizeof(CharT) == sizeof(uint16_t)>::type 
+-        next() noexcept
+-        {
+-            begin_ += length_;
+-            if (begin_ != last_)
+-            {
+-                Iterator it = begin_;
+-
+-                uint32_t ch = *it++;
+-                /* If we have a surrogate pair, validate to uint32_t it. */
+-                if (is_high_surrogate(ch)) 
+-                {
+-                    /* If the 16 bits following the high surrogate are in the it buffer... */
+-                    if (it < last_) {
+-                        uint32_t ch2 = *it;
+-                        /* If it's a low surrogate, */
+-                        if (ch2 >= sur_low_start && ch2 <= sur_low_end) 
+-                        {
+-                            ++it;
+-                            length_ = 2;
+-                        } 
+-                        else 
+-                        {
+-                            err_cd_ = conv_errc::unpaired_high_surrogate;
+-                        }
+-                    } 
+-                    else 
+-                    { 
+-                        // We don't have the 16 bits following the high surrogate.
+-                        err_cd_ = conv_errc::source_exhausted;
+-                    }
+-                } 
+-                else if (is_low_surrogate(ch)) 
+-                {
+-                    /* leading low surrogate */
+-                    err_cd_ = conv_errc::source_illegal;
+-                }
+-                else
+-                {
+-                    length_ = 1;
+-                }
+-            }
+-        }
+-
+-        template <class CharT = typename std::iterator_traits<Iterator>::value_type>
+-        typename std::enable_if<sizeof(CharT) == sizeof(uint32_t)>::type 
+-        next() noexcept
+-        {
+-            begin_ += length_;
+-            length_ = 1;
+-        }
+-    };
+-
+-    template <class Iterator>
+-    sequence_generator<Iterator> make_sequence_generator(Iterator first, Iterator last,
+-        conv_flags flags = conv_flags::strict)
+-    {
+-        return sequence_generator<Iterator>(first, last, flags);
+-    }
+ 
+ } // unicode_traits
+ } // jsoncons
+diff --git a/tests/fuzz_regression/src/fuzz_regression_tests.cpp b/tests/fuzz_regression/src/fuzz_regression_tests.cpp
+index eb441a1df6..248b05d634 100644
+--- a/tests/fuzz_regression/src/fuzz_regression_tests.cpp
++++ b/tests/fuzz_regression/src/fuzz_regression_tests.cpp
+@@ -17,7 +17,6 @@ using namespace jsoncons;
+ 
+ TEST_CASE("oss-fuzz issues")
+ {
+-#if 0
+     // Fuzz target: fuzz_parse
+     // Issue: Stack-overflow
+     // Diagnosis: During basic_json destruction, an internal compiler stack error occurred in std::vector 
+@@ -586,7 +585,7 @@ TEST_CASE("oss-fuzz issues")
+             std::cout << e.what() << std::endl;
+         }
+     }
+-#endif
++
+     // Fuzz target: fuzz_json_encoder
+     // Issue: Container-overflow READ 1
+     SECTION("issue 33781")
+@@ -600,19 +599,8 @@ TEST_CASE("oss-fuzz issues")
+         json_string_encoder visitor(s2);
+ 
+         json_reader reader(is, visitor);
+-        try
+-        {
+-            std::error_code ec;
+-            reader.read(ec);
+-            if (ec)
+-            {
+-                std::cout << ec.message() << "\n";
+-            }
+-        }
+-        catch (const std::exception& e)
+-        {
+-            std::cout << e.what() << std::endl;
+-        }
++        std::error_code ec;
++        reader.read(ec);
+     }
+ }
+ 

@@ -1,0 +1,11 @@
+commit a21c3286644d809f1c0a6589f8f2f1cc70c85ead
+Merge: dbd9d88c9 82b9070fe
+Author: Lalit Maganti <lalitm@google.com>
+Date:   Wed Jun 10 14:17:48 2020 +0000
+
+    Merge "metrics: add surfaceflinger metric and derived events" am: e7479e6d0d am: 35174342a7 am: 2fa8604cfd am: 82b9070fe0
+    
+    Original change: https://android-review.googlesource.com/c/platform/external/perfetto/+/1327114
+    
+    Change-Id: Idc1dce9e997149222075cffb0831aff5f1278d49
+

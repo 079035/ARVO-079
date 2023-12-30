@@ -1,0 +1,9 @@
+commit 28892d9c35b90201929eb1720b49bef4a3f0f778
+Merge: c4ded4a 035f84a
+Author: Ray Essick <essick@google.com>
+Date:   Wed May 20 14:37:18 2020 +0000
+
+    Merge "decoder: Returned frame_decoded true after decoding both fields" am: 035f84a25b
+    
+    Change-Id: I9e7dc456f9082d2473927145a444c9ba93f7e441
+

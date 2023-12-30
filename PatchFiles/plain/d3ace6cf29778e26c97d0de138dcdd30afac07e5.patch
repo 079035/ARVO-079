@@ -1,0 +1,174 @@
+From d3ace6cf29778e26c97d0de138dcdd30afac07e5 Mon Sep 17 00:00:00 2001
+From: David Garcia Quintas <dgq@google.com>
+Date: Thu, 29 Mar 2018 10:13:14 -0700
+Subject: [PATCH] Fix authority fuzzing failures
+
+---
+ .../filters/http/client_authority_filter.cc   |  11 ++-
+ src/core/lib/surface/channel.cc               |   2 +-
+ ...rfuzz-testcase-api_fuzzer-5406804084260864 | Bin 0 -> 44 bytes
+ ...rfuzz-testcase-api_fuzzer-5471994809155584 | Bin 0 -> 287 bytes
+ ...rfuzz-testcase-api_fuzzer-6609852341157888 | Bin 0 -> 1125 bytes
+ tools/run_tests/generated/tests.json          |  69 ++++++++++++++++++
+ 6 files changed, 79 insertions(+), 3 deletions(-)
+ create mode 100644 test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-5406804084260864
+ create mode 100644 test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-5471994809155584
+ create mode 100644 test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-6609852341157888
+
+diff --git a/src/core/ext/filters/http/client_authority_filter.cc b/src/core/ext/filters/http/client_authority_filter.cc
+index f2b3e0fe7bea9..6d68ffcd21181 100644
+--- a/src/core/ext/filters/http/client_authority_filter.cc
++++ b/src/core/ext/filters/http/client_authority_filter.cc
+@@ -97,8 +97,15 @@ grpc_error* init_channel_elem(grpc_channel_element* elem,
+         "channels must explicity specify a value for this argument.");
+     abort();
+   }
+-  chand->default_authority = grpc_slice_from_copied_string(
+-      grpc_channel_arg_get_string(default_authority_arg));
++  const char* default_authority_str =
++      grpc_channel_arg_get_string(default_authority_arg);
++  if (default_authority_str == nullptr) {
++    gpr_log(GPR_ERROR,
++            "GRPC_ARG_DEFAULT_AUTHORITY channel arg. must be a string.");
++    abort();
++  }
++  chand->default_authority =
++      grpc_slice_from_copied_string(default_authority_str);
+   GPR_ASSERT(!args->is_last);
+   return GRPC_ERROR_NONE;
+ }
+diff --git a/src/core/lib/surface/channel.cc b/src/core/lib/surface/channel.cc
+index 807e28eef1b89..d740ebd4114fc 100644
+--- a/src/core/lib/surface/channel.cc
++++ b/src/core/lib/surface/channel.cc
+@@ -167,7 +167,7 @@ static grpc_core::UniquePtr<char> get_default_authority(
+       has_default_authority = true;
+     } else if (0 == strcmp(input_args->args[i].key,
+                            GRPC_SSL_TARGET_NAME_OVERRIDE_ARG)) {
+-      ssl_override = input_args->args[i].value.string;
++      ssl_override = grpc_channel_arg_get_string(&input_args->args[i]);
+     }
+   }
+   if (!has_default_authority && ssl_override != nullptr) {
+diff --git a/test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-5406804084260864 b/test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-5406804084260864
+new file mode 100644
+index 0000000000000000000000000000000000000000..121aac7ec874272905ceafcd9a27961ac69691a1
+GIT binary patch
+literal 44
+zcmZQ7PW@lpz`)OxUR02*S6rMEUy@jqo>~&0mzbLxpI??*RFs*L%D|wPn^*w=Zw3$}
+
+literal 0
+HcmV?d00001
+
+diff --git a/test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-5471994809155584 b/test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-5471994809155584
+new file mode 100644
+index 0000000000000000000000000000000000000000..e5d3d38e96cd25161c6bc4b819167135a1ac848a
+GIT binary patch
+literal 287
+zcmZQzWM*JsU@A^6DoZV5U}8!yDoEB#Nli;E%_)h`EU9E*W(3MJFfg(~Xa+_`MlMDW
+zd1@;oqYyFxih%(G10Ew2OG`5Hi@*k>+Jz*+2(gL-tBouST>lw?E@gPstpITuvV&l5
+S02xtK0J903fygRxyBGituQ1#I
+
+literal 0
+HcmV?d00001
+
+diff --git a/test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-6609852341157888 b/test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-6609852341157888
+new file mode 100644
+index 0000000000000000000000000000000000000000..b7debabf1907b9f5f9877fc666faebcaba768140
+GIT binary patch
+literal 1125
+zcmah}&2G~`5T1<+xGkcQC<1YU7YHgZ0MEcB;$&^@%@2*^u-;T{FR>6uB+lI7p|}zW
+zsUQ^*q#y`*n3=WX7%DM`)p~a3n{U3^bt^M=Y%Hi&-%g@VmW@KEZQr<XtP>Na$Hv-W
+zY`_lPX&9vn%xMUKc(DM0Kq<sx(URRhVCnlpzVh@}vFOtFF^5$N%Mb7o19e|~Ie8UG
+z?L?nEO-z>Qz6nQW+;;;ygM<ucye`SEedpC%k{q!cl)7N_Tj&YZg)Z4`UE<?jx|JcJ
+zkOc$hCI@g^I>aJp7dN{^UN@R);Hh^3r~-GtQMf2mrAZX*!#&FE641&+xM(7{(td1u
+zdOC8Up1MKGax=t6y|X})sKy@EXw>!O_G%y1z3OMfOqw{=)GBVhrU7BU^0o`@VzC}u
+z@tK*|&Bp{lYIvcD!IEx8&7k;-pS&6yz88FR*b0E$^Y|fp5bR2nopUsOd6_t}s=q3w
+zz#YVMAyRBB-?(H-pub2=>0xIu(b3T}rw>Oa%!X&C^Tb4HY@Xv!FDs}k*XibZnd;U8
+zcy#^`aV9Ze3(D2OGrR#9R}5uXcQz>3<Y|{9qk4jo8E4asm0ssoyWdTpZ<M0`C(QdY
+z@2-d^vz-f-@=hYokdEl>0UVT_<g^z8E&2(Z&`$uiU<V%DJWNw^Xxlrswo7jxUn8_}
+e1_8x;(YF5@5sUWn4Nnf*Z-p~Yi{And9R2`hmE*_&
+
+literal 0
+HcmV?d00001
+
+diff --git a/tools/run_tests/generated/tests.json b/tools/run_tests/generated/tests.json
+index c5d3143924fe6..d8c1a125a1ad3 100644
+--- a/tools/run_tests/generated/tests.json
++++ b/tools/run_tests/generated/tests.json
+@@ -104488,6 +104488,75 @@
+     ], 
+     "uses_polling": false
+   }, 
++  {
++    "args": [
++      "test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-5406804084260864"
++    ], 
++    "ci_platforms": [
++      "linux"
++    ], 
++    "cpu_cost": 0.1, 
++    "exclude_configs": [
++      "tsan"
++    ], 
++    "exclude_iomgrs": [
++      "uv"
++    ], 
++    "flaky": false, 
++    "language": "c", 
++    "name": "api_fuzzer_one_entry", 
++    "platforms": [
++      "mac", 
++      "linux"
++    ], 
++    "uses_polling": false
++  }, 
++  {
++    "args": [
++      "test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-5471994809155584"
++    ], 
++    "ci_platforms": [
++      "linux"
++    ], 
++    "cpu_cost": 0.1, 
++    "exclude_configs": [
++      "tsan"
++    ], 
++    "exclude_iomgrs": [
++      "uv"
++    ], 
++    "flaky": false, 
++    "language": "c", 
++    "name": "api_fuzzer_one_entry", 
++    "platforms": [
++      "mac", 
++      "linux"
++    ], 
++    "uses_polling": false
++  }, 
++  {
++    "args": [
++      "test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-api_fuzzer-6609852341157888"
++    ], 
++    "ci_platforms": [
++      "linux"
++    ], 
++    "cpu_cost": 0.1, 
++    "exclude_configs": [
++      "tsan"
++    ], 
++    "exclude_iomgrs": [
++      "uv"
++    ], 
++    "flaky": false, 
++    "language": "c", 
++    "name": "api_fuzzer_one_entry", 
++    "platforms": [
++      "mac", 
++      "linux"
++    ], 
++    "uses_polling": false
++  }, 
+   {
+     "args": [
+       "test/core/end2end/fuzzers/api_fuzzer_corpus/clusterfuzz-testcase-minimized-4688823906729984"

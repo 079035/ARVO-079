@@ -1,0 +1,40 @@
+From 234431b6f32ff2ef25e0e3ec482afe19a1f4e299 Mon Sep 17 00:00:00 2001
+From: Philippe Antoine <contact@catenacyber.fr>
+Date: Wed, 11 Dec 2019 15:06:33 +0100
+Subject: [PATCH] finalize: fix unread to unconsume as well
+
+Found by fuzzing
+---
+ htp/htp_request.c  | 4 ++++
+ htp/htp_response.c | 3 +++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/htp/htp_request.c b/htp/htp_request.c
+index b6f3c121..3756de30 100644
+--- a/htp/htp_request.c
++++ b/htp/htp_request.c
+@@ -891,6 +891,10 @@ htp_status_t htp_connp_REQ_FINALIZE(htp_connp_t *connp) {
+     } else {
+         connp->in_current_read_offset-=len;
+     }
++    if (connp->in_current_read_offset < connp->in_current_consume_offset) {
++        connp->in_current_consume_offset=connp->in_current_read_offset;
++    }
++
+     return htp_tx_state_request_complete(connp->in_tx);
+ }
+ 
+diff --git a/htp/htp_response.c b/htp/htp_response.c
+index 59537b72..9c74a07a 100644
+--- a/htp/htp_response.c
++++ b/htp/htp_response.c
+@@ -1113,6 +1113,9 @@ htp_status_t htp_connp_RES_FINALIZE(htp_connp_t *connp) {
+     } else {
+         connp->out_current_read_offset-=bytes_left;
+     }
++    if (connp->out_current_read_offset < connp->out_current_consume_offset) {
++        connp->out_current_consume_offset=connp->out_current_read_offset;
++    }
+     return htp_tx_state_response_complete_ex(connp->out_tx, 0 /* not hybrid mode */);
+ }
+ 

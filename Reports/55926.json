@@ -1,5 +1,5 @@
 {
-    "fix": "https://git.ffmpeg.org/ffmpeg.git7c41a083b756c8daf34cf1d6bb8367b2151b4e4f",
+    "fix": "https://github.com/rishavbhowmik/ffmpeg/commit/7c41a083b756c8daf34cf1d6bb8367b2151b4e4f",
     "verify": "0",
     "localId": 55926,
     "project": "ffmpeg",

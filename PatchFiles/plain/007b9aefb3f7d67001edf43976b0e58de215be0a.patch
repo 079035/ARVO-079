@@ -1,0 +1,39 @@
+commit 007b9aefb3f7d67001edf43976b0e58de215be0a
+Author: Ken Sharp <ken.sharp@artifex.com>
+Date:   Sat Dec 18 13:35:33 2021 +0000
+
+    OSS-fuzz #42453
+    
+    The fuzzed file ended up trying to deal with a broken token, and in the
+    process treated it as a sc instead of  an scn. This caused us to get the
+    number of components for a Pattern space, which is -1. That caused a
+    seg fault.
+    
+    Fixed by checking the returned number of components and if it is -1
+    (a Pattern colour space) then throw an error for operators that don't
+    support Pattern spaces.
+
+diff --git a/pdf/pdf_colour.c b/pdf/pdf_colour.c
+index 20a61d729..56666dfd6 100644
+--- a/pdf/pdf_colour.c
++++ b/pdf/pdf_colour.c
+@@ -710,6 +710,10 @@ int pdfi_setstrokecolor(pdf_context *ctx)
+     gs_swapcolors_quick(ctx->pgs);
+     pcs = gs_currentcolorspace(ctx->pgs);
+     ncomps = cs_num_components(pcs);
++    if (ncomps < 0) {
++        gs_swapcolors_quick(ctx->pgs);
++        return_error(gs_error_syntaxerror);
++    }
+     code = pdfi_get_color_from_stack(ctx, &cc, ncomps);
+     if (code == 0) {
+         code = gs_setcolor(ctx->pgs, &cc);
+@@ -725,6 +729,8 @@ int pdfi_setfillcolor(pdf_context *ctx)
+     gs_client_color cc;
+ 
+     ncomps = cs_num_components(pcs);
++    if (ncomps < 0)
++        return_error(gs_error_syntaxerror);
+     code = pdfi_get_color_from_stack(ctx, &cc, ncomps);
+     if (code == 0) {
+         code = gs_setcolor(ctx->pgs, &cc);

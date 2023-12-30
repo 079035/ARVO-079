@@ -1,0 +1,109 @@
+From c0c5ffa97385063ce9b24432e7c0c4130ed26e27 Mon Sep 17 00:00:00 2001
+From: Yann Collet <cyan@fb.com>
+Date: Fri, 31 Dec 2021 18:20:36 -0800
+Subject: [PATCH] streaming compression : lazy parameter adaptation with stable
+ input
+
+effectively makes ZSTD_c_stableInput compatible ZSTD_compressStream()
+and zstd_e_continue operation mode.
+---
+ lib/compress/zstd_compress.c | 25 ++++++++++++++++---------
+ lib/zstd.h                   |  6 +++---
+ 2 files changed, 19 insertions(+), 12 deletions(-)
+
+diff --git a/lib/compress/zstd_compress.c b/lib/compress/zstd_compress.c
+index 74f0cbfb51..724ac3887e 100644
+--- a/lib/compress/zstd_compress.c
++++ b/lib/compress/zstd_compress.c
+@@ -177,12 +177,9 @@ size_t ZSTD_freeCCtx(ZSTD_CCtx* cctx)
+     if (cctx==NULL) return 0;   /* support free on NULL */
+     RETURN_ERROR_IF(cctx->staticSize, memory_allocation,
+                     "not compatible with static CCtx");
+-    {
+-        int cctxInWorkspace = ZSTD_cwksp_owns_buffer(&cctx->workspace, cctx);
++    {   int cctxInWorkspace = ZSTD_cwksp_owns_buffer(&cctx->workspace, cctx);
+         ZSTD_freeCCtxContent(cctx);
+-        if (!cctxInWorkspace) {
+-            ZSTD_customFree(cctx, cctx->customMem);
+-        }
++        if (!cctxInWorkspace) ZSTD_customFree(cctx, cctx->customMem);
+     }
+     return 0;
+ }
+@@ -4487,6 +4484,7 @@ ZSTD_compress_insertDictionary(ZSTD_compressedBlockState_t* bs,
+ #define ZSTD_USE_CDICT_PARAMS_DICTSIZE_MULTIPLIER (6ULL)
+ 
+ /*! ZSTD_compressBegin_internal() :
++ * Assumption : either @dict OR @cdict (or none) is non-NULL, never both
+  * @return : 0, or an error code */
+ static size_t ZSTD_compressBegin_internal(ZSTD_CCtx* cctx,
+                                     const void* dict, size_t dictSize,
+@@ -4567,11 +4565,11 @@ size_t ZSTD_compressBegin_advanced(ZSTD_CCtx* cctx,
+                                             &cctxParams, pledgedSrcSize);
+ }
+ 
+-size_t ZSTD_compressBegin_usingDict(ZSTD_CCtx* cctx, const void* dict, size_t dictSize, int compressionLevel)
++size_t
++ZSTD_compressBegin_usingDict(ZSTD_CCtx* cctx, const void* dict, size_t dictSize, int compressionLevel)
+ {
+     ZSTD_CCtx_params cctxParams;
+-    {
+-        ZSTD_parameters const params = ZSTD_getParams_internal(compressionLevel, ZSTD_CONTENTSIZE_UNKNOWN, dictSize, ZSTD_cpm_noAttachDict);
++    {   ZSTD_parameters const params = ZSTD_getParams_internal(compressionLevel, ZSTD_CONTENTSIZE_UNKNOWN, dictSize, ZSTD_cpm_noAttachDict);
+         ZSTD_CCtxParams_init_internal(&cctxParams, &params, (compressionLevel == 0) ? ZSTD_CLEVEL_DEFAULT : compressionLevel);
+     }
+     DEBUGLOG(4, "ZSTD_compressBegin_usingDict (dictSize=%u)", (unsigned)dictSize);
+@@ -5648,6 +5646,12 @@ size_t ZSTD_compressStream2( ZSTD_CCtx* cctx,
+ 
+     /* transparent initialization stage */
+     if (cctx->streamStage == zcss_init) {
++        if ( (cctx->requestedParams.inBufferMode == ZSTD_bm_stable) /* input is presumed stable, across invocations */
++          && (endOp == ZSTD_e_continue)                             /* more to come */
++          && (input->pos < ZSTD_BLOCKSIZE_MAX) ) {                  /* not even reached one block yet */
++            cctx->expectedInBuffer = *input;
++            return (ZSTD_BLOCKSIZE_MAX - input->pos);               /* don't do anything : allows lazy compression parameters adaptation */
++        }
+         FORWARD_IF_ERROR(ZSTD_CCtx_init_compressStream2(cctx, endOp, input->size), "CompressStream2 initialization failed");
+         ZSTD_setBufferExpectations(cctx, output, input);    /* Set initial buffer expectations now that we've initialized */
+     }
+@@ -6159,6 +6163,7 @@ size_t ZSTD_compressSequences(ZSTD_CCtx* const cctx, void* dst, size_t dstCapaci
+ /*======   Finalize   ======*/
+ 
+ /*! ZSTD_flushStream() :
++*   Note : not compatible with ZSTD_c_stableInBuffer
+  * @return : amount of data remaining to flush */
+ size_t ZSTD_flushStream(ZSTD_CStream* zcs, ZSTD_outBuffer* output)
+ {
+@@ -6169,7 +6174,9 @@ size_t ZSTD_flushStream(ZSTD_CStream* zcs, ZSTD_outBuffer* output)
+ 
+ size_t ZSTD_endStream(ZSTD_CStream* zcs, ZSTD_outBuffer* output)
+ {
+-    ZSTD_inBuffer input = { NULL, 0, 0 };
++    ZSTD_inBuffer const nullInput = { NULL, 0, 0 };
++    int const stableInput = (zcs->appliedParams.inBufferMode == ZSTD_bm_stable);
++    ZSTD_inBuffer input = stableInput ? zcs->expectedInBuffer : nullInput;
+     size_t const remainingToFlush = ZSTD_compressStream2(zcs, output, &input, ZSTD_e_end);
+     FORWARD_IF_ERROR( remainingToFlush , "ZSTD_compressStream2 failed");
+     if (zcs->appliedParams.nbWorkers > 0) return remainingToFlush;   /* minimal estimation */
+diff --git a/lib/zstd.h b/lib/zstd.h
+index 349d8017f8..f25e17d4b6 100644
+--- a/lib/zstd.h
++++ b/lib/zstd.h
+@@ -1843,14 +1843,14 @@ ZSTDLIB_STATIC_API size_t ZSTD_CCtx_refPrefix_advanced(ZSTD_CCtx* cctx, const vo
+  * large enough to fit a block (see ZSTD_c_stableOutBuffer). This will also
+  * avoid the memcpy() from the input buffer to the input window buffer.
+  *
+- * NOTE: ZSTD_compressStream2() will error if ZSTD_e_end is not used.
+- * That means this flag cannot be used with ZSTD_compressStream().
++ * NOTE: ZSTD_compressStream2() will error if ZSTD_e_flush is used.
++ * That means this flag cannot be used with ZSTD_flushStream().
+  *
+  * NOTE: So long as the ZSTD_inBuffer always points to valid memory, using
+  * this flag is ALWAYS memory safe, and will never access out-of-bounds
+  * memory. However, compression WILL fail if you violate the preconditions.
+  *
+- * WARNING: The data in the ZSTD_inBuffer in the range [dst, dst + pos) MUST
++ * WARNING: The data in the ZSTD_inBuffer in the range [src, src + pos) MUST
+  * not be modified during compression or you will get data corruption. This
+  * is because zstd needs to reference data in the ZSTD_inBuffer to find
+  * matches. Normally zstd maintains its own window buffer for this purpose,

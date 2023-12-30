@@ -1,0 +1,52 @@
+commit 7de9c0e9d7f537389a238b30d40eac57a2fbaf6d
+Author: Andreas Rheinhardt <andreas.rheinhardt@outlook.com>
+Date:   Sun Aug 28 17:21:03 2022 +0200
+
+    avcodec/flac: Don't use bytestream API unnecessarily
+    
+    It makes no sense here, as flac_parse_block_header()
+    is not even supposed to advance the caller's pointer.
+    
+    Signed-off-by: Andreas Rheinhardt <andreas.rheinhardt@outlook.com>
+
+diff --git a/libavcodec/flac.h b/libavcodec/flac.h
+index fd899ef72c..f118dbbff3 100644
+--- a/libavcodec/flac.h
++++ b/libavcodec/flac.h
+@@ -27,7 +27,7 @@
+ #ifndef AVCODEC_FLAC_H
+ #define AVCODEC_FLAC_H
+ 
+-#include "bytestream.h"
++#include "libavutil/intreadwrite.h"
+ 
+ #define FLAC_STREAMINFO_SIZE   34
+ #define FLAC_MAX_CHANNELS       8
+@@ -63,13 +63,13 @@ enum {
+ static av_always_inline void flac_parse_block_header(const uint8_t *block_header,
+                                                       int *last, int *type, int *size)
+ {
+-    int tmp = bytestream_get_byte(&block_header);
++    int tmp = *block_header;
+     if (last)
+         *last = tmp & 0x80;
+     if (type)
+         *type = tmp & 0x7F;
+     if (size)
+-        *size = bytestream_get_be24(&block_header);
++        *size = AV_RB24(block_header + 1);
+ }
+ 
+ #endif /* AVCODEC_FLAC_H */
+diff --git a/libavformat/flacdec.c b/libavformat/flacdec.c
+index 09404b67bb..eadd41fc36 100644
+--- a/libavformat/flacdec.c
++++ b/libavformat/flacdec.c
+@@ -20,6 +20,7 @@
+  */
+ 
+ #include "libavutil/channel_layout.h"
++#include "libavcodec/bytestream.h"
+ #include "libavcodec/flac.h"
+ #include "avformat.h"
+ #include "demux.h"

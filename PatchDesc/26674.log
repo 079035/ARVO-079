@@ -1,32 +1,12 @@
-Vulnerability:
-The vulnerability fixed in this diff file is a one-byte buffer overwrite and an assertion failure caused by a subtraction that was broken by a change to an unsigned type.
+1. Vulnerability:
+The vulnerability in the code was a one-byte buffer overwrite and an assertion failure. This was caused by a subtraction operation that was broken due to a change to an unsigned type. This could potentially lead to unexpected behavior or crashes in the program.
 
-Summary of the fix:
-The fix for this vulnerability involves changing the subtraction calculation in the code to correctly handle the unsigned type. The fix also includes updating the assert condition to reflect the correct calculation.
+2. Short Summary of the Fix:
+The fix involved correcting the calculation for the size of the buffer to be allocated in the `decode_font` function. The size calculation was adjusted to prevent the one-byte buffer overwrite.
 
-Detailed description of the fix:
-1. The code initially allocates memory for `buf` based on the size of the encoded data divided by 4, multiplied by 3, and adds the maximum of the remainder after dividing by 4 and 1. However, this calculation is incorrect for the case when the remainder is 1. The fix adjusts this calculation to correctly handle the unsigned type by removing the `-1` from the calculation and adding it outside of the `FFMAX` macro.
+3. Detailed Description of the Fix:
+In the `decode_font` function, the size of the buffer to be allocated was calculated as `size / 4 * 3 + FFMAX(size % 4 - 1, 0)`. However, this calculation was incorrect when `size % 4` was 1, leading to a buffer of insufficient size being allocated. This caused a buffer overwrite when the buffer was accessed.
 
-Before fix:
-```c
-buf = malloc(size / 4 * 3 + FFMAX(size % 4 - 1, 0));
-```
+The fix adjusted the calculation to `size / 4 * 3 + FFMAX(size % 4, 1) - 1`, ensuring that the buffer of the correct size is allocated even when `size % 4` is 1. This prevents the buffer overwrite.
 
-After fix:
-```c
-buf = malloc(size / 4 * 3 + FFMAX(size % 4, 1) - 1);
-```
-
-2. The loop that decodes the font data checks for the size of the data modulo 4 to determine if there are remaining bytes to decode. If there are 2 or 3 remaining bytes, they are decoded accordingly by the `decode_chars` function. However, the assertion after the loop incorrectly compares the decoded size `dsize` with the previous calculation of the buffer size. The fix updates this assertion to correctly compare `dsize` with the new calculation that handles the unsigned type.
-
-Before fix:
-```c
-assert(dsize == size / 4 * 3 + FFMAX(size % 4 - 1, 0));
-```
-
-After fix:
-```c
-assert(dsize == size / 4 * 3 + FFMAX(size % 4, 1) - 1);
-```
-
-By making these changes, the fix ensures that the buffer allocation and assertion calculations are correct and prevent the one-byte buffer overwrite and assertion failure.
+Additionally, the assertion that checks the decoded size (`dsize`) against the expected size was also updated to match the new calculation. This ensures that the assertion will not fail due to the change in the size calculation.

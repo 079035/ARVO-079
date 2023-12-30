@@ -1,0 +1,27 @@
+From 98eee3396d7e225d74208cc13c21dce853b10082 Mon Sep 17 00:00:00 2001
+From: Daniel Stenberg <daniel@haxx.se>
+Date: Mon, 12 Mar 2018 23:52:28 +0100
+Subject: [PATCH] Revert "hostip: fix compiler warning: 'variable set but not
+ used'"
+
+This reverts commit a577059f92fc65bd6b81717f0737f897a5b34248.
+
+The assignment really needs to be there or we risk working with an
+uninitialized pointer.
+---
+ lib/hostip.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/hostip.c b/lib/hostip.c
+index d2ebe2fa4324cd..8554d39d1e7f5f 100644
+--- a/lib/hostip.c
++++ b/lib/hostip.c
+@@ -835,7 +835,7 @@ CURLcode Curl_loadhostpairs(struct Curl_easy *data)
+       char *entry_id;
+       size_t entry_len;
+       char address[64];
+-      char *addresses;
++      char *addresses = NULL;
+       char *addr_begin;
+       char *addr_end;
+       char *port_ptr;

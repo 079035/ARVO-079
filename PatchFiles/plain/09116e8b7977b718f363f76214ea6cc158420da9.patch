@@ -1,0 +1,74 @@
+From 09116e8b7977b718f363f76214ea6cc158420da9 Mon Sep 17 00:00:00 2001
+From: "Victor M. Alvarez" <vmalvarez@virustotal.com>
+Date: Tue, 22 Dec 2020 16:52:01 +0100
+Subject: [PATCH] Fix buffer overrun in dotnet module found by OSS-Fuzz.
+ (#1425)
+
+The strncpy function was being invoked with a source buffer that was shorter than MAX_TYPELIB_SIZE and the string was not null-terminated, which means that strncpy read past the end of the buffer. Now the limit pass to strncpy is the length of the string as indicated in the byte before the string itself. This length, being a byte, is equal to or less than MAX_TYPELIB_SIZE whose value is 255.
+---
+ libyara/modules/dotnet/dotnet.c                  |  15 +++++++++------
+ ...case-minimized-dotnet_fuzzer-5636481138556928 | Bin 0 -> 1772 bytes
+ 2 files changed, 9 insertions(+), 6 deletions(-)
+ create mode 100644 tests/oss-fuzz/dotnet_fuzzer_corpus/clusterfuzz-testcase-minimized-dotnet_fuzzer-5636481138556928
+
+diff --git a/libyara/modules/dotnet/dotnet.c b/libyara/modules/dotnet/dotnet.c
+index b14a8b5563..bc600b834c 100644
+--- a/libyara/modules/dotnet/dotnet.c
++++ b/libyara/modules/dotnet/dotnet.c
+@@ -879,25 +879,28 @@ void dotnet_parse_tilde_2(
+             continue;
+           }
+ 
+-          // The next byte is the length of the string.
++          // The next byte after the 16 bit prolog is the length of the string.
+           blob_offset += 2;
++          uint8_t str_len = *blob_offset;
+ 
+-          if (blob_offset + *blob_offset >= pe->data + pe->data_size)
++          // Increment blob_offset so that it points to the first byte of the
++          // string.
++          blob_offset += 1;
++
++          if (blob_offset + str_len > pe->data + pe->data_size)
+           {
+             row_ptr += row_size;
+             continue;
+           }
+ 
+-          blob_offset += 1;
+-
+           if (*blob_offset == 0xFF || *blob_offset == 0x00)
+           {
+             typelib[0] = '\0';
+           }
+           else
+           {
+-            strncpy(typelib, (char*) blob_offset, MAX_TYPELIB_SIZE);
+-            typelib[MAX_TYPELIB_SIZE] = '\0';
++            strncpy(typelib, (char*) blob_offset, str_len);
++            typelib[str_len] = '\0';
+           }
+ 
+           set_string(typelib, pe->object, "typelib");
+diff --git a/tests/oss-fuzz/dotnet_fuzzer_corpus/clusterfuzz-testcase-minimized-dotnet_fuzzer-5636481138556928 b/tests/oss-fuzz/dotnet_fuzzer_corpus/clusterfuzz-testcase-minimized-dotnet_fuzzer-5636481138556928
+new file mode 100644
+index 0000000000000000000000000000000000000000..78333e65f73560494385cbf790487635e57754c4
+GIT binary patch
+literal 1772
+zcmeHGziU%b6#ni@(&k57T582o!53nnc6cO2glr+SXtio-EF}tJTVoAP6M2auNTrJ+
+z=up8?A!BhU4i$=v`2)=CCXP-{;-Fys&V4WVj1aP9^CaiH=jXlWo^#*DtGn<4@RM6D
+z;E=0O=7_U)!yP(DPP`kzL8uu$R13}MmD|OtdB?77*sELS`f9mcshMj9)4p3ai)C~6
+za&F74+$>nb!{L+e#*1^ng7P8w?e(?xS)XA<BPs%vXc=&<`%k%=<T@D`)w1E#Ee5Gy
+zQ<O-%kPn$h5-R^ctE-BMbc6d|5TOq2NFzF_0StB8deKcF=!pwbKj+b{TH$_;`oSiF
+zK7CiWZfcrLmS@>jd!3rDtxiEMS|)oa!*N-5p;Td@uC+m@>}8WZlmW6HRg1gQSCZ6b
+zAb^)9@Qi0DF_Na^z?oZo7(LQ>!oY+ZYs9D7g0OF!oB0j@HcRr)&^Mk?7;MKp5a&#X
+z&56wB&S#ZdiQMbnX)9r+5~*Zbk^{PBdrXf#RN!+pUeFrL)$C$<qbd=5oTtnnww%Ko
+z%JK|iXP4(^xi+YO5ItL}tZ^0MsaTn)tB_p&M?8h2P9H+9Py9^Nak8(lgo<5Q<Te9S
+zN@RJ!#}Ou`zY8vDc~j$ajc>6}`+MTgz(*|)sxLaz$(If&H43%@lOprCqO!!in!}<g
+zp^uLxIYEV*qtSnfl|FH`yjs$AOP*AkS0N-AJ%$u<63y1H)~8m}uW(9R(!>GG6Niu_
+zj={ndt`j2~xk=yJ+~-p)J683*`r3`Ud;iL0=i9UI*Sq-tX4qt>&HsLyJxtR(uiu+F
+B70mzu
+
+literal 0
+HcmV?d00001
+

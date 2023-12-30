@@ -1,0 +1,22 @@
+From 3809b8e9389bda86e6208560842fe145b671cc73 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Caol=C3=A1n=20McNamara?= <caolanm@redhat.com>
+Date: Thu, 8 Sep 2022 16:28:05 +0100
+Subject: [PATCH] ofz#51127 std::throw_out_of_range
+
+---
+ src/hunspell/hashmgr.cxx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/hunspell/hashmgr.cxx b/src/hunspell/hashmgr.cxx
+index 8fc10853d..4e43d8346 100644
+--- a/src/hunspell/hashmgr.cxx
++++ b/src/hunspell/hashmgr.cxx
+@@ -296,7 +296,7 @@ int HashMgr::add_word(const std::string& in_word,
+               ++stripword;
+               if ((ph.size() > strippatt) && (wordpart.size() > stripword)) {
+                 ph.erase(ph.size()-strippatt, strippatt);
+-                wordpart.erase(in_word.size()-stripword, stripword);
++                wordpart.erase(wordpart.size()-stripword, stripword);
+               }
+             }
+             // capitalize lowercase pattern for capitalized words to support

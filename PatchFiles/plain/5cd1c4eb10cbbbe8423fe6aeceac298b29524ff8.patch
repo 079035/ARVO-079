@@ -1,0 +1,345 @@
+From 5cd1c4eb10cbbbe8423fe6aeceac298b29524ff8 Mon Sep 17 00:00:00 2001
+From: Richard Hughes <richard@hughsie.com>
+Date: Thu, 30 Mar 2023 11:05:38 +0100
+Subject: [PATCH] trivial: Be more careful validating buffer sizes when parsing
+ structs
+
+---
+ libfwupdplugin/fu-mem-private.h   |  16 ++++
+ libfwupdplugin/fu-mem.c           | 133 +++++++++++++++++++++---------
+ libfwupdplugin/fwupdplugin.map    |   7 ++
+ libfwupdplugin/generate-struct.py |  62 ++++++--------
+ libfwupdplugin/meson.build        |   1 +
+ 5 files changed, 143 insertions(+), 76 deletions(-)
+ create mode 100644 libfwupdplugin/fu-mem-private.h
+
+diff --git a/libfwupdplugin/fu-mem-private.h b/libfwupdplugin/fu-mem-private.h
+new file mode 100644
+index 00000000000..c3c15448fcc
+--- /dev/null
++++ b/libfwupdplugin/fu-mem-private.h
+@@ -0,0 +1,16 @@
++/*
++ * Copyright (C) 2023 Richard Hughes <richard@hughsie.com>
++ *
++ * SPDX-License-Identifier: LGPL-2.1+
++ */
++
++#pragma once
++
++#include <glib.h>
++
++#include "fu-mem.h"
++
++gboolean
++fu_memchk_read(gsize bufsz, gsize offset, gsize n, GError **error);
++gboolean
++fu_memchk_write(gsize bufsz, gsize offset, gsize n, GError **error);
+diff --git a/libfwupdplugin/fu-mem.c b/libfwupdplugin/fu-mem.c
+index 3c0fb0b09fa..b899769a449 100644
+--- a/libfwupdplugin/fu-mem.c
++++ b/libfwupdplugin/fu-mem.c
+@@ -10,7 +10,7 @@
+ 
+ #include "fwupd-error.h"
+ 
+-#include "fu-mem.h"
++#include "fu-mem-private.h"
+ 
+ /**
+  * fu_memwrite_uint16:
+@@ -298,88 +298,141 @@ fu_memcmp_safe(const guint8 *buf1, gsize bufsz1, const guint8 *buf2, gsize bufsz
+ }
+ 
+ /**
+- * fu_memcpy_safe:
+- * @dst: destination buffer
+- * @dst_sz: maximum size of @dst, typically `sizeof(dst)`
+- * @dst_offset: offset in bytes into @dst to copy to
+- * @src: source buffer
+- * @src_sz: maximum size of @dst, typically `sizeof(src)`
+- * @src_offset: offset in bytes into @src to copy from
+- * @n: number of bytes to copy from @src+@offset from
++ * fu_memchk_read:
++ * @bufsz: maximum size of a buffer, typically `sizeof(buf)`
++ * @offset: offset in bytes
++ * @n: number of bytes
+  * @error: (nullable): optional return location for an error
+  *
+- * Copies some memory using memcpy in a safe way. Providing the buffer sizes
+- * of both the destination and the source allows us to check for buffer overflow.
+- *
+- * Providing the buffer offsets also allows us to check reading past the end of
+- * the source buffer. For this reason the caller should NEVER add an offset to
+- * @src or @dst.
++ * Works out if reading from a buffer is safe. Providing the buffer sizes allows us to check for
++ * buffer overflow.
+  *
+  * You don't need to use this function in "obviously correct" cases, nor should
+  * you use it when performance is a concern. Only us it when you're not sure if
+  * malicious data from a device or firmware could cause memory corruption.
+  *
+- * Returns: %TRUE if the bytes were copied, %FALSE otherwise
++ * Returns: %TRUE if the access is safe, %FALSE otherwise
+  *
+- * Since: 1.8.2
++ * Since: 1.8.14
+  **/
+ gboolean
+-fu_memcpy_safe(guint8 *dst,
+-	       gsize dst_sz,
+-	       gsize dst_offset,
+-	       const guint8 *src,
+-	       gsize src_sz,
+-	       gsize src_offset,
+-	       gsize n,
+-	       GError **error)
++fu_memchk_read(gsize bufsz, gsize offset, gsize n, GError **error)
+ {
+-	g_return_val_if_fail(dst != NULL, FALSE);
+-	g_return_val_if_fail(src != NULL, FALSE);
+ 	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+-
+ 	if (n == 0)
+ 		return TRUE;
+-
+-	if (n > src_sz) {
++	if (n > bufsz) {
+ 		g_set_error(error,
+ 			    FWUPD_ERROR,
+ 			    FWUPD_ERROR_READ,
+ 			    "attempted to read 0x%02x bytes from buffer of 0x%02x",
+ 			    (guint)n,
+-			    (guint)src_sz);
++			    (guint)bufsz);
+ 		return FALSE;
+ 	}
+-	if (src_offset > src_sz || n + src_offset > src_sz) {
++	if (offset > bufsz || n + offset > bufsz) {
+ 		g_set_error(error,
+ 			    FWUPD_ERROR,
+ 			    FWUPD_ERROR_READ,
+ 			    "attempted to read 0x%02x bytes at offset 0x%02x from buffer of 0x%02x",
+ 			    (guint)n,
+-			    (guint)src_offset,
+-			    (guint)src_sz);
++			    (guint)offset,
++			    (guint)bufsz);
+ 		return FALSE;
+ 	}
+-	if (n > dst_sz) {
++	return TRUE;
++}
++
++/**
++ * fu_memchk_write:
++ * @bufsz: maximum size of a buffer, typically `sizeof(buf)`
++ * @offset: offset in bytes
++ * @n: number of bytes
++ * @error: (nullable): optional return location for an error
++ *
++ * Works out if writing to a buffer is safe. Providing the buffer sizes allows us to check for
++ * buffer overflow.
++ *
++ * You don't need to use this function in "obviously correct" cases, nor should
++ * you use it when performance is a concern. Only us it when you're not sure if
++ * malicious data from a device or firmware could cause memory corruption.
++ *
++ * Returns: %TRUE if the access is safe, %FALSE otherwise
++ *
++ * Since: 1.8.14
++ **/
++gboolean
++fu_memchk_write(gsize bufsz, gsize offset, gsize n, GError **error)
++{
++	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
++	if (n == 0)
++		return TRUE;
++	if (n > bufsz) {
+ 		g_set_error(error,
+ 			    FWUPD_ERROR,
+ 			    FWUPD_ERROR_WRITE,
+ 			    "attempted to write 0x%02x bytes to buffer of 0x%02x",
+ 			    (guint)n,
+-			    (guint)dst_sz);
++			    (guint)bufsz);
+ 		return FALSE;
+ 	}
+-	if (dst_offset > dst_sz || n + dst_offset > dst_sz) {
++	if (offset > bufsz || n + offset > bufsz) {
+ 		g_set_error(error,
+ 			    FWUPD_ERROR,
+ 			    FWUPD_ERROR_WRITE,
+ 			    "attempted to write 0x%02x bytes at offset 0x%02x to buffer of 0x%02x",
+ 			    (guint)n,
+-			    (guint)dst_offset,
+-			    (guint)dst_sz);
++			    (guint)offset,
++			    (guint)bufsz);
+ 		return FALSE;
+ 	}
++	return TRUE;
++}
+ 
+-	/* phew! */
++/**
++ * fu_memcpy_safe:
++ * @dst: destination buffer
++ * @dst_sz: maximum size of @dst, typically `sizeof(dst)`
++ * @dst_offset: offset in bytes into @dst to copy to
++ * @src: source buffer
++ * @src_sz: maximum size of @dst, typically `sizeof(src)`
++ * @src_offset: offset in bytes into @src to copy from
++ * @n: number of bytes to copy from @src+@offset from
++ * @error: (nullable): optional return location for an error
++ *
++ * Copies some memory using memcpy in a safe way. Providing the buffer sizes
++ * of both the destination and the source allows us to check for buffer overflow.
++ *
++ * Providing the buffer offsets also allows us to check reading past the end of
++ * the source buffer. For this reason the caller should NEVER add an offset to
++ * @src or @dst.
++ *
++ * You don't need to use this function in "obviously correct" cases, nor should
++ * you use it when performance is a concern. Only us it when you're not sure if
++ * malicious data from a device or firmware could cause memory corruption.
++ *
++ * Returns: %TRUE if the bytes were copied, %FALSE otherwise
++ *
++ * Since: 1.8.2
++ **/
++gboolean
++fu_memcpy_safe(guint8 *dst,
++	       gsize dst_sz,
++	       gsize dst_offset,
++	       const guint8 *src,
++	       gsize src_sz,
++	       gsize src_offset,
++	       gsize n,
++	       GError **error)
++{
++	g_return_val_if_fail(dst != NULL, FALSE);
++	g_return_val_if_fail(src != NULL, FALSE);
++	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
++
++	if (!fu_memchk_read(src_sz, src_offset, n, error))
++		return FALSE;
++	if (!fu_memchk_write(dst_sz, dst_offset, n, error))
++		return FALSE;
+ 	memcpy(dst + dst_offset, src + src_offset, n);
+ 	return TRUE;
+ }
+diff --git a/libfwupdplugin/fwupdplugin.map b/libfwupdplugin/fwupdplugin.map
+index 649d255baa9..844c8faf9a7 100644
+--- a/libfwupdplugin/fwupdplugin.map
++++ b/libfwupdplugin/fwupdplugin.map
+@@ -1193,3 +1193,10 @@ LIBFWUPDPLUGIN_1.8.13 {
+     fu_volume_get_partition_kind;
+   local: *;
+ } LIBFWUPDPLUGIN_1.8.12;
++
++LIBFWUPDPLUGIN_1.8.14 {
++  global:
++    fu_memchk_read;
++    fu_memchk_write;
++  local: *;
++} LIBFWUPDPLUGIN_1.8.13;
+diff --git a/libfwupdplugin/generate-struct.py b/libfwupdplugin/generate-struct.py
+index 691e2942c43..c2397ce3479 100755
+--- a/libfwupdplugin/generate-struct.py
++++ b/libfwupdplugin/generate-struct.py
+@@ -425,23 +425,19 @@ def _process_items(self, name: str, items: List[Item]) -> Tuple[str, str]:
+         str_c += f"}}\n"
+ 
+         # _parse()
+-        str_c += f"GByteArray *\n"
+-        str_c += f"{name_snake}_parse(const guint8 *buf, gsize bufsz, gsize offset, GError **error)\n"
+-        str_c += f"{{\n"
+-        str_c += f"    g_autoptr(GByteArray) st = g_byte_array_new();\n"
+-        str_c += f"    g_return_val_if_fail(buf != NULL, NULL);\n"
+-        str_c += f"    g_return_val_if_fail(error == NULL || *error == NULL, NULL);\n"
+-        str_c += f"    if (offset + {size} > bufsz) {{\n"
+-        str_c += f"            g_set_error(error,\n"
+-        str_c += f"                        G_IO_ERROR,\n"
+-        str_c += f"                        G_IO_ERROR_INVALID_DATA,\n"
+-        str_c += f'                        "cannot parse buffer of size 0x%x at offset 0x%x for struct {name} of size 0x%x",\n'
+-        str_c += f"                        (guint) bufsz,\n"
+-        str_c += f"                        (guint) offset,\n"
+-        str_c += f"                        (guint) {size});\n"
+-        str_c += f"            return NULL;\n"
+-        str_c += f"    }}\n"
+-        str_c += f"    g_byte_array_append(st, buf + offset, {size});\n"
++        str_c += f"""
++GByteArray *
++{name_snake}_parse(const guint8 *buf, gsize bufsz, gsize offset, GError **error)
++{{
++    g_autoptr(GByteArray) st = g_byte_array_new();
++    g_return_val_if_fail(buf != NULL, NULL);
++    g_return_val_if_fail(error == NULL || *error == NULL, NULL);
++    if (!fu_memchk_read(bufsz, offset, {size}, error)) {{
++            g_prefix_error(error, "invalid struct {name}: ");
++            return NULL;
++    }}
++    g_byte_array_append(st, buf + offset, {size});
++"""
+         for item in items:
+             if item.constant:
+                 if item.type == Type.STRING:
+@@ -461,24 +457,18 @@ def _process_items(self, name: str, items: List[Item]) -> Tuple[str, str]:
+ 
+         # _validate()
+         if has_constant:
+-            str_c += f"gboolean\n"
+-            str_c += f"{name_snake}_validate(const guint8 *buf, gsize bufsz, gsize offset, GError **error)\n"
+-            str_c += f"{{\n"
+-            str_c += f"    GByteArray st = {{.data = (guint8 *) buf + offset, .len = bufsz - offset, }};\n"
+-            str_c += f"    g_return_val_if_fail(buf != NULL, FALSE);\n"
+-            str_c += (
+-                f"    g_return_val_if_fail(error == NULL || *error == NULL, FALSE);\n"
+-            )
+-            str_c += f"    if (offset + {size} > bufsz) {{\n"
+-            str_c += f"            g_set_error(error,\n"
+-            str_c += f"                        G_IO_ERROR,\n"
+-            str_c += f"                        G_IO_ERROR_INVALID_DATA,\n"
+-            str_c += f'                        "cannot parse buffer of size 0x%x at offset 0x%x for struct {name} of size 0x%x",\n'
+-            str_c += f"                        (guint) bufsz,\n"
+-            str_c += f"                        (guint) offset,\n"
+-            str_c += f"                        (guint) {size});\n"
+-            str_c += f"            return FALSE;\n"
+-            str_c += f"    }}\n"
++            str_c += f"""
++gboolean
++{name_snake}_validate(const guint8 *buf, gsize bufsz, gsize offset, GError **error)
++{{
++    GByteArray st = {{.data = (guint8 *) buf + offset, .len = bufsz - offset, }};
++    g_return_val_if_fail(buf != NULL, FALSE);
++    g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
++    if (!fu_memchk_read(bufsz, offset, {size}, error)) {{
++            g_prefix_error(error, "invalid struct {name}: ");
++            return FALSE;
++    }}
++"""
+             for item in items:
+                 if not item.constant:
+                     continue
+@@ -518,7 +508,7 @@ def process_input(self, contents: str) -> Tuple[str, str]:
+         dst_c = f"""/* auto-generated, do not modify */
+ #include "{self.basename}"
+ #include "fu-byte-array.h"
+-#include "fu-mem.h"
++#include "fu-mem-private.h"
+ #include "fu-string.h"
+ """
+ 
+diff --git a/libfwupdplugin/meson.build b/libfwupdplugin/meson.build
+index b8b35e610e7..c78d78ff35b 100644
+--- a/libfwupdplugin/meson.build
++++ b/libfwupdplugin/meson.build
+@@ -208,6 +208,7 @@ fwupdplugin_headers_private = [
+   'fu-device-private.h',
+   'fu-device-progress.h',
+   'fu-kenv.h',
++  'fu-mem-private.h',
+   'fu-plugin-private.h',
+   'fu-bios-settings-private.h',
+   'fu-security-attrs-private.h',

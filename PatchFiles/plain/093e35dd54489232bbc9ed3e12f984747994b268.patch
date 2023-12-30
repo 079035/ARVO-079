@@ -1,0 +1,23 @@
+From 093e35dd54489232bbc9ed3e12f984747994b268 Mon Sep 17 00:00:00 2001
+From: Alex <aleksandrosansan@gmail.com>
+Date: Mon, 3 Jul 2023 09:12:00 +0000
+Subject: [PATCH] Fix eternal loop
+
+---
+ code/AssetLib/SMD/SMDLoader.cpp | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/code/AssetLib/SMD/SMDLoader.cpp b/code/AssetLib/SMD/SMDLoader.cpp
+index 8f5ae58e30..9af871ceed 100644
+--- a/code/AssetLib/SMD/SMDLoader.cpp
++++ b/code/AssetLib/SMD/SMDLoader.cpp
+@@ -837,8 +837,7 @@ void SMDImporter::ParseNodeInfo(const char* szCurrent, const char** szCurrentOut
+     unsigned int iBone  = 0;
+     SkipSpacesAndLineEnd(szCurrent,&szCurrent);
+     if ( !ParseUnsignedInt(szCurrent,&szCurrent,iBone) || !SkipSpaces(szCurrent,&szCurrent)) {
+-        LogErrorNoThrow("Unexpected EOF/EOL while parsing bone index");
+-        SMDI_PARSE_RETURN;
++        throw DeadlyImportError("Unexpected EOF/EOL while parsing bone index");
+     }
+     if (iBone == UINT_MAX) {
+         LogErrorNoThrow("Invalid bone number while parsing bone index");

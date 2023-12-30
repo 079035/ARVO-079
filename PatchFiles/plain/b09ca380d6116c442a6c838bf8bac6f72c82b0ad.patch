@@ -1,0 +1,102 @@
+From b09ca380d6116c442a6c838bf8bac6f72c82b0ad Mon Sep 17 00:00:00 2001
+From: Thomas Van Lenten <thomasvl@google.com>
+Date: Thu, 9 Sep 2021 13:07:42 -0400
+Subject: [PATCH] When skipping a varint for an unknown field, ensure it is
+ valid.
+
+---
+ ...ed-FuzzTextFormat_release-5109315292233728 |  1 +
+ Sources/SwiftProtobuf/BinaryDecoder.swift     | 16 ++-----------
+ Tests/SwiftProtobufTests/Test_AllTypes.swift  |  8 +++++++
+ Tests/SwiftProtobufTests/Test_FuzzTests.swift | 24 +++++++++++++++++++
+ 4 files changed, 35 insertions(+), 14 deletions(-)
+ create mode 100644 FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5109315292233728
+
+diff --git a/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5109315292233728 b/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5109315292233728
+new file mode 100644
+index 000000000..0619c0d4d
+--- /dev/null
++++ b/FuzzTesting/FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5109315292233728
+@@ -0,0 +1 @@
++500<1:'google.protobuf.Timestamp'2:'xt21:47@ogle.mmap_sint32_sfixed64:0XXXXXXXXXXXXXXXXXXXXXX©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©©1'>
+\ No newline at end of file
+diff --git a/Sources/SwiftProtobuf/BinaryDecoder.swift b/Sources/SwiftProtobuf/BinaryDecoder.swift
+index f15c8392e..d5b0ebc8b 100644
+--- a/Sources/SwiftProtobuf/BinaryDecoder.swift
++++ b/Sources/SwiftProtobuf/BinaryDecoder.swift
+@@ -1288,20 +1288,8 @@ internal struct BinaryDecoder: Decoder {
+     private mutating func skipOver(tag: FieldTag) throws {
+         switch tag.wireFormat {
+         case .varint:
+-            if available < 1 {
+-                throw BinaryDecodingError.truncated
+-            }
+-            var c = p.load(fromByteOffset: 0, as: UInt8.self)
+-            while (c & 0x80) != 0 {
+-                p += 1
+-                available -= 1
+-                if available < 1 {
+-                    throw BinaryDecodingError.truncated
+-                }
+-                c = p.load(fromByteOffset: 0, as: UInt8.self)
+-            }
+-            p += 1
+-            available -= 1
++            // Don't need the value, just ensuring it is validly encoded.
++            let _ = try decodeVarint()
+         case .fixed64:
+             if available < 8 {
+                 throw BinaryDecodingError.truncated
+diff --git a/Tests/SwiftProtobufTests/Test_AllTypes.swift b/Tests/SwiftProtobufTests/Test_AllTypes.swift
+index 90e97b6d8..35f125cb2 100644
+--- a/Tests/SwiftProtobufTests/Test_AllTypes.swift
++++ b/Tests/SwiftProtobufTests/Test_AllTypes.swift
+@@ -52,6 +52,14 @@ class Test_AllTypes: XCTestCase, PBTestHelpers {
+     func testEncoding_unknown() {
+         assertDecodeFails([208, 41]) // Field 666, wiretype 0
+         assertDecodeSucceeds([208, 41, 0]) {$0 != MessageTestType()} // Ditto, with varint body
++
++        // This test validation when putting things into unknown fields. In
++        // this case, ensuring the a varint value isn't invalid.
++        assertDecodeFails([
++          (7 << 3) + 0, // Field 7 as a varint (it should be a fixed32)
++          // And overly encoded varint for the value (extracted from some fuzz testing)
++          239, 191, 189, 239, 191, 189, 239, 191, 189, 239, 191, 189, 49,
++        ])
+     }
+ 
+     //
+diff --git a/Tests/SwiftProtobufTests/Test_FuzzTests.swift b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+index 9f441f580..ec9ef3c93 100644
+--- a/Tests/SwiftProtobufTests/Test_FuzzTests.swift
++++ b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+@@ -123,5 +123,29 @@ class Test_FuzzTests: XCTestCase {
+     assertTextFormatSucceeds("500<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<[google.protobuf.Any]<>>>>>>>>>>>>>>>>500<1:''\n2:''>")
+ 
+     assertTextFormatFails("500<[fvwzz_exobuf.Aob/google.protobuf.Any]<[oeFgb/google.protobuf.Any]<[xlob/google.protobuf.Any]<[oeee0FFFFgb/google.protobuf.Any]<[oglob/google.protobuf.Any]<[oogoFFFFFFFFRFfuzz.tebool_extFFFFFFFBFFFFegleeeeeeeeeeeeeeeeeeemeeeeeeeeeeeneeeeeeeekeeeeFFFFFFFFFIFFFFFFFgb/google.protobuf.Any]<[oglob/google.protobuf.Any]<[oogoFFFFFFFFRFfuzz.tebool_extFFFFFFFBFFFFegleeeeeeeeeeeeeeeeeeemeeeeeeeeeeeneeeeeeeekeeeeFFFFFFFFFIFFFFFFFgb/google.protobuf.Any]<[oglob/google.protobuf.Any]<[oogoFFFFFFFFRFfuzz.tebool_extFFFFFFFBFFFFegleeeeeeeeeeeeeeeeeeemeeeeeeeeeeeneeeeeeeekeeeeFFFFFFFFFIFFFFFFFgb/google.protobuf.Any]<[oglob/google.protobuf.Any]<[oogoFFFFFFFFRFfuzz.tebool_extFFFFFFFBFFFFegleeeeeeeeeeeeeeeeeeemeeeeeeeeeeeneeeeeeeekeeeeFFFFFFFFFIFFFFFFFgb/google.protobuf.Any]<[oglob/google.protobuf.Any]<[oogoFFFFFFFFRFfuzz.tebool_extFFFFFFFBFFFFegleeeeeeeeeeeeeeeeeeemeeeeeeeeeeeneeeeeeeekeeeeFFFFFFFFFIFFFFFFFgb/google.protobuf.Any]<[oglob/google.protobuf.Any]<[oogoFFFFFFFFRFfuzz.tebool_extFFFFFFFBFFFFegleeeeeeeeeeeeeeeeeeemeeeeeeeeeeeneeeeeeeekeeeeFFFFFFFFFIFFFFFFFgb/google.protobuf.Any]<>>>>>>>>>>>>>>>>>500<1:''\n1:''\n1:''\n2:''\n1:'roto")
++
++    // FailCases/clusterfuzz-testcase-minimized-FuzzTextFormat_release-5109315292233728
++    // This decodes but fails when trying to generate the TextFormat again.
++    let bytes: [UInt8] = [
++      0x35, 0x30, 0x30, 0x3c, 0x31, 0x3a, 0x27, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
++      0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54,
++      0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x27, 0x32, 0x3a, 0x27,
++      0x78, 0x74, 0x32, 0x31, 0x3a, 0x34, 0x37, 0x40, 0x6f, 0x67, 0x6c, 0x65,
++      0x2e, 0x6d, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15,
++      0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x6d, 0x61, 0x70, 0x5f, 0x73,
++      0x69, 0x6e, 0x74, 0x33, 0x32, 0x5f, 0x73, 0x66, 0x69, 0x78, 0x65, 0x64,
++      0x36, 0x34, 0x3a, 0x15, 0x15, 0x15, 0x15, 0x30, 0x15, 0x15, 0x15, 0x15,
++      0x1d, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x58, 0x58,
++      0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0x58,
++      0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0x58, 0xa9, 0xa9, 0xa9, 0xa9,
++      0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9,
++      0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9,
++      0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9,
++      0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9, 0xa9,
++      0xa9, 0xa9, 0xa9, 0xa9, 0x31, 0x27, 0x3e,
++    ]
++    let str = String(data: Data(bytes), encoding: .utf8)!
++    let msg = try! Fuzz_Testing_Message(textFormatString: str, extensions: Fuzz_Testing_FuzzTesting_Extensions)
++    let _ = msg.textFormatString()
+   }
+ }

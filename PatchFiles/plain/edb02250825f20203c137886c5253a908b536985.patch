@@ -1,0 +1,20 @@
+commit edb02250825f20203c137886c5253a908b536985
+Author: Chris Liddell <chris.liddell@artifex.com>
+Date:   Sat Mar 5 09:53:10 2022 +0000
+
+    oss-fuzz 45222: Bounds check fdselect proc selection offset
+
+diff --git a/pdf/pdf_font1C.c b/pdf/pdf_font1C.c
+index e68acbebc..8ac228ab4 100644
+--- a/pdf/pdf_font1C.c
++++ b/pdf/pdf_font1C.c
+@@ -1933,6 +1933,9 @@ pdfi_read_cff(pdf_context *ctx, pdfi_gs_cff_font_priv *ptpriv)
+                 }
+             }
+             else {
++                if (font->cffdata + offsets.fdselect_off > font->cffend)
++                    return_error(gs_error_rangecheck);
++
+                 switch ((int)font->cffdata[offsets.fdselect_off]) {
+                     case 0:
+                         fdselect_proc = format0_fdselect_proc;

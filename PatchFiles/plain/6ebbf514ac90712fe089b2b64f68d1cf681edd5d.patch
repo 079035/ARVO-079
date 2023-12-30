@@ -1,0 +1,22 @@
+From 6ebbf514ac90712fe089b2b64f68d1cf681edd5d Mon Sep 17 00:00:00 2001
+From: Behdad Esfahbod <behdad@behdad.org>
+Date: Fri, 14 Sep 2018 12:15:53 +0200
+Subject: [PATCH] Minor
+
+---
+ src/hb-ot-layout.hh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/hb-ot-layout.hh b/src/hb-ot-layout.hh
+index 84981391cb5..94414d3f287 100644
+--- a/src/hb-ot-layout.hh
++++ b/src/hb-ot-layout.hh
+@@ -263,7 +263,7 @@ _hb_glyph_info_set_unicode_props (hb_glyph_info_t *info, hb_buffer_t *buffer)
+        * Also, all Mn's that are Default_Ignorable, have ccc=0, hence
+        * the "else if".
+        */
+-      props |= unicode->modified_combining_class (info->codepoint)<<8;
++      props |= unicode->modified_combining_class (u)<<8;
+ 
+       /* Recategorize emoji skin-tone modifiers as Unicode mark, so they
+        * behave correctly in non-native directionality.  They originally

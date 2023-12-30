@@ -1,0 +1,20 @@
+From d43a4d4d937dfc71fe7b80de4525b1a20b38c2d2 Mon Sep 17 00:00:00 2001
+From: Dirk Lemstra <dirk@git.imagemagick.org>
+Date: Tue, 27 Feb 2018 21:51:59 +0100
+Subject: [PATCH] Fixed typo.
+
+---
+ ChangeLog | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ChangeLog b/ChangeLog
+index cbe4ef1e8ca..fbb3d393660 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,5 +1,5 @@
+ 2018-02-25  7.0.7-24 Cristy  <quetzlzacatenango@image...>
+-  * Release ImageMagick version 7.0.0-24, GIT revision 23079:7ccb76178:20180225.
++  * Release ImageMagick version 7.0.7-24, GIT revision 23079:7ccb76178:20180225.
+ 
+ 2018-02-19  7.0.7-24 Cristy  <quetzlzacatenango@image...>
+   * Do not refer to page in OptimizeLayerFrames (reference

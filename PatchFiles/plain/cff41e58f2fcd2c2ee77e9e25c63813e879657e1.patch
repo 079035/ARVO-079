@@ -1,0 +1,22 @@
+From cff41e58f2fcd2c2ee77e9e25c63813e879657e1 Mon Sep 17 00:00:00 2001
+From: Francois-Xavier Le Bail <devel.fx.lebail@orange.fr>
+Date: Sun, 11 Dec 2022 18:39:58 +0100
+Subject: [PATCH] CHANGES: Add a main-only change
+
+[skip ci]
+---
+ CHANGES | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/CHANGES b/CHANGES
+index 92ac217997..f007558a34 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -32,6 +32,7 @@ Monthday, Month DD, YYYY:
+       Makefile.in: Add the releasecheck target.
+       Cirrus CI: Add the "make releasecheck" command in the Linux task.
+       CI: Introduce and use LIBPCAP_CMAKE_TAINTED.
++      CMakeLists.txt: Print "Symlinking: /some/path to ..." conditionally.
+       Makefile.in: Add "make -s install" in the releasecheck target.
+ 
+ Monthday, Month DD, YYYY:

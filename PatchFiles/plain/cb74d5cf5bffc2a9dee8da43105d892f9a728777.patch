@@ -1,0 +1,51 @@
+From cb74d5cf5bffc2a9dee8da43105d892f9a728777 Mon Sep 17 00:00:00 2001
+From: Reini Urban <rurban@cpan.org>
+Date: Sun, 28 Feb 2021 07:56:41 +0100
+Subject: [PATCH] llvmfuzz: fix leaks on input errors
+
+See e.g. oss-fuzz issue 31422
+we skip leak detection with libfuzzer, but not with honggfuzz.
+note that in_dxf still leaks heavily, a known limitation.
+so we'd need to skip leak checks with honggfuzz also, or disable in_dxf there.
+---
+ examples/llvmfuzz.c | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/examples/llvmfuzz.c b/examples/llvmfuzz.c
+index 94ed220bf0..dee2b895a6 100644
+--- a/examples/llvmfuzz.c
++++ b/examples/llvmfuzz.c
+@@ -67,7 +67,10 @@ int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size) {
+     if (dat.size > 2 && dat.chain[0] == 'A' && dat.chain[1] == 'C')
+       {
+         if (dwg_decode (&dat, &dwg) >= DWG_ERR_CRITICAL)
+-          return 0;
++          {
++            dwg_free (&dwg);
++            return 0;
++          }
+       }
+ #ifndef DISABLE_JSON
+     else if (dat.size > 1 && dat.chain[0] == '{')
+@@ -75,7 +78,9 @@ int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size) {
+         copied = enforce_null_termination(&dat);
+         if (dwg_read_json (&dat, &dwg) >= DWG_ERR_CRITICAL)
+           {
+-            if (copied) bit_chain_free (&dat);
++            if (copied)
++              bit_chain_free (&dat);
++            dwg_free (&dwg);
+             return 0;
+           }
+       }
+@@ -86,7 +91,9 @@ int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size) {
+         copied = enforce_null_termination(&dat);
+         if (dwg_read_dxf (&dat, &dwg) >= DWG_ERR_CRITICAL)
+           {
+-            if (copied) bit_chain_free (&dat);
++            if (copied)
++              bit_chain_free (&dat);
++            dwg_free (&dwg);
+             return 0;
+           }
+       }

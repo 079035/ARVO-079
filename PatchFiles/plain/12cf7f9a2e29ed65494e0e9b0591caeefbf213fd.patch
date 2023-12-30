@@ -1,0 +1,83 @@
+From 12cf7f9a2e29ed65494e0e9b0591caeefbf213fd Mon Sep 17 00:00:00 2001
+From: Tim Kientzle <tkientzle@apple.com>
+Date: Mon, 20 Sep 2021 12:05:25 -0700
+Subject: [PATCH] Reject fieldmasks that have non-ASCII characters for JSON
+
+Fieldmasks refer to proto fields which can only have ASCII
+names, so any fieldmask with a non-ASCII character is
+necessarily ill-formed.
+
+This rejects such field masks when encoding and decoding JSON.
+In particular, this fixes a round-trip decode/encode failure
+that occurred when certain accented Unicode characters appeared
+in JSON fieldmask arguments.
+---
+ .../Google_Protobuf_FieldMask+Extensions.swift  |  6 ++++++
+ Tests/SwiftProtobufTests/Test_FieldMask.swift   | 17 +++++++++--------
+ 2 files changed, 15 insertions(+), 8 deletions(-)
+
+diff --git a/Sources/SwiftProtobuf/Google_Protobuf_FieldMask+Extensions.swift b/Sources/SwiftProtobuf/Google_Protobuf_FieldMask+Extensions.swift
+index a3cb6b539..17be6ea8d 100644
+--- a/Sources/SwiftProtobuf/Google_Protobuf_FieldMask+Extensions.swift
++++ b/Sources/SwiftProtobuf/Google_Protobuf_FieldMask+Extensions.swift
+@@ -20,6 +20,9 @@ private func ProtoToJSON(name: String) -> String? {
+   var jsonPath = String()
+   var chars = name.makeIterator()
+   while let c = chars.next() {
++    if !c.isASCII {
++        return nil // Reject anything with a non-ASCII character
++    }
+     switch c {
+     case "_":
+       if let toupper = chars.next() {
+@@ -44,6 +47,9 @@ private func ProtoToJSON(name: String) -> String? {
+ private func JSONToProto(name: String) -> String? {
+   var path = String()
+   for c in name {
++    if !c.isASCII {
++        return nil // Reject anything with a non-ASCII character
++    }
+     switch c {
+     case "_":
+       return nil
+diff --git a/Tests/SwiftProtobufTests/Test_FieldMask.swift b/Tests/SwiftProtobufTests/Test_FieldMask.swift
+index e81421360..044cd7c5c 100644
+--- a/Tests/SwiftProtobufTests/Test_FieldMask.swift
++++ b/Tests/SwiftProtobufTests/Test_FieldMask.swift
+@@ -27,8 +27,8 @@ class Test_FieldMask: XCTestCase, PBTestHelpers {
+         assertJSONEncode("\"foo\"") { (o: inout MessageTestType) in
+             o.paths = ["foo"]
+         }
+-        assertJSONEncode("\"foo,fooBar\"") { (o: inout MessageTestType) in
+-            o.paths = ["foo", "foo_bar"]
++        assertJSONEncode("\"foo,fooBar,foo.bar.baz\"") { (o: inout MessageTestType) in
++            o.paths = ["foo", "foo_bar", "foo.bar.baz"]
+         }
+         // assertJSONEncode doesn't want an empty object, hand roll it.
+         let msg = MessageTestType.with { (o: inout MessageTestType) in
+@@ -44,6 +44,8 @@ class Test_FieldMask: XCTestCase, PBTestHelpers {
+         assertJSONDecodeFails("\"foo,,bar\"")
+         assertJSONDecodeFails("\"foo,bar")
+         assertJSONDecodeFails("foo,bar\"")
++        assertJSONDecodeFails("\"H̱ܻ̻ܻ̻ܶܶAܻD\"") // Reject non-ASCII
++        assertJSONDecodeFails("abc_def") // Reject underscores
+     }
+ 
+     func testProtobuf() {
+@@ -101,11 +103,10 @@ class Test_FieldMask: XCTestCase, PBTestHelpers {
+     func testSerializationFailure() {
+         // If the proto fieldname can't be converted to a JSON field name,
+         // then JSON serialization should fail:
+-        let m1 = Google_Protobuf_FieldMask(protoPaths: "foo_3_bar")
+-        XCTAssertThrowsError(try m1.jsonString())
+-        let m2 = Google_Protobuf_FieldMask(protoPaths: "foo__bar")
+-        XCTAssertThrowsError(try m2.jsonString())
+-        let m3 = Google_Protobuf_FieldMask(protoPaths: "fooBar")
+-        XCTAssertThrowsError(try m3.jsonString())
++        let cases = ["foo_3_bar", "foo__bar", "fooBar", "☹️", "ȟìĳ"]
++        for c in cases {
++            let m = Google_Protobuf_FieldMask(protoPaths: c)
++            XCTAssertThrowsError(try m.jsonString())
++        }
+     }
+ }

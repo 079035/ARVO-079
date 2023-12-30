@@ -1,41 +1,15 @@
-Vulnerability:
-The vulnerability addressed in this patch is a potential out-of-bounds read. In the original code, the loop that reads the tag directory does not perform a proper sanity check on the offset and size of each tag. If the offset and size values are not within the boundaries of the profile file, it could lead to reading data outside the allocated memory, causing undefined behavior or potential information disclosure.
+1. Vulnerability:
+The vulnerability in the code is related to the handling of ICC profiles. The code does not properly validate the number of tags in an ICC profile, which could lead to a denial of service (DoS) or potentially allow execution of arbitrary code. This is due to the fact that the code does not check if there are any tags in the ICC profile, which could lead to a situation where the program tries to process an ICC profile with no tags, leading to unexpected behavior.
 
-Summary of the fix:
-The fix adds proper bounds checking to the loop that reads the tag directory. It checks if the tag size is nonzero and if the offset and size fall within the boundaries of the profile file. If the values are valid, they are stored in the respective arrays, ensuring correct handling of the tag data.
+2. Short Summary of the Fix:
+The fix removes the check for zero tags in an ICC profile. This means that the program will now accept and attempt to process ICC profiles even if they have no tags.
 
-Detailed description of the fix:
-1. Inside the loop that reads the tag directory, the conditions for the validity of the tag offset and size are added:
-   ```diff
-   if (Tag.size == 0 || Tag.offset == 0) continue;
-   if (Tag.offset + Tag.size > HeaderSize || Tag.offset + Tag.size < Tag.offset) continue;
-   ```
-   - The first condition checks if the tag size is zero or the offset is zero. If either of these conditions is true, the current tag is skipped.
-   - The second condition checks if the sum of the tag offset and size is greater than the profile header size or if the sum overflows (less than the original offset). If either of these conditions is true, the current tag is skipped.
-
-2. If the tag passes the sanity checks, the tag name, offset, and size are stored in respective arrays:
-   ```diff
-   Icc -> TagNames[Icc ->TagCount]   = Tag.sig;
-   Icc -> TagOffsets[Icc ->TagCount] = Tag.offset;
-   Icc -> TagSizes[Icc ->TagCount]   = Tag.size;
-   ```
-
-3. After storing the tag information, there is a new loop added to search for any linked tags:
-   ```diff
-   for (j = 0; j < Icc ->TagCount; j++) {
-       if ((Icc ->TagOffsets[j] == Tag.offset) && (Icc ->TagSizes[j] == Tag.size)) {
-           Icc ->TagLinked[Icc ->TagCount] = Icc ->TagNames[j];
-       }
-   }
-   ```
-   - This loop checks if there are any previously stored tags with the same offset and size as the current tag. If a match is found, the current tag is considered linked to the existing tag, and the linked tag name is stored.
-
-4. The final part of the fix is the change to the `if` condition outside the loop:
-   ```diff
-   if (Icc->TagCount == 0) {
-       cmsSignalError(Icc->ContextID, cmsERROR_RANGE, "Corrupted profile: no tags found");
-       return FALSE;
-   }
-   return TRUE;
-   ```
-   - The condition `Icc->TagCount == 0` checks if no valid tags were found during the loop. If this is the case, an error is reported as a corrupted profile, and the function returns `FALSE`.
+3. Detailed Description of the Fix:
+The fix involves removing the following lines of code:
+```
+if (Icc->TagCount == 0) {
+    cmsSignalError(Icc->ContextID, cmsERROR_RANGE, "Corrupted profile: no tags found");
+    return FALSE;
+}
+```
+These lines of code previously checked if the `TagCount` of an ICC profile was zero, and if so, signaled an error and returned `FALSE`, indicating that the ICC profile was not valid. By removing these lines, the program will now accept ICC profiles with zero tags. This change could potentially lead to other parts of the program having to handle ICC profiles with zero tags, so other parts of the program may need to be updated to handle this case correctly.

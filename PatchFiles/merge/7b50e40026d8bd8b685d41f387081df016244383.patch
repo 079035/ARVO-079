@@ -1,0 +1,10 @@
+commit 7b50e40026d8bd8b685d41f387081df016244383
+Merge: f03d92d f74c2f6
+Author: Akshata Jadhav <akshata.jadhav@ittiam.com>
+Date:   Sun Dec 1 14:47:44 2019 -0800
+
+    Merge "libhevcenc: Move deblk, sao and subpel plane generation into nctb loop"
+    am: f74c2f62dd
+    
+    Change-Id: I905dab0e6e65d90bdf5f9bc557bab91878b05efd
+

@@ -1,0 +1,26 @@
+From 39a0e0cdc47ebc9c17f9eee57eb14dc118404dfe Mon Sep 17 00:00:00 2001
+From: Dirk Lemstra <dirk@lemstra.org>
+Date: Tue, 2 Jul 2019 23:24:00 +0200
+Subject: [PATCH] Corrected setting the compression for the merged image.
+
+---
+ coders/psd.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/coders/psd.c b/coders/psd.c
+index 5bbaed51a1a..157551ae9ac 100644
+--- a/coders/psd.c
++++ b/coders/psd.c
+@@ -3743,10 +3743,10 @@ static MagickBooleanType WritePSDImage(const ImageInfo *image_info,
+         compression;
+ 
+       compression=image->compression;
+-      if (image->compression == ZipCompression)
+-        image->compression=RLECompression;
+       if (image_info->compression != UndefinedCompression)
+         image->compression=image_info->compression;
++      if (image->compression == ZipCompression)
++        image->compression=RLECompression;
+       if (WritePSDChannels(&psd_info,image_info,image,image,0,MagickFalse,
+           exception) == 0)
+         status=MagickFalse;

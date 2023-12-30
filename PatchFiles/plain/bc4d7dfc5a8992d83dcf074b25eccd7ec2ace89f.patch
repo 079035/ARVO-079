@@ -1,0 +1,32 @@
+commit bc4d7dfc5a8992d83dcf074b25eccd7ec2ace89f
+Author: Jouni Malinen <jouni@codeaurora.org>
+Date:   Wed May 29 13:49:21 2019 +0300
+
+    tests: Fix ap-mgmt-fuzzer build configuration to match libap.a
+    
+    Missing CONFIG_AIRTIME_POLICY=y made the offset of struct
+    hostapd_iface::prev_wmm different between libap.a and ap-mgmt-fuzzer.o
+    which resulted in odd fuzzing failures due to a memcpy to
+    ctx.iface->prev_wmm ending up writing on top of the ctx.hapd and in
+    particular, on top of ctx.hapd.iface pointer.
+    
+    Credit to OSS-Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15013
+    Credit to OSS-Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15014
+    Credit to OSS-Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15015
+    Credit to OSS-Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15017
+    Credit to OSS-Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15019
+    Credit to OSS-Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15020
+    Signed-off-by: Jouni Malinen <jouni@codeaurora.org>
+
+diff --git a/tests/ap-mgmt-fuzzer/Makefile b/tests/ap-mgmt-fuzzer/Makefile
+index 141a6f621..1e06767c4 100644
+--- a/tests/ap-mgmt-fuzzer/Makefile
++++ b/tests/ap-mgmt-fuzzer/Makefile
+@@ -22,6 +22,7 @@ CFLAGS += -DCONFIG_GAS
+ CFLAGS += -DCONFIG_HS20
+ CFLAGS += -DIEEE8021X_EAPOL
+ CFLAGS += -DNEED_AP_MLME
++CFLAGS += -DCONFIG_AIRTIME_POLICY
+ 
+ $(SRC)/utils/libutils.a:
+ 	$(MAKE) -C $(SRC)/utils

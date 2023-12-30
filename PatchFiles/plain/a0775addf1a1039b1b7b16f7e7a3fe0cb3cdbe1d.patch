@@ -1,0 +1,42 @@
+From a0775addf1a1039b1b7b16f7e7a3fe0cb3cdbe1d Mon Sep 17 00:00:00 2001
+From: Eugene Kliuchnikov <eustas.ru@gmail.com>
+Date: Tue, 23 May 2023 10:56:59 +0200
+Subject: [PATCH] Fix DRM decoder fuzzer (#139)
+
+Drive-by: add MSAN / UBSAN bazel configs
+---
+ .bazelrc           | 10 ++++++++++
+ fuzz/fuzz_decode.c |  2 +-
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/.bazelrc b/.bazelrc
+index 59e7267c..243942a3 100644
+--- a/.bazelrc
++++ b/.bazelrc
+@@ -6,3 +6,13 @@ build --action_env=CXX=clang++
+ build:asan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing//fuzzing/engines:libfuzzer
+ build:asan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine_instrumentation=libfuzzer
+ build:asan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine_sanitizer=asan
++
++# Define the --config=msan-libfuzzer configuration.
++build:msan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing//fuzzing/engines:libfuzzer
++build:msan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine_instrumentation=libfuzzer
++build:msan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine_sanitizer=msan
++
++# Define the --config=ubsan-libfuzzer configuration.
++build:ubsan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing//fuzzing/engines:libfuzzer
++build:ubsan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine_instrumentation=libfuzzer
++build:ubsan-libfuzzer --@rules_fuzzing//fuzzing:cc_engine_sanitizer=ubsan
+diff --git a/fuzz/fuzz_decode.c b/fuzz/fuzz_decode.c
+index 8956e0ab..0e4c2005 100644
+--- a/fuzz/fuzz_decode.c
++++ b/fuzz/fuzz_decode.c
+@@ -91,7 +91,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+   }
+   if (use_drm) {
+ #ifdef DRM_SUPPORT
+-    NeAACDecInitDRM(decoder, drm_channels, drm_sample_rate);
++    NeAACDecInitDRM(&decoder, drm_channels, drm_sample_rate);
+ #else
+     (void)drm_channels;
+     (void)drm_sample_rate;

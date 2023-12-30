@@ -1,0 +1,24 @@
+commit 675e18e0fb9fc7a7e568a37ee8335798306e7063
+Author: Michael Niedermayer <michael@niedermayer.cc>
+Date:   Tue Jun 28 03:07:23 2022 +0200
+
+    tools/target_dec_fuzzer: adjust threshold for cinepak
+    
+    Fixes: Timeout
+    Fixes: 48158/clusterfuzz-testcase-minimized-ffmpeg_AV_CODEC_ID_CINEPAK_fuzzer-5986526573494272
+    
+    Found-by: continuous fuzzing process https://github.com/google/oss-fuzz/tree/master/projects/ffmpeg
+    Signed-off-by: Michael Niedermayer <michael@niedermayer.cc>
+
+diff --git a/tools/target_dec_fuzzer.c b/tools/target_dec_fuzzer.c
+index 4c3135bbb3..88c2686ae4 100644
+--- a/tools/target_dec_fuzzer.c
++++ b/tools/target_dec_fuzzer.c
+@@ -215,6 +215,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+     case AV_CODEC_ID_BINKVIDEO:   maxpixels  /= 32;    break;
+     case AV_CODEC_ID_CDTOONS:     maxpixels  /= 1024;  break;
+     case AV_CODEC_ID_CFHD:        maxpixels  /= 16384; break;
++    case AV_CODEC_ID_CINEPAK:     maxpixels  /= 128;   break;
+     case AV_CODEC_ID_COOK:        maxsamples /= 1<<20; break;
+     case AV_CODEC_ID_DFA:         maxpixels  /= 1024;  break;
+     case AV_CODEC_ID_DIRAC:       maxpixels  /= 8192;  break;

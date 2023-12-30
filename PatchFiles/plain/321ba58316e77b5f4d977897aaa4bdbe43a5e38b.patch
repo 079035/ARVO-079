@@ -1,0 +1,366 @@
+From 5e1b92d6ac5a201e4a42619e9e885d2e7f9b0f20 Mon Sep 17 00:00:00 2001
+From: Volodymyr Shymanskyy <vshymanskyi@gmail.com>
+Date: Mon, 29 Aug 2022 15:00:28 +0300
+Subject: [PATCH 1/6] Update README.md
+
+---
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index ca6a5223..edc60dc1 100644
+--- a/README.md
++++ b/README.md
+@@ -92,7 +92,7 @@ Wasm3 started as a research project and remains so by many means. Evaluating the
+ [<img src="/extra/logos/scailable.png" height="32" />](https://scailable.net)　
+ [<img src="/extra/logos/blynk.png" height="32" />](https://blynk.io)　
+ [<img src="/extra/logos/iden3.svg" height="32" />](https://www.iden3.io)　
+-[<img src="/extra/logos/losant.png" height="32" />](https://github.com/Losant/eea-examples)　
++[<img src="/extra/logos/losant.png" height="28" />](https://github.com/Losant/eea-examples)　
+ [<img src="https://user-images.githubusercontent.com/1506708/114701856-069ce700-9d2c-11eb-9b72-9ce2dfd9f0fb.png" height="32" />](https://github.com/kateinoigakukun/wasmic-ios)　
+ [<img src="https://www.balena.io/avatar.png" height="32" />](https://github.com/balena-io-playground/balena-wasm3)　
+ [<img src="https://krustlet.dev/images/horizontal.svg" height="32" />](https://github.com/deislabs/krustlet-wasm3)　
+
+From f2edc3c272f354bc97108a9d49530135f015cc05 Mon Sep 17 00:00:00 2001
+From: Volodymyr Shymanskyy <vshymanskyi@gmail.com>
+Date: Mon, 29 Aug 2022 15:06:27 +0300
+Subject: [PATCH 2/6] Update Demos.md
+
+Fix #314
+---
+ docs/Demos.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/docs/Demos.md b/docs/Demos.md
+index d982c1be..cbba624a 100644
+--- a/docs/Demos.md
++++ b/docs/Demos.md
+@@ -14,4 +14,4 @@
+ - **RGB lamp animation using WebAssembly** │ [video](https://twitter.com/wasm3_engine/status/1222835097289752576), [github](https://github.com/vshymanskyy/Wasm3_RGB_Lamp) [nRF51 / nRF52 / ESP8266 / ESP32]
+ - **LCD display rendering with AssemblyScript** │ [video](https://twitter.com/h1romas4/status/1228581467850100736), [github](https://github.com/h1romas4/m5stack-wasm3-testing) [M5Stack / ESP32]
+ - **Conway's Game Of Life with AssemblyScript** │ [video](https://www.youtube.com/watch?v=Hc2sbhGMrig), [github](https://github.com/h1romas4/maixduino-wasm3-testing) [Maixduino / K210]
+-
++- **Losant Embedded Edge Agent** | [Python](https://github.com/Losant/eea-examples/tree/main/python), [ESP32](https://github.com/Losant/eea-examples/tree/main/esp32)
+
+From 4fb6d9e426201d832959d0cc2553ef3d4e4a1ab2 Mon Sep 17 00:00:00 2001
+From: Felipe Gasper <FGasper@users.noreply.github.com>
+Date: Mon, 29 Aug 2022 08:10:23 -0400
+Subject: [PATCH 3/6] Fix parsing of i32 constant globals on big-endian
+ systems. (#322)
+
+FIx #321. This replaces `intValue` in the global value union with
+separate `i32Value` and `i64Value`. A CI test is added against s390x.
+---
+ .github/workflows/tests.yml | 10 ++++++++++
+ source/m3_compile.c         |  4 ++--
+ source/m3_env.c             | 11 ++++++-----
+ source/m3_env.h             |  3 ++-
+ 4 files changed, 20 insertions(+), 8 deletions(-)
+
+diff --git a/.github/workflows/tests.yml b/.github/workflows/tests.yml
+index 2935b1de..f4893d49 100644
+--- a/.github/workflows/tests.yml
++++ b/.github/workflows/tests.yml
+@@ -76,6 +76,16 @@ jobs:
+     - name: Test WASI apps
+       run: cd test && python3 run-wasi-test.py
+ 
++  big-endian-i32-constant:
++    runs-on: ubuntu-latest
++
++    steps:
++    - uses: actions/checkout@v3
++    - name: Get the qemu container
++      run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
++    - name: Run tests
++      run: docker run --rm --interactive --mount type=bind,source=$(pwd),target=/host s390x/alpine sh -c "apk add build-base cmake git --update-cache && cd /host && mkdir build && cd build && cmake .. && cd .. && cmake --build build && echo wasm3 built && echo AGFzbQEAAAAGBgF/AEElCwcLAQdteWNvbnN0AwAACARuYW1lAgEA | base64 -d > myconst.wasm && echo ':get-global myconst' | ./build/wasm3 --repl myconst.wasm && echo ':get-global myconst' | ./build/wasm3 --repl myconst.wasm 2>&1 | grep 37"
++
+   macos:
+     runs-on: macos-latest
+     name: macos-${{ matrix.config.target }}
+diff --git a/source/m3_compile.c b/source/m3_compile.c
+index 8a93330b..2baf069c 100644
+--- a/source/m3_compile.c
++++ b/source/m3_compile.c
+@@ -1343,7 +1343,7 @@ M3Result  Compile_GetGlobal  (IM3Compilation o, M3Global * i_global)
+ 
+     IM3Operation op = Is64BitType (i_global->type) ? op_GetGlobal_s64 : op_GetGlobal_s32;
+ _   (EmitOp (o, op));
+-    EmitPointer (o, & i_global->intValue);
++    EmitPointer (o, & i_global->i64Value);
+ _   (PushAllocatedSlotAndEmit (o, i_global->type));
+ 
+     _catch: return result;
+@@ -1366,7 +1366,7 @@ M3Result  Compile_SetGlobal  (IM3Compilation o, M3Global * i_global)
+         else op = Is64BitType (type) ? op_SetGlobal_s64 : op_SetGlobal_s32;
+ 
+ _      (EmitOp (o, op));
+-        EmitPointer (o, & i_global->intValue);
++        EmitPointer (o, & i_global->i64Value);
+ 
+         if (IsStackTopInSlot (o))
+             EmitSlotOffset (o, GetStackTopSlotNumber (o));
+diff --git a/source/m3_env.c b/source/m3_env.c
+index 2bb86573..82a198dd 100644
+--- a/source/m3_env.c
++++ b/source/m3_env.c
+@@ -424,7 +424,8 @@ M3Result  InitGlobals  (IM3Module io_module)
+                 if (g->initExpr)
+                 {
+                     bytes_t start = g->initExpr;
+-                    result = EvaluateExpression (io_module, & g->intValue, g->type, & start, g->initExpr + g->initExprSize);
++
++                    result = EvaluateExpression (io_module, & g->i64Value, g->type, & start, g->initExpr + g->initExprSize);
+ 
+                     if (not result)
+                     {
+@@ -648,8 +649,8 @@ M3Result  m3_GetGlobal  (IM3Global                 i_global,
+     if (not i_global) return m3Err_globalLookupFailed;
+ 
+     switch (i_global->type) {
+-    case c_m3Type_i32: o_value->value.i32 = i_global->intValue; break;
+-    case c_m3Type_i64: o_value->value.i64 = i_global->intValue; break;
++    case c_m3Type_i32: o_value->value.i32 = i_global->i32Value; break;
++    case c_m3Type_i64: o_value->value.i64 = i_global->i64Value; break;
+ # if d_m3HasFloat
+     case c_m3Type_f32: o_value->value.f32 = i_global->f32Value; break;
+     case c_m3Type_f64: o_value->value.f64 = i_global->f64Value; break;
+@@ -670,8 +671,8 @@ M3Result  m3_SetGlobal  (IM3Global                 i_global,
+     if (i_global->type != i_value->type) return m3Err_globalTypeMismatch;
+ 
+     switch (i_value->type) {
+-    case c_m3Type_i32: i_global->intValue = i_value->value.i32; break;
+-    case c_m3Type_i64: i_global->intValue = i_value->value.i64; break;
++    case c_m3Type_i32: i_global->i32Value = i_value->value.i32; break;
++    case c_m3Type_i64: i_global->i64Value = i_value->value.i64; break;
+ # if d_m3HasFloat
+     case c_m3Type_f32: i_global->f32Value = i_value->value.f32; break;
+     case c_m3Type_f64: i_global->f64Value = i_value->value.f64; break;
+diff --git a/source/m3_env.h b/source/m3_env.h
+index 970eb308..61839987 100644
+--- a/source/m3_env.h
++++ b/source/m3_env.h
+@@ -58,7 +58,8 @@ typedef struct M3Global
+ 
+     union
+     {
+-        i64 intValue;
++        i32 i32Value;
++        i64 i64Value;
+ #if d_m3HasFloat
+         f64 f64Value;
+         f32 f32Value;
+
+From 58488085f2d3b317a2e52515d1278cd1f90516d1 Mon Sep 17 00:00:00 2001
+From: Ryan Tremblay <ryantrem@msn.com>
+Date: Mon, 29 Aug 2022 05:15:29 -0700
+Subject: [PATCH 4/6] Replace C array with std::array to handle zero length
+ (#371)
+
+Co-authored-by: Ryan Tremblay <ryan.tremblay@outlook.com>
+Fix #368
+---
+ platforms/cpp/wasm3_cpp/include/wasm3_cpp.h | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/platforms/cpp/wasm3_cpp/include/wasm3_cpp.h b/platforms/cpp/wasm3_cpp/include/wasm3_cpp.h
+index c12a1277..2bdf51a8 100644
+--- a/platforms/cpp/wasm3_cpp/include/wasm3_cpp.h
++++ b/platforms/cpp/wasm3_cpp/include/wasm3_cpp.h
+@@ -5,6 +5,7 @@
+ #include <type_traits>
+ #include <iostream>
+ #include <vector>
++#include <array>
+ #include <memory>
+ #include <string>
+ #include <iterator>
+@@ -348,8 +349,8 @@ namespace wasm3 {
+          */
+         template<typename Ret = void, typename ... Args>
+         Ret call(Args... args) {
+-            const void *arg_ptrs[] = { reinterpret_cast<const void*>(&args)... };
+-            M3Result res = m3_Call(m_func, sizeof...(args), arg_ptrs);
++            std::array<const void*, sizeof...(args)> arg_ptrs{ reinterpret_cast<const void*>(&args)... };
++            M3Result res = m3_Call(m_func, arg_ptrs.size(), arg_ptrs.data());
+             detail::check_error(res);
+ 
+             if constexpr (!std::is_void<Ret>::value) {
+
+From 8f3986a66c390e1125493531648b828099fab982 Mon Sep 17 00:00:00 2001
+From: Alex Rebert <alexandre.rebert@gmail.com>
+Date: Mon, 29 Aug 2022 14:22:17 +0200
+Subject: [PATCH 5/6] Fix memory safety issues found by OSS-Fuzz (#301)
+
+* Add integer overflow checks in NewCodePage
+
+Fix https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=33457
+
+* TouchSlot should track slots outside of functions
+
+Fix https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=33554.
+
+The OSS-Fuzz inputs led to a crash on a Const64 instruction that
+overflows the stack. The overflow was not detected during compilation as
+TouchSlot did not track maxStackSlots if o->function is NULL. This
+commit changes TouchSlot to track slots outside of functions.
+
+* Fix out-of-bounds write in MarkSlotsAllocatedByType
+
+While pushing the params back onto the stack in CompileBlock,
+GetSlotForStackIndex may return c_slotUnused. If that is the case,
+passing the slot to MarkSlotsAllocatedByType leads to a crash.
+
+Fix https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=33555
+Fix https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=36551
+
+* Fix memory leak in CompileElseBlock
+
+In the case of an exception in CompileElseBlock, the original page was not
+properly restored and was leaked. This commit moves the release/restore
+in the _catch: block which always executes.
+
+* Fix stackIndex underflow in param deallocation
+
+When the stack is polymorphic, the stack should never underflow. This
+commits fixes an unreported stack underflow while led to an integer
+underflow in stackIndex. Now, if the stack is polymorphic, we only
+decrement stackIndex up until blockStackIndex.
+---
+ source/m3_code.c    | 15 +++++++++++++++
+ source/m3_compile.c | 28 +++++++++++++++-------------
+ 2 files changed, 30 insertions(+), 13 deletions(-)
+
+diff --git a/source/m3_code.c b/source/m3_code.c
+index a5dd5d3f..b399b825 100644
+--- a/source/m3_code.c
++++ b/source/m3_code.c
+@@ -5,6 +5,7 @@
+ //  Copyright © 2019 Steven Massey. All rights reserved.
+ //
+ 
++#include <limits.h>
+ #include "m3_code.h"
+ #include "m3_env.h"
+ 
+@@ -15,9 +16,23 @@ IM3CodePage  NewCodePage  (IM3Runtime i_runtime, u32 i_minNumLines)
+ {
+     IM3CodePage page;
+ 
++    // check multiplication overflow
++    if (i_minNumLines > UINT_MAX / sizeof (code_t)) {
++        return NULL;
++    }
+     u32 pageSize = sizeof (M3CodePageHeader) + sizeof (code_t) * i_minNumLines;
+ 
++    // check addition overflow
++    if (pageSize < sizeof (M3CodePageHeader)) {
++        return NULL;
++    }
++
+     pageSize = (pageSize + (d_m3CodePageAlignSize-1)) & ~(d_m3CodePageAlignSize-1); // align
++    // check alignment overflow
++    if (pageSize == 0) {
++        return NULL;
++    }
++
+     page = (IM3CodePage)m3_Malloc ("M3CodePage", pageSize);
+ 
+     if (page)
+diff --git a/source/m3_compile.c b/source/m3_compile.c
+index 2baf069c..3fa533a3 100644
+--- a/source/m3_compile.c
++++ b/source/m3_compile.c
+@@ -322,11 +322,8 @@ u16  GetExtraSlotForStackIndex  (IM3Compilation o, u16 i_stackIndex)
+ static inline
+ void  TouchSlot  (IM3Compilation o, u16 i_slot)
+ {
+-    if (o->function)
+-    {
+-        // op_Entry uses this value to track and detect stack overflow
+-        o->maxStackSlots = M3_MAX (o->maxStackSlots, i_slot + 1);
+-    }
++    // op_Entry uses this value to track and detect stack overflow
++    o->maxStackSlots = M3_MAX (o->maxStackSlots, i_slot + 1);
+ }
+ 
+ static inline
+@@ -1900,6 +1897,7 @@ _   (CompileBlock (o, blockType, i_opcode));
+ static
+ M3Result  CompileElseBlock  (IM3Compilation o, pc_t * o_startPC, IM3FuncType i_blockType)
+ {
++    IM3CodePage savedPage = o->page;
+ _try {
+ 
+     IM3CodePage elsePage;
+@@ -1907,19 +1905,17 @@ _   (AcquireCompilationCodePage (o, & elsePage));
+ 
+     * o_startPC = GetPagePC (elsePage);
+ 
+-    IM3CodePage savedPage = o->page;
+     o->page = elsePage;
+ 
+ _   (CompileBlock (o, i_blockType, c_waOp_else));
+ 
+ _   (EmitOp (o, op_Branch));
+     EmitPointer (o, GetPagePC (savedPage));
+-
+-    ReleaseCompilationCodePage (o);
+-
+-    o->page = savedPage;
+-
+ } _catch:
++    if(o->page != savedPage) {
++        ReleaseCompilationCodePage (o);
++    }
++    o->page = savedPage;
+     return result;
+ }
+ 
+@@ -2702,7 +2698,13 @@ _try {
+ _           (PopType (o, type));
+         }
+     }
+-    else o->stackIndex -= numParams;
++    else {
++        if (IsStackPolymorphic (o) && o->block.blockStackIndex + numParams > o->stackIndex) {
++            o->stackIndex = o->block.blockStackIndex;
++        } else {
++            o->stackIndex -= numParams;
++        }
++    }
+ 
+     u16 paramIndex = o->stackIndex;
+     block->exitStackIndex = paramIndex; // consume the params at block exit
+@@ -2730,7 +2732,7 @@ _           (PopType (o, type));
+         u16 slot = GetSlotForStackIndex (o, paramIndex + i);
+         Push (o, type, slot);
+ 
+-        if (slot >= o->slotFirstDynamicIndex)
++        if (slot >= o->slotFirstDynamicIndex && slot != c_slotUnused)
+             MarkSlotsAllocatedByType (o, slot, type);
+     }
+ 
+
+From 37ae5a8ebde99c58a1e1f6ab6af877a66c2e277a Mon Sep 17 00:00:00 2001
+From: Guus Waals <_@guusw.nl>
+Date: Mon, 29 Aug 2022 14:28:25 +0200
+Subject: [PATCH 6/6] Support standalone clang with GCC frontend (#310)
+
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2a4a8aa1..c3386411 100755
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -128,7 +128,7 @@ elseif(WASIENV)
+   #-flto -Wl,--lto-O3
+   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,stack-size=8388608")
+ 
+-elseif(WIN32 AND NOT MINGW)
++elseif(MSVC OR CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
+ 
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Dd_m3HasTracer -D_CRT_SECURE_NO_WARNINGS /WX- /diagnostics:column")
+ 

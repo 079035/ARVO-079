@@ -1,0 +1,23 @@
+commit c66e13cbac72bf26be28d5dcff451e89f882a2c2
+Author: Michael Niedermayer <michael@niedermayer.cc>
+Date:   Sat Apr 8 00:25:43 2023 +0200
+
+    avcodec/jpeg2000dec: Add YA16 support
+    
+    Signed-off-by: Michael Niedermayer <michael@niedermayer.cc>
+
+diff --git a/libavcodec/jpeg2000dec.c b/libavcodec/jpeg2000dec.c
+index c2b81ec103..da7152646b 100644
+--- a/libavcodec/jpeg2000dec.c
++++ b/libavcodec/jpeg2000dec.c
+@@ -449,6 +449,10 @@ static int get_siz(Jpeg2000DecoderContext *s)
+                    s->cdx[0] == s->cdx[1] && s->cdy[0] == s->cdy[1]) {
+             s->avctx->pix_fmt = AV_PIX_FMT_YA8;
+             i = 0;
++        } else if (ncomponents == 2 && s->precision == 16 &&
++                   s->cdx[0] == s->cdx[1] && s->cdy[0] == s->cdy[1]) {
++            s->avctx->pix_fmt = AV_PIX_FMT_YA16;
++            i = 0;
+         } else if (ncomponents == 1 && s->precision == 8) {
+             s->avctx->pix_fmt = AV_PIX_FMT_GRAY8;
+             i = 0;

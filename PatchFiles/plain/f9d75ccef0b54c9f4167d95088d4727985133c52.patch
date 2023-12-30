@@ -1,0 +1,33 @@
+From f9d75ccef0b54c9f4167d95088d4727985133c52 Mon Sep 17 00:00:00 2001
+From: Marti Maria <info@littlecms.com>
+Date: Mon, 20 Mar 2017 17:12:15 +0100
+Subject: [PATCH] [oss-fuzz] Fix corrupted tag detection on MPE
+
+---
+ src/cmsio0.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/cmsio0.c b/src/cmsio0.c
+index eafd41d6b..af3249d56 100644
+--- a/src/cmsio0.c
++++ b/src/cmsio0.c
+@@ -1541,6 +1541,8 @@ void* CMSEXPORT cmsReadTag(cmsHPROFILE hProfile, cmsTagSignature sig)
+     Offset    = Icc -> TagOffsets[n];
+     TagSize   = Icc -> TagSizes[n];
+ 
++    if (TagSize < 8) goto Error;
++
+     // Seek to its location
+     if (!io -> Seek(io, Offset))
+         goto Error;
+@@ -1563,8 +1565,8 @@ void* CMSEXPORT cmsReadTag(cmsHPROFILE hProfile, cmsTagSignature sig)
+     if (BaseType == 0) goto Error;
+ 
+     if (!IsTypeSupported(TagDescriptor, BaseType)) goto Error;
+-
+-    TagSize  -= 8;                      // Alredy read by the type base logic
++   
++    TagSize  -= 8;       // Alredy read by the type base logic
+ 
+     // Get type handler
+     TypeHandler = _cmsGetTagTypeHandler(Icc ->ContextID, BaseType);

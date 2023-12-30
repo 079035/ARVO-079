@@ -1,0 +1,84 @@
+From 573ad182d21df2457a0a2f6fd3c075e1f0bfca44 Mon Sep 17 00:00:00 2001
+From: Nikita Popov <nikita.ppv@gmail.com>
+Date: Thu, 3 Sep 2020 09:45:54 +0200
+Subject: [PATCH] Handle memory limit error during string reallocation
+ correctly
+
+Do not decrement the refcount before allocating the new string,
+as the allocation operation may bail out and cause a use-after-free
+lateron. We can only decrement the refcount once the allocation
+has succeeded.
+
+Fixes oss-fuzz #25384.
+---
+ Zend/zend_string.h | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/Zend/zend_string.h b/Zend/zend_string.h
+index c95578d4a5247..396b63b26653f 100644
+--- a/Zend/zend_string.h
++++ b/Zend/zend_string.h
+@@ -186,12 +186,13 @@ static zend_always_inline zend_string *zend_string_realloc(zend_string *s, size_
+ 			ZSTR_LEN(ret) = len;
+ 			zend_string_forget_hash_val(ret);
+ 			return ret;
+-		} else {
+-			GC_DELREF(s);
+ 		}
+ 	}
+ 	ret = zend_string_alloc(len, persistent);
+ 	memcpy(ZSTR_VAL(ret), ZSTR_VAL(s), MIN(len, ZSTR_LEN(s)) + 1);
++	if (!ZSTR_IS_INTERNED(s)) {
++		GC_DELREF(s);
++	}
+ 	return ret;
+ }
+ 
+@@ -206,12 +207,13 @@ static zend_always_inline zend_string *zend_string_extend(zend_string *s, size_t
+ 			ZSTR_LEN(ret) = len;
+ 			zend_string_forget_hash_val(ret);
+ 			return ret;
+-		} else {
+-			GC_DELREF(s);
+ 		}
+ 	}
+ 	ret = zend_string_alloc(len, persistent);
+ 	memcpy(ZSTR_VAL(ret), ZSTR_VAL(s), ZSTR_LEN(s) + 1);
++	if (!ZSTR_IS_INTERNED(s)) {
++		GC_DELREF(s);
++	}
+ 	return ret;
+ }
+ 
+@@ -226,12 +228,13 @@ static zend_always_inline zend_string *zend_string_truncate(zend_string *s, size
+ 			ZSTR_LEN(ret) = len;
+ 			zend_string_forget_hash_val(ret);
+ 			return ret;
+-		} else {
+-			GC_DELREF(s);
+ 		}
+ 	}
+ 	ret = zend_string_alloc(len, persistent);
+ 	memcpy(ZSTR_VAL(ret), ZSTR_VAL(s), len + 1);
++	if (!ZSTR_IS_INTERNED(s)) {
++		GC_DELREF(s);
++	}
+ 	return ret;
+ }
+ 
+@@ -245,12 +248,13 @@ static zend_always_inline zend_string *zend_string_safe_realloc(zend_string *s,
+ 			ZSTR_LEN(ret) = (n * m) + l;
+ 			zend_string_forget_hash_val(ret);
+ 			return ret;
+-		} else {
+-			GC_DELREF(s);
+ 		}
+ 	}
+ 	ret = zend_string_safe_alloc(n, m, l, persistent);
+ 	memcpy(ZSTR_VAL(ret), ZSTR_VAL(s), MIN((n * m) + l, ZSTR_LEN(s)) + 1);
++	if (!ZSTR_IS_INTERNED(s)) {
++		GC_DELREF(s);
++	}
+ 	return ret;
+ }
+ 

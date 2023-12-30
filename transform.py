@@ -23,6 +23,7 @@ TRANS_TABLE = {
 '/src/libssh2': "https://github.com/libssh2/libssh2.git",
 '/src/quickjs': "https://github.com/bellard/quickjs",
 '/src/lwan': "https://github.com/lpereira/lwan.git",
+"/src/skia/third_party/externals/piet-gpu": "https://skia.googlesource.com/external/github.com/linebender/vello.git",
 }
 
 def trans_table(item_name,item_url,item_type):

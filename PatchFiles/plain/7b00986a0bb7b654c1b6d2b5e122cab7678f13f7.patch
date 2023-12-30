@@ -1,0 +1,38 @@
+From 7b00986a0bb7b654c1b6d2b5e122cab7678f13f7 Mon Sep 17 00:00:00 2001
+From: Eduardo Silva <eduardo@treasure-data.com>
+Date: Tue, 29 Sep 2020 12:41:07 -0600
+Subject: [PATCH] config: new flag to determinate if the ingestion is active
+
+Signed-off-by: Eduardo Silva <eduardo@treasure-data.com>
+---
+ include/fluent-bit/flb_config.h | 1 +
+ src/flb_config.c                | 4 ++++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/include/fluent-bit/flb_config.h b/include/fluent-bit/flb_config.h
+index 4a2e9f748fa..f9037a62813 100644
+--- a/include/fluent-bit/flb_config.h
++++ b/include/fluent-bit/flb_config.h
+@@ -45,6 +45,7 @@ struct flb_config {
+     struct mk_event ch_event;
+ 
+     int support_mode;         /* enterprise support mode ?      */
++    int is_ingestion_active;  /* date ingestion active/allowed  */
+     int is_running;           /* service running ?              */
+     double flush;             /* Flush timeout                  */
+     int grace;                /* Grace on shutdown              */
+diff --git a/src/flb_config.c b/src/flb_config.c
+index 25494f3e927..fe754013d64 100644
+--- a/src/flb_config.c
++++ b/src/flb_config.c
+@@ -139,6 +139,10 @@ struct flb_config *flb_config_init()
+     MK_EVENT_ZERO(&config->event_flush);
+     MK_EVENT_ZERO(&config->event_shutdown);
+ 
++    /* is data ingestion active ? */
++    config->is_ingestion_active = FLB_TRUE;
++
++    /* Is the engine (event loop) actively running ? */
+     config->is_running = FLB_TRUE;
+ 
+     /* Flush */

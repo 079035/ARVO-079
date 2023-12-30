@@ -1,0 +1,41 @@
+From 6befa75cdf83d561de69fb342f68694cd7b46f5e Mon Sep 17 00:00:00 2001
+From: Behdad Esfahbod <behdad@behdad.org>
+Date: Mon, 17 Dec 2018 20:34:51 -0500
+Subject: [PATCH] Enable __builtin_* on clang
+
+We'll see which old clang versions this breaks...
+---
+ src/hb-dsalgs.hh | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/hb-dsalgs.hh b/src/hb-dsalgs.hh
+index 6fef9240f92..b8b5625933a 100644
+--- a/src/hb-dsalgs.hh
++++ b/src/hb-dsalgs.hh
+@@ -46,7 +46,7 @@ template <typename T>
+ static inline HB_CONST_FUNC unsigned int
+ hb_popcount (T v)
+ {
+-#if (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)) && defined(__OPTIMIZE__)
++#if (defined(__GNUC__) && (__GNUC__ >= 4)) || defined(__clang__)
+   if (sizeof (T) <= sizeof (unsigned int))
+     return __builtin_popcount (v);
+ 
+@@ -89,7 +89,7 @@ hb_bit_storage (T v)
+ {
+   if (unlikely (!v)) return 0;
+ 
+-#if defined(__GNUC__) && (__GNUC__ >= 4) && defined(__OPTIMIZE__)
++#if (defined(__GNUC__) && (__GNUC__ >= 4)) || defined(__clang__)
+   if (sizeof (T) <= sizeof (unsigned int))
+     return sizeof (unsigned int) * 8 - __builtin_clz (v);
+ 
+@@ -163,7 +163,7 @@ hb_ctz (T v)
+ {
+   if (unlikely (!v)) return 0;
+ 
+-#if defined(__GNUC__) && (__GNUC__ >= 4) && defined(__OPTIMIZE__)
++#if (defined(__GNUC__) && (__GNUC__ >= 4)) || defined(__clang__)
+   if (sizeof (T) <= sizeof (unsigned int))
+     return __builtin_ctz (v);
+ 

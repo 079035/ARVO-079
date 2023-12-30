@@ -1,0 +1,41 @@
+commit ed42e7cf11ddb11ffcce9e17276476e0c3d14c71
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Thu Mar 17 14:03:06 2022 +0100
+
+    libelf: Make sure ar_size starts with a digit before calling atol.
+    
+    The ar_size field is a 10 character string, not zero terminated, of
+    decimal digits right padded with spaces.  Make sure it actually starts
+    with a digit before calling atol on it.  We already make sure it is
+    zero terminated. Otherwise atol might produce unexpected results.
+    
+    Signed-off-by: Mark Wielaard <mark@klomp.org>
+
+diff --git a/libelf/ChangeLog b/libelf/ChangeLog
+index 1883af07..07dd905f 100644
+--- a/libelf/ChangeLog
++++ b/libelf/ChangeLog
+@@ -1,3 +1,7 @@
++2022-03-17  Mark Wielaard  <mark@klomp.org>
++
++	* elf_begin.c (read_long_names): Check ar_size starts with a digit.
++
+ 2022-03-17  Mark Wielaard  <mark@klomp.org>
+ 
+ 	* elf_begin.c (get_shnum): Take offset into account for Shdr
+diff --git a/libelf/elf_begin.c b/libelf/elf_begin.c
+index 53bbff40..17d9b1f3 100644
+--- a/libelf/elf_begin.c
++++ b/libelf/elf_begin.c
+@@ -765,6 +765,11 @@ read_long_names (Elf *elf)
+ 	  *((char *) mempcpy (buf, hdr->ar_size, sizeof (hdr->ar_size))) = '\0';
+ 	  string = buf;
+ 	}
++
++      /* atol expects to see at least one digit.
++	 It also cannot be negative (-).  */
++      if (!isdigit(string[0]))
++	return NULL;
+       len = atol (string);
+ 
+       if (memcmp (hdr->ar_name, "//              ", 16) == 0)

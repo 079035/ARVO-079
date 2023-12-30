@@ -1,0 +1,143 @@
+From 87205ef935ede70365187549d133014669ea47f2 Mon Sep 17 00:00:00 2001
+From: Behdad Esfahbod <behdad@behdad.org>
+Date: Tue, 16 Oct 2018 15:40:44 -0700
+Subject: [PATCH] [aat] Make sure Lookup offset is never nulled
+
+It has unbounded size...
+
+Fixes https://oss-fuzz.com/v2/testcase-detail/5718889451749376
+---
+ src/hb-aat-layout-ankr-table.hh |  2 +-
+ src/hb-aat-layout-common.hh     |  3 ++-
+ src/hb-aat-layout-kerx-table.hh | 18 ++++++++----------
+ src/hb-aat-layout-morx-table.hh |  4 ++--
+ src/hb-open-type.hh             | 12 ++++++------
+ 5 files changed, 19 insertions(+), 20 deletions(-)
+
+diff --git a/src/hb-aat-layout-ankr-table.hh b/src/hb-aat-layout-ankr-table.hh
+index 3eac473a4e4..f9bd30fff08 100644
+--- a/src/hb-aat-layout-ankr-table.hh
++++ b/src/hb-aat-layout-ankr-table.hh
+@@ -82,7 +82,7 @@ struct ankr
+   protected:
+   HBUINT16	version; 	/* Version number (set to zero) */
+   HBUINT16	flags;		/* Flags (currently unused; set to zero) */
+-  LOffsetTo<Lookup<Offset<HBUINT16, false> > >
++  LOffsetTo<Lookup<Offset<HBUINT16, false> >, false>
+ 		lookupTable;	/* Offset to the table's lookup table */
+   LOffsetTo<HBUINT8>
+ 		anchorData;	/* Offset to the glyph data table */
+diff --git a/src/hb-aat-layout-common.hh b/src/hb-aat-layout-common.hh
+index 432b9e85429..9a4cf73c26e 100644
+--- a/src/hb-aat-layout-common.hh
++++ b/src/hb-aat-layout-common.hh
+@@ -291,7 +291,8 @@ struct Lookup
+   LookupFormat8<T>	format8;
+   } u;
+   public:
+-  DEFINE_SIZE_UNION (2, format);
++  DEFINE_SIZE_MIN (0); /* 0 min size, makes sure this cannot be used on null pool,
++			  because Format0 has unbounded size depending on num_glyphs. */
+ };
+ 
+ 
+diff --git a/src/hb-aat-layout-kerx-table.hh b/src/hb-aat-layout-kerx-table.hh
+index 9ab8e136e39..c09a6d31075 100644
+--- a/src/hb-aat-layout-kerx-table.hh
++++ b/src/hb-aat-layout-kerx-table.hh
+@@ -278,10 +278,10 @@ struct KerxSubTableFormat2
+   protected:
+   KerxSubTableHeader	header;
+   HBUINT32		rowWidth;	/* The width, in bytes, of a row in the table. */
+-  LOffsetTo<Lookup<HBUINT16> >
++  LOffsetTo<Lookup<HBUINT16>, false>
+ 			leftClassTable;	/* Offset from beginning of this subtable to
+ 					 * left-hand class table. */
+-  LOffsetTo<Lookup<HBUINT16> >
++  LOffsetTo<Lookup<HBUINT16>, false>
+ 			rightClassTable;/* Offset from beginning of this subtable to
+ 					 * right-hand class table. */
+   LOffsetTo<UnsizedArrayOf<FWORD>, false>
+@@ -548,17 +548,15 @@ struct KerxSubTableFormat6
+   {
+     struct Long
+     {
+-      LOffsetTo<Lookup<HBUINT32> >	rowIndexTable;
+-      LOffsetTo<Lookup<HBUINT32> >	columnIndexTable;
+-      LOffsetTo<UnsizedArrayOf<FWORD32>, false>
+-					array;
++      LOffsetTo<Lookup<HBUINT32>, false>	rowIndexTable;
++      LOffsetTo<Lookup<HBUINT32>, false>	columnIndexTable;
++      LOffsetTo<UnsizedArrayOf<FWORD32>, false>	array;
+     } l;
+     struct Short
+     {
+-      LOffsetTo<Lookup<HBUINT16> >	rowIndexTable;
+-      LOffsetTo<Lookup<HBUINT16> >	columnIndexTable;
+-      LOffsetTo<UnsizedArrayOf<FWORD>, false>
+-					array;
++      LOffsetTo<Lookup<HBUINT16>, false>	rowIndexTable;
++      LOffsetTo<Lookup<HBUINT16>, false>	columnIndexTable;
++      LOffsetTo<UnsizedArrayOf<FWORD>, false>	array;
+     } s;
+   } u;
+   public:
+diff --git a/src/hb-aat-layout-morx-table.hh b/src/hb-aat-layout-morx-table.hh
+index d8ba28ba6b6..651af2188fd 100644
+--- a/src/hb-aat-layout-morx-table.hh
++++ b/src/hb-aat-layout-morx-table.hh
+@@ -270,7 +270,7 @@ struct ContextualSubtable
+     private:
+     bool mark_set;
+     unsigned int mark;
+-    const UnsizedOffsetListOf<Lookup<GlyphID>, HBUINT32> &subs;
++    const UnsizedOffsetListOf<Lookup<GlyphID>, HBUINT32, false> &subs;
+   };
+ 
+   inline bool apply (hb_aat_apply_context_t *c) const
+@@ -311,7 +311,7 @@ struct ContextualSubtable
+   protected:
+   StateTable<EntryData>
+ 		machine;
+-  LOffsetTo<UnsizedOffsetListOf<Lookup<GlyphID>, HBUINT32>, false>
++  LOffsetTo<UnsizedOffsetListOf<Lookup<GlyphID>, HBUINT32, false>, false>
+ 		substitutionTables;
+   public:
+   DEFINE_SIZE_STATIC (20);
+diff --git a/src/hb-open-type.hh b/src/hb-open-type.hh
+index 0aea6423e65..9d2e1fa7c1d 100644
+--- a/src/hb-open-type.hh
++++ b/src/hb-open-type.hh
+@@ -385,12 +385,12 @@ struct UnsizedArrayOf
+ };
+ 
+ /* Unsized array of offset's */
+-template <typename Type, typename OffsetType>
+-struct UnsizedOffsetArrayOf : UnsizedArrayOf<OffsetTo<Type, OffsetType> > {};
++template <typename Type, typename OffsetType, bool has_null=true>
++struct UnsizedOffsetArrayOf : UnsizedArrayOf<OffsetTo<Type, OffsetType, has_null> > {};
+ 
+ /* Unsized array of offsets relative to the beginning of the array itself. */
+-template <typename Type, typename OffsetType>
+-struct UnsizedOffsetListOf : UnsizedOffsetArrayOf<Type, OffsetType>
++template <typename Type, typename OffsetType, bool has_null=true>
++struct UnsizedOffsetListOf : UnsizedOffsetArrayOf<Type, OffsetType, has_null>
+ {
+   inline const Type& operator [] (unsigned int i) const
+   {
+@@ -400,13 +400,13 @@ struct UnsizedOffsetListOf : UnsizedOffsetArrayOf<Type, OffsetType>
+   inline bool sanitize (hb_sanitize_context_t *c, unsigned int count) const
+   {
+     TRACE_SANITIZE (this);
+-    return_trace ((UnsizedOffsetArrayOf<Type, OffsetType>::sanitize (c, count, this)));
++    return_trace ((UnsizedOffsetArrayOf<Type, OffsetType, has_null>::sanitize (c, count, this)));
+   }
+   template <typename T>
+   inline bool sanitize (hb_sanitize_context_t *c, unsigned int count, T user_data) const
+   {
+     TRACE_SANITIZE (this);
+-    return_trace ((UnsizedOffsetArrayOf<Type, OffsetType>::sanitize (c, count, this, user_data)));
++    return_trace ((UnsizedOffsetArrayOf<Type, OffsetType, has_null>::sanitize (c, count, this, user_data)));
+   }
+ };
+ 

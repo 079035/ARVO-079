@@ -1,0 +1,22 @@
+From e44004089b5356416304a70ac38222d6c253b90a Mon Sep 17 00:00:00 2001
+From: Even Rouault <even.rouault@spatialys.com>
+Date: Fri, 18 Nov 2022 00:49:00 +0100
+Subject: [PATCH] loadLayer(): fix memory leak in case of repeated CLUSTER
+
+Fixes https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=53471
+---
+ mapfile.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/mapfile.c b/mapfile.c
+index 64731bca8d..fa52d1312f 100755
+--- a/mapfile.c
++++ b/mapfile.c
+@@ -4021,7 +4021,6 @@ int loadLayer(layerObj *layer, mapObj *map)
+         layer->numclasses++;
+         break;
+       case(CLUSTER):
+-        initCluster(&layer->cluster);
+         if(loadCluster(&layer->cluster) == -1) return(-1);
+         break;
+       case(CLASSGROUP):

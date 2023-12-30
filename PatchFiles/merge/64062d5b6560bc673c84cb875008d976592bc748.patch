@@ -1,0 +1,11 @@
+commit 64062d5b6560bc673c84cb875008d976592bc748
+Merge: 4a91c10 ad6d324
+Author: Ray Essick <essick@google.com>
+Date:   Wed Nov 10 16:46:36 2021 +0000
+
+    Prune departed users from OWNERS am: ad6d324bb1
+    
+    Original change: https://android-review.googlesource.com/c/platform/external/libhevc/+/1883574
+    
+    Change-Id: I6eda24953cbfa706033e0880146b7ee6fd988180
+

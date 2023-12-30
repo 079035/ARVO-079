@@ -1,0 +1,216 @@
+From 5f92a085cc50718aa921ba1139f6cc576deb68fa Mon Sep 17 00:00:00 2001
+From: Tyson Andre <tysonandre775@hotmail.com>
+Date: Sun, 26 Jan 2020 13:05:34 -0500
+Subject: [PATCH] Convert ZEND_ECHO operand to string after sccp
+
+And filter out echoes of the empty string (e.g. false/null)
+
+Split out of #5097 (on GitHub)
+
+Closes GH-5118
+---
+ ext/opcache/Optimizer/zend_optimizer.c | 15 +++++++++++
+ ext/opcache/tests/opt/sccp_002.phpt    |  4 +--
+ ext/opcache/tests/opt/sccp_003.phpt    |  4 +--
+ ext/opcache/tests/opt/sccp_004.phpt    |  4 +--
+ ext/opcache/tests/opt/sccp_005.phpt    |  2 +-
+ ext/opcache/tests/opt/sccp_007.phpt    |  2 +-
+ ext/opcache/tests/opt/sccp_009.phpt    |  2 +-
+ ext/opcache/tests/opt/sccp_010.phpt    |  4 +--
+ ext/opcache/tests/opt/sccp_011.phpt    |  2 +-
+ ext/opcache/tests/opt/sccp_012.phpt    |  4 +--
+ ext/opcache/tests/opt/sccp_022.phpt    |  2 +-
+ ext/opcache/tests/opt/sccp_031.phpt    | 36 ++++++++++++++++++++++++++
+ 12 files changed, 66 insertions(+), 15 deletions(-)
+ create mode 100644 ext/opcache/tests/opt/sccp_031.phpt
+
+diff --git a/ext/opcache/Optimizer/zend_optimizer.c b/ext/opcache/Optimizer/zend_optimizer.c
+index 84d4c61831bb7..30743fd7ba44a 100644
+--- a/ext/opcache/Optimizer/zend_optimizer.c
++++ b/ext/opcache/Optimizer/zend_optimizer.c
+@@ -340,6 +340,21 @@ int zend_optimizer_update_op1_const(zend_op_array *op_array,
+ 		case ZEND_FETCH_LIST_R:
+ 		case ZEND_COPY_TMP:
+ 			return 0;
++		case ZEND_ECHO:
++		{
++			zval zv;
++			if (Z_TYPE_P(val) != IS_STRING && zend_optimizer_eval_cast(&zv, IS_STRING, val) == SUCCESS) {
++				zval_ptr_dtor_nogc(val);
++				val = &zv;
++			}
++			opline->op1.constant = zend_optimizer_add_literal(op_array, val);
++			if (Z_TYPE_P(val) == IS_STRING && Z_STRLEN_P(val) == 0) {
++				MAKE_NOP(opline);
++			}
++			/* TODO: In a subsequent pass, *after* this step and compacting nops, combine consecutive ZEND_ECHOs using the block information from ssa->cfg */
++			/* (e.g. for ext/opcache/tests/opt/sccp_010.phpt) */
++			break;
++		}
+ 		case ZEND_CONCAT:
+ 		case ZEND_FAST_CONCAT:
+ 		case ZEND_FETCH_R:
+diff --git a/ext/opcache/tests/opt/sccp_002.phpt b/ext/opcache/tests/opt/sccp_002.phpt
+index 0fd10f2ac57ad..fd2b373d7332a 100644
+--- a/ext/opcache/tests/opt/sccp_002.phpt
++++ b/ext/opcache/tests/opt/sccp_002.phpt
+@@ -32,6 +32,6 @@ foo: ; (lines=4, args=1, vars=1, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_002.php:2-12
+ L0 (2):     CV0($x) = RECV 1
+-L1 (9):     ECHO int(1)
+-L2 (11):    ECHO int(1)
++L1 (9):     ECHO string("1")
++L2 (11):    ECHO string("1")
+ L3 (12):    RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_003.phpt b/ext/opcache/tests/opt/sccp_003.phpt
+index 282a5788e628b..50ed9eb759c29 100644
+--- a/ext/opcache/tests/opt/sccp_003.phpt
++++ b/ext/opcache/tests/opt/sccp_003.phpt
+@@ -31,6 +31,6 @@ L0 (14):    RETURN int(1)
+ foo: ; (lines=3, args=0, vars=0, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_003.php:2-12
+-L0 (9):     ECHO int(1)
+-L1 (11):    ECHO int(1)
++L0 (9):     ECHO string("1")
++L1 (11):    ECHO string("1")
+ L2 (12):    RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_004.phpt b/ext/opcache/tests/opt/sccp_004.phpt
+index d82212e0ef004..495499f8843ea 100644
+--- a/ext/opcache/tests/opt/sccp_004.phpt
++++ b/ext/opcache/tests/opt/sccp_004.phpt
+@@ -35,6 +35,6 @@ foo: ; (lines=4, args=1, vars=1, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_004.php:2-15
+ L0 (2):     CV0($x) = RECV 1
+-L1 (11):    ECHO bool(true)
+-L2 (14):    ECHO int(1)
++L1 (11):    ECHO string("1")
++L2 (14):    ECHO string("1")
+ L3 (15):    RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_005.phpt b/ext/opcache/tests/opt/sccp_005.phpt
+index 7fbb062922fbe..1ff0d4e4ae7f5 100644
+--- a/ext/opcache/tests/opt/sccp_005.phpt
++++ b/ext/opcache/tests/opt/sccp_005.phpt
+@@ -25,5 +25,5 @@ foo: ; (lines=3, args=1, vars=1, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_005.php:2-5
+ L0 (2):     CV0($x) = RECV 1
+-L1 (4):     ECHO int(2)
++L1 (4):     ECHO string("2")
+ L2 (5):     RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_007.phpt b/ext/opcache/tests/opt/sccp_007.phpt
+index 82feb04e226a5..c502a5c6beec8 100644
+--- a/ext/opcache/tests/opt/sccp_007.phpt
++++ b/ext/opcache/tests/opt/sccp_007.phpt
+@@ -29,5 +29,5 @@ foo: ; (lines=3, args=1, vars=1, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_007.php:2-9
+ L0 (2):     CV0($x) = RECV 1
+-L1 (8):     ECHO int(0)
++L1 (8):     ECHO string("0")
+ L2 (9):     RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_009.phpt b/ext/opcache/tests/opt/sccp_009.phpt
+index 1b049810c136d..47612cdb29828 100644
+--- a/ext/opcache/tests/opt/sccp_009.phpt
++++ b/ext/opcache/tests/opt/sccp_009.phpt
+@@ -26,5 +26,5 @@ foo: ; (lines=3, args=1, vars=1, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_009.php:2-6
+ L0 (2):     CV0($x) = RECV 1
+-L1 (5):     ECHO int(2)
++L1 (5):     ECHO string("2")
+ L2 (6):     RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_010.phpt b/ext/opcache/tests/opt/sccp_010.phpt
+index e88bf579f7178..a2e9945c7f646 100644
+--- a/ext/opcache/tests/opt/sccp_010.phpt
++++ b/ext/opcache/tests/opt/sccp_010.phpt
+@@ -32,6 +32,6 @@ L0 (15):    RETURN int(1)
+ foo: ; (lines=3, args=0, vars=0, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_010.php:2-13
+-L0 (10):    ECHO int(1)
+-L1 (12):    ECHO int(1)
++L0 (10):    ECHO string("1")
++L1 (12):    ECHO string("1")
+ L2 (13):    RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_011.phpt b/ext/opcache/tests/opt/sccp_011.phpt
+index 281e3dca2eb00..adb2c0a3638bf 100644
+--- a/ext/opcache/tests/opt/sccp_011.phpt
++++ b/ext/opcache/tests/opt/sccp_011.phpt
+@@ -32,5 +32,5 @@ foo: ; (lines=3, args=1, vars=1, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_011.php:2-12
+ L0 (2):     CV0($x) = RECV 1
+-L1 (11):    ECHO int(0)
++L1 (11):    ECHO string("0")
+ L2 (12):    RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_012.phpt b/ext/opcache/tests/opt/sccp_012.phpt
+index 5d2f3e9a01c9b..0e3b872e0ca22 100644
+--- a/ext/opcache/tests/opt/sccp_012.phpt
++++ b/ext/opcache/tests/opt/sccp_012.phpt
+@@ -34,6 +34,6 @@ L0 (17):    RETURN int(1)
+ foo: ; (lines=3, args=0, vars=0, tmps=0)
+     ; (after optimizer)
+     ; %ssccp_012.php:2-15
+-L0 (10):    ECHO int(1)
+-L1 (14):    ECHO int(4)
++L0 (10):    ECHO string("1")
++L1 (14):    ECHO string("4")
+ L2 (15):    RETURN null
+diff --git a/ext/opcache/tests/opt/sccp_022.phpt b/ext/opcache/tests/opt/sccp_022.phpt
+index 40c9df5971b3b..6a6bfbfec95a4 100644
+--- a/ext/opcache/tests/opt/sccp_022.phpt
++++ b/ext/opcache/tests/opt/sccp_022.phpt
+@@ -32,7 +32,7 @@ L1 (3):     ASSIGN_DIM CV1($a) int(0)
+ L2 (3):     OP_DATA CV0($x)
+ L3 (4):     ASSIGN_DIM CV1($a) int(1)
+ L4 (4):     OP_DATA int(5)
+-L5 (5):     ECHO int(5)
++L5 (5):     ECHO string("5")
+ L6 (6):     ASSIGN_OBJ CV1($a) string("foo")
+ L7 (6):     OP_DATA int(5)
+ L8 (7):     T2 = FETCH_DIM_R CV1($a) int(1)
+diff --git a/ext/opcache/tests/opt/sccp_031.phpt b/ext/opcache/tests/opt/sccp_031.phpt
+new file mode 100644
+index 0000000000000..0f4ff184bda23
+--- /dev/null
++++ b/ext/opcache/tests/opt/sccp_031.phpt
+@@ -0,0 +1,36 @@
++--TEST--
++SCCP 031: Echo optimizations
++--INI--
++opcache.enable=1
++opcache.enable_cli=1
++opcache.optimization_level=-1
++opcache.opt_debug_level=0x20000
++opcache.preload=
++--SKIPIF--
++<?php require_once('skipif.inc'); ?>
++--FILE--
++<?php
++function foo() {
++	$k = 0;
++	$a = [null];
++	echo isset($a[$k]);
++	echo "b";
++	echo isset($a[$k+1]);
++	echo "c";
++	echo $a[$k];
++	echo $a; // Should not be optimized
++}
++?>
++--EXPECTF--
++$_main: ; (lines=1, args=0, vars=0, tmps=0)
++    ; (after optimizer)
++    ; %ssccp_031.php:1-13
++L0 (13):    RETURN int(1)
++
++foo: ; (lines=4, args=0, vars=0, tmps=0)
++    ; (after optimizer)
++    ; %s_031.php:2-11
++L0 (6):     ECHO string("b")
++L1 (8):     ECHO string("c")
++L2 (10):    ECHO array(...)
++L3 (11):    RETURN null

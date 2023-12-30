@@ -1,0 +1,647 @@
+From f3c4c512b4de3cc5912fc4bdde7ac41dbeac9ff5 Mon Sep 17 00:00:00 2001
+From: Michael Brandeis <michael.brandeis@gmail.com>
+Date: Sat, 6 Feb 2021 09:29:20 -0800
+Subject: [PATCH] PCAPNG dissection improvements (#2895)
+
+- Fix blocklen computation
+- Improve SHB read
+- Improve error managment
+
+Co-authored-by: Michael Brandeis <michael.brandeis@gmail.com>
+
+Co-authored-by: gpotter2 <gabriel@potter.fr>
+---
+ .gitignore                       |   1 +
+ scapy/tools/UTscapy.py           |  18 ++--
+ scapy/utils.py                   | 170 +++++++++++++++++++------------
+ test/pcaps/macos.pcapng.gz       | Bin 0 -> 526 bytes
+ test/regression.uts              |  20 +++-
+ test/scapy/layers/dot15d4.uts    |   8 +-
+ test/scapy/layers/http.uts       |  28 ++---
+ test/scapy/layers/netflow.uts    |  12 +--
+ test/sslv2.uts                   |   4 +-
+ test/tls.uts                     |  12 +--
+ test/tls/tests_tls_netaccess.uts |  22 ++--
+ 11 files changed, 158 insertions(+), 137 deletions(-)
+ create mode 100644 test/pcaps/macos.pcapng.gz
+
+diff --git a/.gitignore b/.gitignore
+index e90fba94c7..b8685028c7 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -7,6 +7,7 @@ MANIFEST
+ scapy/VERSION
+ test/*.html
+ .tox
++.ipynb_checkpoints
+ .mypy_cache
+ doc/scapy/_build
+ doc/scapy/api
+diff --git a/scapy/tools/UTscapy.py b/scapy/tools/UTscapy.py
+index 225de07ef9..9365e77e95 100644
+--- a/scapy/tools/UTscapy.py
++++ b/scapy/tools/UTscapy.py
+@@ -84,6 +84,15 @@ def retry_test(func):
+     assert success
+     return result
+ 
++
++def scapy_path(fname):
++    """Resolves a path relative to scapy's root folder"""
++    if fname.startswith('/'):
++        fname = fname[1:]
++    return os.path.abspath(os.path.join(
++        os.path.dirname(__file__), '../../', fname
++    ))
++
+ #    Import tool    #
+ 
+ 
+@@ -546,8 +555,9 @@ def run_test(test, get_interactive_session, theme, verb=3,
+ 
+ def import_UTscapy_tools(ses):
+     """Adds UTScapy tools directly to a session"""
+-    ses["retry_test"] = retry_test
+     ses["Bunch"] = Bunch
++    ses["retry_test"] = retry_test
++    ses["scapy_path"] = scapy_path
+     if WINDOWS:
+         from scapy.arch.windows import _route_add_loopback
+         _route_add_loopback()
+@@ -1091,9 +1101,6 @@ def main():
+         except ImportError as e:
+             raise getopt.GetoptError("cannot import [%s]: %s" % (m, e))
+ 
+-    # Add SCAPY_ROOT_DIR environment variable, used for tests
+-    os.environ['SCAPY_ROOT_DIR'] = os.environ.get("PWD", os.getcwd())
+-
+     autorun_func = {
+         Format.TEXT: scapy.autorun_get_text_interactive_session,
+         Format.ANSI: scapy.autorun_get_ansi_interactive_session,
+@@ -1175,9 +1182,6 @@ def main():
+             f.write(glob_output.encode("utf8", "ignore")
+                     if 'b' in f.mode or six.PY2 else glob_output)
+ 
+-    # Delete scapy's test environment vars
+-    del os.environ['SCAPY_ROOT_DIR']
+-
+     # Print end message
+     if VERB > 2:
+         if glob_result == 0:
+diff --git a/scapy/utils.py b/scapy/utils.py
+index a1a3fc51e9..b5f6e1eb82 100644
+--- a/scapy/utils.py
++++ b/scapy/utils.py
+@@ -1125,20 +1125,20 @@ def __call__(cls, filename):  # type: ignore
+             )
+         try:
+             i.__init__(filename, fdesc, magic)
+-        except Scapy_Exception:
+-            if "alternative" in cls.__dict__:
+-                cls = cls.__dict__["alternative"]
+-                i = cls.__new__(cls, cls.__name__, cls.__bases__, cls.__dict__)
+-                try:
+-                    i.__init__(filename, fdesc, magic)
+-                except Scapy_Exception:
+-                    try:
+-                        i.f.seek(-4, 1)
+-                    except Exception:
+-                        pass
+-                    raise Scapy_Exception("Not a supported capture file")
+-
+-        return i
++            return i
++        except (Scapy_Exception, EOFError):
++            pass
++
++        if "alternative" in cls.__dict__:
++            cls = cls.__dict__["alternative"]
++            i = cls.__new__(cls, cls.__name__, cls.__bases__, cls.__dict__)
++            try:
++                i.__init__(filename, fdesc, magic)
++                return i
++            except (Scapy_Exception, EOFError):
++                pass
++
++        raise Scapy_Exception("Not a supported capture file")
+ 
+     @staticmethod
+     def open(fname  # type: Union[IO[bytes], str]
+@@ -1365,33 +1365,81 @@ def __init__(self, filename, fdesc, magic):
+             "tsresol": 1000000
+         }
+         self.blocktypes = {
+-            1: self.read_block_idb,
+-            2: self.read_block_pkt,
+-            3: self.read_block_spb,
+-            6: self.read_block_epb,
++            1: self._read_block_idb,
++            2: self._read_block_pkt,
++            3: self._read_block_spb,
++            6: self._read_block_epb,
+         }
++        self.endian = "!"  # Will be overwritten by first SHB
++
+         if magic != b"\x0a\x0d\x0d\x0a":  # PcapNg:
+             raise Scapy_Exception(
+                 "Not a pcapng capture file (bad magic: %r)" % magic
+             )
+-        # see https://github.com/pcapng/pcapng
+-        blocklen_, magic = self.f.read(4), self.f.read(4)  # noqa: F841
+-        if magic == b"\x1a\x2b\x3c\x4d":
++
++        try:
++            self._read_block_shb()
++        except EOFError:
++            raise Scapy_Exception(
++                "The first SHB of the pcapng file is malformed !"
++            )
++
++    def _read_block(self, size=MTU):
++        # type: (int) -> Optional[Tuple[bytes, RawPcapNgReader.PacketMetadata]]  # noqa: E501
++        try:
++            blocktype = struct.unpack(self.endian + "I", self.f.read(4))[0]
++        except struct.error:
++            raise EOFError
++        if blocktype == 0x0A0D0D0A:
++            # This function updates the endianness based on the block content.
++            self._read_block_shb()
++            return None
++        try:
++            blocklen = struct.unpack(self.endian + "I", self.f.read(4))[0]
++        except struct.error:
++            raise EOFError
++        if blocklen < 12:
++            warning("Invalid block length !")
++            raise EOFError
++        block = self.f.read(blocklen - 12)
++        self._read_block_tail(blocklen)
++        return self.blocktypes.get(
++            blocktype,
++            lambda block, size: None
++        )(block, size)
++
++    def _read_block_tail(self, blocklen):
++        # type: (int) -> None
++        if blocklen % 4:
++            pad = self.f.read(-blocklen % 4)
++            warning("PcapNg: bad blocklen %d (MUST be a multiple of 4. "
++                    "Ignored padding %r" % (blocklen, pad))
++        try:
++            if blocklen != struct.unpack(self.endian + 'I',
++                                         self.f.read(4))[0]:
++                raise EOFError("PcapNg: Invalid pcapng block (bad blocklen)")
++        except struct.error:
++            raise EOFError
++
++    def _read_block_shb(self):
++        # type: () -> None
++        _blocklen = self.f.read(4)
++        endian = self.f.read(4)
++        if endian == b"\x1a\x2b\x3c\x4d":
+             self.endian = ">"
+-        elif magic == b"\x4d\x3c\x2b\x1a":
++        elif endian == b"\x4d\x3c\x2b\x1a":
+             self.endian = "<"
+         else:
+-            raise Scapy_Exception("Not a pcapng capture file (bad magic)")
+-        self.f.read(12)
+-        blocklen = struct.unpack("!I", blocklen_)[0]  # type: int
+-        # Read default options
+-        self.default_options = self.read_options(
+-            self.f.read(blocklen - 24)
+-        )
+-        try:
+-            self.f.seek(0)
+-        except Exception:
+-            pass
++            warning("Bad magic in Section Header block (not a pcapng file?)")
++            raise EOFError
++
++        blocklen = struct.unpack(self.endian + "I", _blocklen)[0]
++        if blocklen < 16:
++            warning("Invalid SHB block length!")
++            raise EOFError
++        options = self.f.read(blocklen - 16)
++        self._read_block_tail(blocklen)
++        self._read_options(options)
+ 
+     def _read_packet(self, size=MTU):  # type: ignore
+         # type: (int) -> Tuple[bytes, RawPcapNgReader.PacketMetadata]
+@@ -1401,29 +1449,11 @@ def _read_packet(self, size=MTU):  # type: ignore
+ 
+         """
+         while True:
+-            try:
+-                blocktype, blocklen = struct.unpack(self.endian + "2I",
+-                                                    self.f.read(8))
+-            except struct.error:
+-                raise EOFError
+-            block = self.f.read(blocklen - 12)
+-            if blocklen % 4:
+-                pad = self.f.read(4 - (blocklen % 4))
+-                warning("PcapNg: bad blocklen %d (MUST be a multiple of 4. "
+-                        "Ignored padding %r" % (blocklen, pad))
+-            try:
+-                if (blocklen,) != struct.unpack(self.endian + 'I',
+-                                                self.f.read(4)):
+-                    warning("PcapNg: Invalid pcapng block (bad blocklen)")
+-                    raise EOFError
+-            except struct.error:
+-                raise EOFError
+-            res = self.blocktypes.get(blocktype,
+-                                      lambda block, size: None)(block, size)
++            res = self._read_block()
+             if res is not None:
+                 return res
+ 
+-    def read_options(self, options):
++    def _read_options(self, options):
+         # type: (bytes) -> Dict[str, int]
+         """Section Header Block"""
+         opts = self.default_options.copy()
+@@ -1446,23 +1476,31 @@ def read_options(self, options):
+             options = options[4 + length:]
+         return opts
+ 
+-    def read_block_idb(self, block, _):
++    def _read_block_idb(self, block, _):
+         # type: (bytes, int) -> None
+         """Interface Description Block"""
+-        options = self.read_options(block[16:])
+-        interface = struct.unpack(  # type: ignore
+-            self.endian + "HxxI",
+-            block[:8]
+-        ) + (options["tsresol"],)  # type: Tuple[int, int, int]
++        # 2 bytes LinkType + 2 bytes Reserved
++        # 4 bytes Snaplen
++        options = self._read_options(block[8:-4])
++        try:
++            interface = struct.unpack(  # type: ignore
++                self.endian + "HxxI",
++                block[:8]
++            ) + (options["tsresol"],)  # type: Tuple[int, int, int]
++        except struct.error:
++            raise EOFError
+         self.interfaces.append(interface)
+ 
+-    def read_block_epb(self, block, size):
++    def _read_block_epb(self, block, size):
+         # type: (bytes, int) -> Tuple[bytes, RawPcapNgReader.PacketMetadata]
+         """Enhanced Packet Block"""
+-        intid, tshigh, tslow, caplen, wirelen = struct.unpack(
+-            self.endian + "5I",
+-            block[:20],
+-        )
++        try:
++            intid, tshigh, tslow, caplen, wirelen = struct.unpack(
++                self.endian + "5I",
++                block[:20],
++            )
++        except struct.error:
++            raise EOFError
+         return (block[20:20 + caplen][:size],
+                 RawPcapNgReader.PacketMetadata(linktype=self.interfaces[intid][0],  # noqa: E501
+                                                tsresol=self.interfaces[intid][2],  # noqa: E501
+@@ -1470,7 +1508,7 @@ def read_block_epb(self, block, size):
+                                                tslow=tslow,
+                                                wirelen=wirelen))
+ 
+-    def read_block_spb(self, block, size):
++    def _read_block_spb(self, block, size):
+         # type: (bytes, int) -> Tuple[bytes, RawPcapNgReader.PacketMetadata]
+         """Simple Packet Block"""
+         # "it MUST be assumed that all the Simple Packet Blocks have
+@@ -1486,7 +1524,7 @@ def read_block_spb(self, block, size):
+                                                tslow=None,
+                                                wirelen=wirelen))
+ 
+-    def read_block_pkt(self, block, size):
++    def _read_block_pkt(self, block, size):
+         # type: (bytes, int) -> Tuple[bytes, RawPcapNgReader.PacketMetadata]
+         """(Obsolete) Packet Block"""
+         intid, drops, tshigh, tslow, caplen, wirelen = struct.unpack(
+diff --git a/test/pcaps/macos.pcapng.gz b/test/pcaps/macos.pcapng.gz
+new file mode 100644
+index 0000000000000000000000000000000000000000..491e13d8b2d5c9ef4b3bc00eb1fbaa91be6e72e0
+GIT binary patch
+literal 526
+zcmV+p0`dJHiwFP!000003ghDC<*H#|VDPokmSP0b|Dk}9L4=_=HMt}+KTjbeH8CZ%
+zNFgaFKRKI;fsLWU!Ytm*gn@yXftSH0v8X&VPr=Yq&rHt%sGo&Fo}nbUAf+_7KtUrX
+zGpQgsu|T0LwWt_mkfENXo}nfK2!QMa*{1-dU$HVUFab?W%`*VYgT&c@*o6tqWsu**
+z%E0kxlcFe)55hgI6LjB95HanRyBNU1;L5<n9({{}p+ImUJL{fWy#p&aii8h*H)Z_1
+zGy<rZot;T+zVx+2!far>7#x8@LZ4X}88{d+8KfsVGJ;8_N(QDhM^~d9M}I2^=4|%k
+zESZdV?I*H=Nwy@0KiLdI>=4(uf(&3_;Nbeq!US}74p>m?(GtcAkkgrugtK_+mfqml
+zcj}SD=^DR%0t^fr9F~}SJ4*HVf$T;#gd5oq=?NiFLrlE6z=p(~um<W`<R}9ST*u{)
+zf*hY++=yui4~ikKGoXe{S;h-CL``<eL35{^gCQW7Ecb0bD97M+5W^5&6z{~TLk(fs
+z!3Q>^{`T{Ol~Ysf*Ir-j;aHaZ`ydO`zI_;m@S(V*#ugSP_r<}6XbP@9Xty-e;W@}9
+z>rQSt*miur1BM~|D27aY0W~D#oEX>;zw|{1W9wHO_zf~d>F|<+1&cHffYmYqQy?S6
+QEO6QZ0B^jEF5m(H03FWqE&u=k
+
+literal 0
+HcmV?d00001
+
+diff --git a/test/regression.uts b/test/regression.uts
+index 3fa99744ed..bd7a879dff 100644
+--- a/test/regression.uts
++++ b/test/regression.uts
+@@ -1819,6 +1819,10 @@ pktpcapngdefaults = rdpcap(pcapngdefaults)
+ assert pktpcapngdefaults[0].time == 1575115986.114775512
+ assert Ether in pktpcapngdefaults[0]
+ 
++= Read a pcapng with little-endian SHB
++pktcapng = sniff(offline=scapy_path("/test/pcaps/macos.pcapng.gz"))
++assert len(pktcapng) != 0
++
+ = Read a pcap file with wirelen != captured len
+ pktpcapwirelen = rdpcap(pcapwirelenfile)
+ 
+@@ -1983,11 +1987,21 @@ assert isinstance(pkt, Padding) and pkt.load == b'\xeay$\xf6'
+ pkt = pkt.payload
+ assert isinstance(pkt, NoPayload)
+ 
+-= Invalid pcapng file
++= Invalid pcapng files
+ 
+ from io import BytesIO
+-invalid_pcapngfile = BytesIO(b'\n\r\r\n\r\x00\x00\x00M<+\x1a\xb2<\xb2\xa1\x01\x00\x00\x00\r\x00\x00\x00M<+\x1a\x80\xaa\xb2\x02')
+-assert(len(rdpcap(invalid_pcapngfile)) == 0)
++
++# Invalid PCAPNG format -> Raise
++try:
++    invalid_pcapngfile_1 = BytesIO(b'\n\r\r\n\r\x00\x00\x00M<+\x1a\xb2<\xb2\xa1\x01\x00\x00\x00\r\x00\x00\x00M<+\x1a\x80\xaa\xb2\x02')
++    rdpcap(invalid_pcapngfile_1)
++    assert False
++except Scapy_Exception:
++    pass
++
++# Invalid Packet in PCAPNG -> return
++invalid_pcapngfile_2 = BytesIO(b'\n\r\r\n\x00\x00\x00\x10\x1a+<M\x00\x00\x00\x10\x00\x00\x00\x01\x00\x00\x00\x10    \x00\x00\x00\x10')
++assert len(rdpcap(invalid_pcapngfile_2)) == 0
+ 
+ = Check PcapWriter on null write
+ 
+diff --git a/test/scapy/layers/dot15d4.uts b/test/scapy/layers/dot15d4.uts
+index 9d42f7e624..1babea9bfc 100644
+--- a/test/scapy/layers/dot15d4.uts
++++ b/test/scapy/layers/dot15d4.uts
+@@ -590,9 +590,7 @@ assert pkt.read_attribute_status_record[1].attribute_value == b'\x07sengled'
+ = Zigbee - advanced dissection
+ 
+ import os
+-tmp = "/test/pcaps/zigbee-join-authenticate.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/zigbee-join-authenticate.pcap")
+ a = rdpcap(filename)
+ 
+ pkt1 = a[0]  # Data
+@@ -629,9 +627,7 @@ assert pkt3[ZigBeeBeacon].tx_offset == 16777215
+ 
+ = Zigbee - skke_1 transport key
+ 
+-tmp = "/test/pcaps/zigbee-transport-key-skke_1.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/zigbee-transport-key-skke_1.pcap")
+ a = rdpcap(filename)
+ 
+ pkt1 = a[0]  # AppCommandPayload with transport key
+diff --git a/test/scapy/layers/http.uts b/test/scapy/layers/http.uts
+index b60631c9c8..aaf3035cf3 100644
+--- a/test/scapy/layers/http.uts
++++ b/test/scapy/layers/http.uts
+@@ -11,9 +11,7 @@ load_layer("http")
+ 
+ import os
+ 
+-tmp = "/test/pcaps/http_chunk.pcap.gz"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/http_chunk.pcap.gz")
+ 
+ a = sniff(offline=filename, session=TCPSession)
+ 
+@@ -49,9 +47,7 @@ import os
+ 
+ # Packet from
+ # https://community.cisco.com/t5/networking-documents/http-packet-captures/ta-p/3121453
+-tmp = "/test/pcaps/http_content_length.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/http_content_length.pcap")
+ 
+ expected_data = b"""<!doctype html><html><head><meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Google</title><script>window.google={kEI:"TiU7TKv1IdO6jAfQmdX4AQ",kEXPI:"17259,18168,23756,24692,24878,24879,25233,25335,25402,25529",kCSI:{e:"17259,18168,23756,24692,24878,24879,25233,25335,25402,25529",ei:"TiU7TKv1IdO6jAfQmdX4AQ",expi:"17259,18168,23756,24692,24878,24879,25233,25335,25402,25529"},ml:function(){},kHL:"en",time:function(){return(new Date).getTime()},log:function(b,d,c){var a=new Image,e=google,g=e.lc,f=e.li;a.onerror=(a.onload=(a.onabort=function(){delete g[f]}));g[f]=a;c=c||"/gen_204?atyp=i&ct="+b+"&cad="+d+"&zx="+google.time();a.src=c;e.li=f+1},lc:[],li:0,Toolbelt:{}};\nwindow.google.sn="webhp";window.google.timers={load:{t:{start:(new Date).getTime()}}};try{window.google.pt=window.external&&window.external.pageT;}catch(u){}window.google.jsrt_kill=1;\nvar _gjwl=location;function _gjuc(){var b=_gjwl.href.indexOf("#");if(b>=0){var a=_gjwl.href.substring(b+1);if(/(^|&)q=/.test(a)&&a.indexOf("#")==-1&&!/(^|&)cad=h($|&)/.test(a)){_gjwl.replace("/search?"+a.replace(/(^|&)fp=[^&]*/g,"")+"&cad=h");return 1}}return 0}function _gjp(){!(window._gjwl.hash&&window._gjuc())&&setTimeout(_gjp,500)};\nwindow._gjp && _gjp()</script><style id=gstyle>body{margin:0}#gog{padding:3px 10px 0}td{line-height:.8em;}.gac_m td{line-height:17px;}form{margin-bottom:20px;}body,td,a,p,.h{font-family:arial,sans-serif}.h{color:#36c;font-size:20px}.q{color:#00c}.ts td{padding:0}.ts{border-collapse:collapse}.fl a:link{color:#77c}em{font-weight:bold;font-style:normal}.lst{font:17px arial,sans-serif;margin-bottom:.2em;vertical-align:bottom;}input{font-family:inherit}.lsb,.gac_sb{font-size:15px;height:1.85em!important;margin:.2em;padding:0 6px;width:auto;overflow:visible;}#gog{background:#fff;}#gbar,#guser{font-size:13px;padding-top:1px !important}#gbar{float:left;height:22px}#guser{padding-bottom:7px !important;text-align:right}.gbh,.gbd{border-top:1px solid #c9d7f1;font-size:1px}.gbh{height:0;position:absolute;top:24px;width:100%}#gbs,.gbm{background:#fff;left:0;position:absolute;text-align:left;visibility:hidden;z-index:1000}.gbm{border:1px solid;border-color:#c9d7f1 #36c #36c #a2bae7;z-index:1001}.gb1{margin-right:.5em}.gb1,.gb3{zoom:1}.gb2{display:block;padding:.2em .5em;}.gb2,.gb3{text-decoration:none;border-bottom:none}a.gb1,a.gb2,a.gb3,a.gb4{color:#00c !important}a.gb2:hover{background:#36c;color:#fff !important}</style><script>google.y={};google.x=function(e,g){google.y[e.id]=[e,g];return false};var e=0;if(!window.google)window.google={};window.google.crm={};window.google.cri=0;window.clk=function(f,g,h,l,m,b,n){if(document.images){e++;var a=encodeURIComponent||escape,c=new Image,i=window.google.cri++;window.google.crm[i]=c;c.onerror=(c.onload=(c.onabort=function(){delete window.google.crm[i]}));if(b&&b.substring(0,6)!="&sig2=")b="&sig2="+b;c.src=["/url?sa=T","","&cd=",a(m),"&ved=",a(n),f?"&url="+a(f.replace(/#.*/,"")).replace(/\\+/g,"%2B"):"","&ei=","TiU7TKv1IdO6jAfQmdX4AQ",b,"&nclks=",e].join("")}return true};\nwindow.gbar={qs:function(){},tg:function(e){var o={id:\'gbar\'};for(i in e)o[i]=e[i];google.x(o,function(){gbar.tg(o)})}};</script></head><body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 onload="document.f.q.focus();if(document.images)new Image().src=\'/images/nav_logo8.png\'" ><textarea id=csi style=display:none></textarea><span><iframe name=wgjf style=display:none></iframe></span><div id=xjsc></div><div id=ghead><div id=gog><div id=gbar><nobr><b class=gb1>Web</b> <a href="http://www.google.com/imghp?hl=en&tab=wi" onclick=gbar.qs(this) class=gb1>Images</a> <a href="http://video.google.com/?hl=en&tab=wv" onclick=gbar.qs(this) class=gb1>Videos</a> <a href="http://maps.google.com/maps?hl=en&tab=wl" onclick=gbar.qs(this) class=gb1>Maps</a> <a href="http://news.google.com/nwshp?hl=en&tab=wn" onclick=gbar.qs(this) class=gb1>News</a> <a href="http://www.google.com/prdhp?hl=en&tab=wf" onclick=gbar.qs(this) class=gb1>Shopping</a> <a href="http://mail.google.com/mail/?hl=en&tab=wm" class=gb1>Gmail</a> <a href="http://www.google.com/intl/en/options/" onclick="this.blur();gbar.tg(event);return !1" aria-haspopup=true class=gb3><u>more</u> <small>&#9660;</small></a><div class=gbm id=gbi><a href="http://books.google.com/bkshp?hl=en&tab=wp" onclick=gbar.qs(this) class=gb2>Books</a> <a href="http://www.google.com/finance?hl=en&tab=we" onclick=gbar.qs(this) class=gb2>Finance</a> <a href="http://translate.google.com/?hl=en&tab=wT" onclick=gbar.qs(this) class=gb2>Translate</a> <a href="http://scholar.google.com/schhp?hl=en&tab=ws" onclick=gbar.qs(this) class=gb2>Scholar</a> <a href="http://blogsearch.google.com/?hl=en&tab=wb" onclick=gbar.qs(this) class=gb2>Blogs</a> <div class=gb2><div class=gbd></div></div><a href="http://www.youtube.com/?hl=en&tab=w1" onclick=gbar.qs(this) class=gb2>YouTube</a> <a href="http://www.google.com/calendar/render?hl=en&tab=wc" class=gb2>Calendar</a> <a href="http://picasaweb.google.com/home?hl=en&tab=wq" onclick=gbar.qs(this) class=gb2>Photos</a> <a href="http://docs.google.com/?hl=en&tab=wo" class=gb2>Documents</a> <a href="http://www.google.com/reader/?hl=en&tab=wy" class=gb2>Reader</a> <a href="http://sites.google.com/?hl=en&tab=w3" class=gb2>Sites</a> <a href="http://groups.google.com/grphp?hl=en&tab=wg" onclick=gbar.qs(this) class=gb2>Groups</a> <div class=gb2><div class=gbd></div></div><a href="http://www.google.com/intl/en/options/" class=gb2>even more &raquo;</a> </div></nobr></div><div id=guser width=100%><nobr><span id=gbn class=gbi></span><span id=gbf class=gbf></span><span id=gbe><a href="/url?sa=p&pref=ig&pval=3&q=http://www.google.com/ig%3Fhl%3Den%26source%3Diglk&usg=AFQjCNFA18XPfgb7dKnXfKz7x7g1GDH1tg" class=gb4>iGoogle</a> | </span><a href="/preferences?hl=en" class=gb4>Search settings</a> | <a href="https://www.google.com/accounts/Login?hl=en&continue=http://www.google.com/" class=gb4>Sign in</a></nobr></div><div class=gbh style=left:0></div><div class=gbh style=right:0></div></div></div> <center><style>.pmoabs{position:absolute;right:0;top:25px;}.pmoflt,.pmoc{float:right;clear:both;}#pmocntr{behavior:url(#default#userdata);border:1px solid #ccc;}#pmocntr table{font-size:80%;}#pmolnk,#pmolnk div{background:url(/images/modules/buttons/g-button-chocobo-basic-1.gif)}#pmolnk{width:170px;}#pmolnk div{background-position:100% -400px;}#pmolnk div div{background-position:0 100%;}#pmolnk a{white-space:nowrap;background:url(/images/modules/buttons/g-button-chocobo-basic-2.gif) 100% 100% no-repeat;color:#fff;display:block;padding:8px 12px 15px 10px;text-decoration:none}.padi {padding:0 0 4px 8px}.padt {padding:0 6px 4px 6px}</style><div id=pmocntr class=pmoabs><table border=0><tr><td colspan=2><img border=0 src="/images/close_sm.gif" class=pmoc onclick="cpc()"><tr><td class=padi rowspan=2><img src="/images/chrome_48.gif"><td class=padt align=center><b>A faster way to browse the web</b><tr><td class=padt align=center dir=ltr><div id=pmolnk><div><div><a href="/aclk?sa=L&ai=CMDwaOCM7TIi0MIqv4gbPjZW5B8_W3aEB-9_olQ_v-_3lJxABIMFUULKwjvUBYLsGqgSUAU_QpGfsCCT1d4iDFinqBPHIMs6nmdIsfzDF-UtUGr_gjMc_XAzlKMJy_lPWHLjRniVP1sBkhK5rdW1q85XInEs9JuYm4Dk1ofkpAr6hdMN3EZXsHVSk7CsomsS42n4oOQUZtLJ1sLpkc5VOuvAIU17-0Egro-40RlOQGNYLTbGSHyqssz8Ahp3Ehki745351WicSNE&num=1&sig=AGiWqtz44oZT8y_vcAQLTowVZyUZctoAHA&adurl=http://www.google.com/chrome/index.html%3Fhl%3Den%26brand%3DCHNG%26utm_source%3Den-hpp%26utm_medium%3Dhpp%26utm_campaign%3Den"><b>Install Google Chrome</b></a></div></div></table></div><script>(function(){var b=\'pmocntr\',a=document.getElementById(b),c=\'d\',d=\'i\',e;function p(){a.style.display=\'none\'}try{a.load(b);e=a.getAttribute(d)||0;if(a.getAttribute(c)||e>25){p()}else{a.setAttribute(d,++e);a.save(b)}}catch(z){}window.cpc=function(){p();try{a.setAttribute(c,1);a.save(b)}catch(z){}};window.onresize=function(){if(a.offsetWidth*2+document.getElementById(\'logo\').offsetWidth>document.body.clientWidth){a.className=\'pmoflt\'}else{a.className=\'pmoabs\'}};window.lol=function(){window.onresize()}}())</script><br clear=all id=lgpd><div id=lga><img alt="Google" height=110 src="/intl/en_ALL/images/logo2.gif" width=276 id=logo onload="window.lol&&lol()"><br><br></div><form action="/search" name=f><table cellpadding=0 cellspacing=0><tr valign=top><td width=25%>&nbsp;</td><td align=center nowrap><input name=hl type=hidden value=en><input name=source type=hidden value=hp><input autocomplete="off" maxlength=2048 name=q size=55 class=lst title="Google Search" value=""><br><input name=btnG type=submit value="Google Search" class=lsb><input name=btnI type=submit value="I&#39;m Feeling Lucky" class=lsb></td><td nowrap width=25% align=left><font size=-2>&nbsp;&nbsp;<a href="/advanced_search?hl=en">Advanced Search</a><br>&nbsp;&nbsp;<a href="/language_tools?hl=en">Language Tools</a></font></td></tr></table></form><br><span id=footer><center id=fctr><br><font size=-1><a href="/intl/en/ads/">Advertising&nbsp;Programs</a> - <a href="/services/">Business Solutions</a> - <a href="/intl/en/about.html">About Google</a><p id=shf0 style=display:none;behavior:url(#default#homePage)><font size=-1><a href="/aclk?sa=L&ai=Ch8SU4iQ7TMvoHp2x4gbR1rm3B8X4n3yvjpnHCs2tk5cREAEgwVRQvpyhyfj_____AWCrBaoEsgFP0AfDqi9LrsWk8xuAZxV33DBcsflfyeiFyZrQXRUyD-x2QfMpinnjfIrM5cD-YizzdL-m7VKXO6w_kRsOWsPkgD9mKu0K9qXP9FQfHQsHRp0LdDmtlbf1g0E-Md-opiHZKK6_0YlMxALdkw6sN2LZRCkOIQq8LDHViqVDnr8Rqx2bomL0aY_vO6JtJE3QZkkQJkV5ZFLB8R-H0FingtOWISs1zLoTNYlPJwUnqOPcAKF7&num=1&sig=AGiWqtxkwm32U-Ox-AEC_8qXgysR70jfpA&adurl=/mgyhp.html" onclick=xz()>Make Google my homepage</a></p><script>(function(){var a=document.getElementById("shf0"),b="http://www.google.com/";try{a.isHomePage(b)||(a.style.display="block")}catch(z){}window.xz=function(){try{a.setHomePage(b);var c=new Image;c.src="/gen_204?mgmhp=shf0&ct=c&cd="+a.isHomePage(b);window.wy=c}catch(z){}}})();</script></font><p><font size=-2>&copy;2010 - <a href="/intl/en/privacy.html">Privacy</a></font></p></center></span> <div id=xjsd></div><div id=xjsi><script>if(google.y)google.y.first=[];if(google.y)google.y.first=[];google.dstr=[];google.rein=[];window.setTimeout(function(){var a=document.createElement("script");a.src="/extern_js/f/CgJlbhICdXMrMEU4ASwrMFo4AiwrMA44FSwrMBc4BywrMCc4BCwrMDw4AywrMFE4AiwrMAo4bUAvLCswFjgcLCswGTghLCswJTjKiAEsKzBAOBIsKzBOOAUsKzAYOAUsKzAmOAssgAIN/sfSVKzsYj5Q.js";(document.getElementById("xjsd")||document.body).appendChild(a);if(google.timers&&google.timers.load.t)google.timers.load.t.xjsls=(new Date).getTime();},0);\n;google.neegg=1;google.y.first.push(function(){google.ac.i(document.f,document.f.q,\'\',\'\',\'\',{a:1,o:1,l:1});google.History&&google.History.initialize(\'/\')});if(google.j&&google.j.en&&google.j.xi){window.setTimeout(google.j.xi,0);google.fade=null;}</script></div><script>(function(){\nvar b,d,e,f;function g(a,c){if(a.removeEventListener){a.removeEventListener("load",c,false);a.removeEventListener("error",c,false)}else{a.detachEvent("onload",c);a.detachEvent("onerror",c)}}function h(a){f=(new Date).getTime();++d;a=a||window.event;var c=a.target||a.srcElement;g(c,h)}var i=document.getElementsByTagName("img");b=i.length;d=0;for(var j=0,k;j<b;++j){k=i[j];if(k.complete||typeof k.src!="string"||!k.src)++d;else if(k.addEventListener){k.addEventListener("load",h,false);k.addEventListener("error",\nh,false)}else{k.attachEvent("onload",h);k.attachEvent("onerror",h)}}e=b-d;function l(){google.timers.load.t.ol=(new Date).getTime();google.timers.load.t.iml=f;google.kCSI.imc=d;google.kCSI.imn=b;google.kCSI.imp=e;google.report&&google.report(google.timers.load,google.kCSI)}if(window.addEventListener)window.addEventListener("load",l,false);else if(window.attachEvent)window.attachEvent("onload",l);google.timers.load.t.prt=(f=(new Date).getTime());\n})();\n</script>"""
+ 
+@@ -80,9 +76,7 @@ load_layer("http")
+ import os
+ import gzip
+ 
+-tmp = "/test/pcaps/http_compressed.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/http_compressed.pcap")
+ 
+ # First without auto decompression
+ 
+@@ -115,9 +109,7 @@ load_layer("http")
+ import os
+ import brotli
+ 
+-tmp = "/test/pcaps/http_compressed-brotli.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/http_compressed-brotli.pcap")
+ 
+ # First without auto decompression
+ 
+@@ -152,9 +144,7 @@ import zstandard
+ 
+ # sample server: $ socat -v TCP-LISTEN:8080,fork,reuseaddr SYSTEM:'(echo -ne "HTTP/1.1 200 OK\r\nContent-Encoding: zstd\r\n\r\n") > tmp && dd bs=1G count=1 status=none | zstd --stdout >> tmp && cat tmp'
+ # sample client: $ curl -v localhost:8080/tmp_echo_zstd_request_for_testing -o a.html
+-tmp = "/test/pcaps/http_compressed-zstd.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/http_compressed-zstd.pcap")
+ 
+ # First without auto decompression
+ 
+@@ -179,9 +169,7 @@ assert b'tmp_echo_zstd_request_for_testing' in pkts[0].load
+ 
+ = HTTP PSH bug fix
+ 
+-tmp = "/test/pcaps/http_tcp_psh.pcap.gz"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/http_tcp_psh.pcap.gz")
+ 
+ pkts = sniff(offline=filename, session=TCPSession)
+ 
+@@ -208,9 +196,7 @@ from scapy.contrib.http2 import H2Frame
+ 
+ import os
+ 
+-tmp = "/test/pcaps/http2_h2c.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/http2_h2c.pcap")
+ 
+ pkts = sniff(offline=filename, session=TCPSession)
+ 
+diff --git a/test/scapy/layers/netflow.uts b/test/scapy/layers/netflow.uts
+index 45610be891..61f913c80f 100644
+--- a/test/scapy/layers/netflow.uts
++++ b/test/scapy/layers/netflow.uts
+@@ -39,9 +39,7 @@ nf5.version == 5 and nf5[NetflowHeaderV5].count == 2 and isinstance(nf5[NetflowR
+ = NetflowV9 - advanced dissection
+ 
+ import os
+-tmp = "/test/pcaps/netflowv9.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/netflowv9.pcap")
+ a = rdpcap(filename)
+ a = netflowv9_defragment(a)
+ 
+@@ -167,9 +165,7 @@ assert raw(pkt) == dat
+ = IPFix dissection
+ 
+ import os
+-tmp = "/test/pcaps/ipfix.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/ipfix.pcap")
+ a = sniff(offline=filename, session=NetflowSession)
+ 
+ # Templates
+@@ -243,9 +239,7 @@ assert raw(pkt) == b'\x00\n\x00>\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00
+ = NetflowSession - dissect packet NetflowV9 packets on-the-flow
+ 
+ import os
+-tmp = "/test/pcaps/netflowv9.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/netflowv9.pcap")
+ 
+ dissected_packets = []
+ def callback(pkt):
+diff --git a/test/sslv2.uts b/test/sslv2.uts
+index 5222682d91..0959a9cbe2 100644
+--- a/test/sslv2.uts
++++ b/test/sslv2.uts
+@@ -85,9 +85,7 @@ mk_enc.decryptedkey is None
+ 
+ = Reading SSLv2 session - Importing server compromised key
+ import os
+-tmp = "/test/tls/pki/srv_key.pem"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/tls/pki/srv_key.pem")
+ rsa_key = PrivKeyRSA(filename)
+ t.tls_session.server_rsa_key = rsa_key
+ 
+diff --git a/test/tls.uts b/test/tls.uts
+index 56a8ad7e16..cbedcdd20f 100644
+--- a/test/tls.uts
++++ b/test/tls.uts
+@@ -1081,9 +1081,7 @@ assert server_finished.vdata == hex_bytes(b'42c9765e833997b6714fec75')
+ 
+ = Reading TLS test session - Full TLSNewSessionTicket captured
+ import os
+-tmp = "/test/pcaps/tls_new-session-ticket.pcap"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/tls_new-session-ticket.pcap")
+ a = rdpcap(filename)
+ pkt = a[4]
+ assert isinstance(pkt[TLS].msg[0], TLSNewSessionTicket)
+@@ -1184,9 +1182,7 @@ load_layer("tls")
+ from scapy.layers.tls.cert import PrivKeyRSA
+ from scapy.layers.tls.record import TLSApplicationData
+ import os
+-tmp = "/test/tls/pki/srv_key.pem"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/tls/pki/srv_key.pem")
+ key = PrivKeyRSA(filename)
+ ch = b'\x16\x03\x01\x005\x01\x00\x001\x03\x01X\xac\x0e\x8c\xe46\xe9\xedo\xda\x085$M\xae$\x90\xd9\xa93\xb7(\x13J\xf9\xc5?\xef\xf4\x96\xa1\xfa\x00\x00\x04\x00/\x00\xff\x01\x00\x00\x04\x00#\x00\x00'
+ sh = b'\x16\x03\x01\x005\x02\x00\x001\x03\x01\x88\xac\xd4\xaf\x93~\xb5\x1b8c\xe7)\xa6\x9b\xa9\xed\xf3\xf3*\xdb\x00\x8bB\xf6\n\xcbz\x8eP\x83`G\x00\x00/\x00\x00\t\xff\x01\x00\x01\x00\x00#\x00\x00\x16\x03\x01\x03\xac\x0b\x00\x03\xa8\x00\x03\xa5\x00\x03\xa20\x82\x03\x9e0\x82\x02\x86\xa0\x03\x02\x01\x02\x02\t\x00\xfe\x04W\r\xc7\'\xe9\xf60\r\x06\t*\x86H\x86\xf7\r\x01\x01\x0b\x05\x000T1\x0b0\t\x06\x03U\x04\x06\x13\x02MN1\x140\x12\x06\x03U\x04\x07\x0c\x0bUlaanbaatar1\x170\x15\x06\x03U\x04\x0b\x0c\x0eScapy Test PKI1\x160\x14\x06\x03U\x04\x03\x0c\rScapy Test CA0\x1e\x17\r160916102811Z\x17\r260915102811Z0X1\x0b0\t\x06\x03U\x04\x06\x13\x02MN1\x140\x12\x06\x03U\x04\x07\x0c\x0bUlaanbaatar1\x170\x15\x06\x03U\x04\x0b\x0c\x0eScapy Test PKI1\x1a0\x18\x06\x03U\x04\x03\x0c\x11Scapy Test Server0\x82\x01"0\r\x06\t*\x86H\x86\xf7\r\x01\x01\x01\x05\x00\x03\x82\x01\x0f\x000\x82\x01\n\x02\x82\x01\x01\x00\xcc\xf1\xf1\x9b`-`\xae\xf2\x98\r\')\xd9\xc0\tYL\x0fJ0\xa8R\xdf\xe5\xb1!\x9fO\xc3=V\x93\xdd_\xc6\xf7\xb3\xf6U\x8b\xe7\x92\xe2\xde\xf2\x85I\xb4\xa1,\xf4\xfdv\xa8g\xca\x04 `\x11\x18\xa6\xf2\xa9\xb6\xa6\x1d\xd9\xaa\xe5\xd9\xdb\xaf\xe6\xafUW\x9f\xffR\x89e\xe6\x80b\x80!\x94\xbc\xcf\x81\x1b\xcbg\xc2\x9d\xb5\x05w\x04\xa6\xc7\x88\x18\x80xh\x956\xde\x97\x1b\xb6a\x87B\x1au\x98E\x82\xeb>2\x11\xc8\x9b\x86B9\x8dM\x12\xb7X\x1b\x19\xf3\x9d+\xa1\x98\x82\xca\xd7;$\xfb\t9\xb0\xbc\xc2\x95\xcf\x82)u\x16)?B \x17+M@\x8cVl\xad\xba\x0f4\x85\xb1\x7f@yqx\xb7\xa5\x04\xbb\x94\xf7\xb5A\x95\xee|\xeb\x8d\x0cyhY\xef\xcb\xb3\xfa>x\x1e\xeegLz\xdd\xe0\x99\xef\xda\xe7\xef\xb2\t]\xbe\x80 !\x05\x83,D\xdb]*v)\xa5\xb0#\x88t\x07T"\xd6)z\x92\xf5o-\x9e\xe7\xf8&+\x9cXe\x02\x03\x01\x00\x01\xa3o0m0\t\x06\x03U\x1d\x13\x04\x020\x000\x0b\x06\x03U\x1d\x0f\x04\x04\x03\x02\x05\xe00\x1d\x06\x03U\x1d\x0e\x04\x16\x04\x14\xa1+ p\xd2k\x80\xe5e\xbc\xeb\x03\x0f\x88\x9ft\xad\xdd\xf6\x130\x1f\x06\x03U\x1d#\x04\x180\x16\x80\x14fS\x94\xf4\x15\xd1\xbdgh\xb0Q725\xe1\xa4\xaa\xde\x07|0\x13\x06\x03U\x1d%\x04\x0c0\n\x06\x08+\x06\x01\x05\x05\x07\x03\x010\r\x06\t*\x86H\x86\xf7\r\x01\x01\x0b\x05\x00\x03\x82\x01\x01\x00\x81\x88\x92sk\x93\xe7\x95\xd6\xddA\xee\x8e\x1e\xbd\xa3HX\xa7A5?{}\xd07\x98\x0e\xb8,\x94w\xc8Q6@\xadY\t(\xc8V\xd6\xea[\xac\xb4\xd8?h\xb7f\xca\xe1V7\xa9\x00e\xeaQ\xc9\xec\xb2iI]\xf9\xe3\xc0\xedaT\xc9\x12\x9f\xc6\xb0\nsU\xe8U5`\xef\x1c6\xf0\xda\xd1\x90wV\x04\xb8\xab8\xee\xf7\t\xc5\xa5\x98\x90#\xea\x1f\xdb\x15\x7f2(\x81\xab\x9b\x85\x02K\x95\xe77Q{\x1bH.\xfb>R\xa3\r\xb4F\xa9\x92:\x1c\x1f\xd7\n\x1eXJ\xfa.Q\x8f)\xc6\x1e\xb8\x0e1\x0es\xf1\'\x88\x17\xca\xc8i\x0c\xfa\x83\xcd\xb3y\x0e\x14\xb0\xb8\x9b/:-\t\xe3\xfc\x06\xf0:n\xfd6;+\x1a\t*\xe8\xab_\x8c@\xe4\x81\xb2\xbc\xf7\x83g\x11nN\x93\xea"\xaf\xff\xa3\x9awWv\xd0\x0b8\xac\xf8\x8a\x945\x8e\xd7\xd4a\xcc\x01\xff$\xb4\x8fa#\xba\x88\xd7Y\xe4\xe9\xba*N\xb5\x15\x0f\x9c\xd0\xea\x06\x91\xd9\xde\xab\x16\x03\x01\x00\x04\x0e\x00\x00\x00'
+@@ -1498,9 +1494,7 @@ conf.debug_dissector = dd
+ 
+ import os
+ 
+-tmp = "/test/pcaps/tls_tcp_frag.pcap.gz"
+-filename = os.path.abspath(os.path.join(os.path.dirname(__file__),"../")) + tmp
+-filename = os.getenv("SCAPY_ROOT_DIR")+tmp if not os.path.exists(filename) else filename
++filename = scapy_path("/test/pcaps/tls_tcp_frag.pcap.gz")
+ 
+ dd = conf.debug_dissector
+ conf.debug_dissector = False
+diff --git a/test/tls/tests_tls_netaccess.uts b/test/tls/tests_tls_netaccess.uts
+index cd7c4d27f4..95b6b9dc28 100644
+--- a/test/tls/tests_tls_netaccess.uts
++++ b/test/tls/tests_tls_netaccess.uts
+@@ -63,9 +63,6 @@ def check_output_for_data(out, err, expected_data):
+     else:
+         return (False, None)
+ 
+-def get_file(filename):
+-    return os.path.abspath(os.getenv("SCAPY_ROOT_DIR")+filename if not os.path.exists(filename) else filename)
+-
+ 
+ def run_tls_test_server(expected_data, q, curve=None, cookie=False, client_auth=False,
+                         psk=None, handle_session_ticket=False):
+@@ -73,9 +70,8 @@ def run_tls_test_server(expected_data, q, curve=None, cookie=False, client_auth=
+     print("Server started !")
+     with captured_output() as (out, err):
+         # Prepare automaton
+-        mycert = get_file("/test/tls/pki/srv_cert.pem")
+-        mykey = get_file("/test/tls/pki/srv_key.pem")
+-        print(os.environ["SCAPY_ROOT_DIR"])
++        mycert = scapy_path("/test/tls/pki/srv_cert.pem")
++        mykey = scapy_path("/test/tls/pki/srv_key.pem")
+         print(mykey)
+         print(mycert)
+         assert os.path.exists(mycert)
+@@ -104,9 +100,9 @@ def run_tls_test_server(expected_data, q, curve=None, cookie=False, client_auth=
+ def run_openssl_client(msg, suite="", version="", tls13=False, client_auth=False,
+                        psk=None, sess_out=None):
+     # Run client
+-    CA_f = get_file("/test/tls/pki/ca_cert.pem")
+-    mycert = get_file("/test/tls/pki/cli_cert.pem")
+-    mykey = get_file("/test/tls/pki/cli_key.pem")
++    CA_f = scapy_path("/test/tls/pki/ca_cert.pem")
++    mycert = scapy_path("/test/tls/pki/cli_cert.pem")
++    mykey = scapy_path("/test/tls/pki/cli_key.pem")
+     args = [
+         "openssl", "s_client",
+         "-connect", "127.0.0.1:4433", "-debug",
+@@ -222,8 +218,8 @@ def run_tls_test_client(send_data=None, cipher_suite_code=None, version=None,
+                         client_auth=False, key_update=False, stop_server=True,
+                         session_ticket_file_out=None, session_ticket_file_in=None):
+     print("Loading client...")
+-    mycert = get_file("/test/tls/pki/cli_cert.pem") if client_auth else None
+-    mykey = get_file("/test/tls/pki/cli_key.pem") if client_auth else None
++    mycert = scapy_path("/test/tls/pki/cli_cert.pem") if client_auth else None
++    mykey = scapy_path("/test/tls/pki/cli_key.pem") if client_auth else None
+     commands = [send_data]
+     if key_update:
+         commands.append(b"key_update")
+@@ -268,7 +264,7 @@ def test_tls_client(suite, version, curve=None, cookie=False, client_auth=False,
+     print("Thread synchronised")
+     # Run client
+     if sess_in_out:
+-        file_sess = get_file("/test/session")
++        file_sess = scapy_path("/test/session")
+         run_tls_test_client(msg, suite, version, client_auth, key_update, session_ticket_file_out=file_sess,
+                             stop_server=False)
+         run_tls_test_client(msg, suite, version, client_auth, key_update, session_ticket_file_in=file_sess,
+@@ -352,7 +348,7 @@ test_tls_client("1305", "0304", client_auth=True, sess_in_out=True)
+ 
+ = Clear session file
+ 
+-file_sess = get_file("/test/session")
++file_sess = scapy_path("/test/session")
+ try:
+     os.remove(file_sess)
+ except:

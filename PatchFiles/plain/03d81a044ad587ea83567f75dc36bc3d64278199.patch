@@ -1,0 +1,28 @@
+commit 03d81a044ad587ea83567f75dc36bc3d64278199
+Author: Marton Balint <cus@passwd.hu>
+Date:   Mon Jun 27 21:52:35 2022 +0200
+
+    avformat/mov: disallow a zero sample size in trun atoms
+    
+    In order to not generate 0 sized packets or create a huge index table
+    needlessly.
+    
+    Fixes: Timeout
+    Fixes: 43717/clusterfuzz-testcase-minimized-ffmpeg_IO_DEMUXER_fuzzer-5206008287330304
+    Fixes: 45738/clusterfuzz-testcase-minimized-ffmpeg_IO_DEMUXER_fuzzer-6142535657979904
+    
+    Signed-off-by: Marton Balint <cus@passwd.hu>
+
+diff --git a/libavformat/mov.c b/libavformat/mov.c
+index 5d8b24368a..6eb631d45b 100644
+--- a/libavformat/mov.c
++++ b/libavformat/mov.c
+@@ -5179,6 +5179,8 @@ static int mov_read_trun(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+         distance++;
+         if (av_sat_add64(dts, sample_duration) != dts + (uint64_t)sample_duration)
+             return AVERROR_INVALIDDATA;
++        if (!sample_size)
++            return AVERROR_INVALIDDATA;
+         dts += sample_duration;
+         offset += sample_size;
+         sc->data_size += sample_size;

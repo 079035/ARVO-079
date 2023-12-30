@@ -1,0 +1,176 @@
+From f1d1e57a49dca345e086e01b5fccc44e723221e0 Mon Sep 17 00:00:00 2001
+From: "Richard L. Barnes" <richbarn@cisco.com>
+Date: Thu, 9 Dec 2021 15:40:18 -0500
+Subject: [PATCH 1/3] Correctly set null cipher key sizes
+
+---
+ srtp/srtp.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/srtp/srtp.c b/srtp/srtp.c
+index dbb099095..7ce2b5395 100644
+--- a/srtp/srtp.c
++++ b/srtp/srtp.c
+@@ -3277,7 +3277,8 @@ void srtp_crypto_policy_set_null_cipher_hmac_sha1_80(srtp_crypto_policy_t *p)
+      */
+ 
+     p->cipher_type = SRTP_NULL_CIPHER;
+-    p->cipher_key_len = 16;
++    p->cipher_key_len =
++        SRTP_AES_ICM_128_KEY_LEN_WSALT; /* 128 bit key, 112 bit salt */;
+     p->auth_type = SRTP_HMAC_SHA1;
+     p->auth_key_len = 20;
+     p->auth_tag_len = 10;
+@@ -3291,7 +3292,8 @@ void srtp_crypto_policy_set_null_cipher_hmac_null(srtp_crypto_policy_t *p)
+      */
+ 
+     p->cipher_type = SRTP_NULL_CIPHER;
+-    p->cipher_key_len = 16;
++    p->cipher_key_len =
++        SRTP_AES_ICM_128_KEY_LEN_WSALT; /* 128 bit key, 112 bit salt */;
+     p->auth_type = SRTP_NULL_AUTH;
+     p->auth_key_len = 0;
+     p->auth_tag_len = 0;
+
+From 2542d684ce351f1acb27309aaeb5c615c63d1469 Mon Sep 17 00:00:00 2001
+From: "Richard L. Barnes" <richbarn@cisco.com>
+Date: Thu, 9 Dec 2021 16:19:43 -0500
+Subject: [PATCH 2/3] Fix key sizes in null cipher test policies
+
+---
+ srtp/srtp.c        | 10 ++++++++++
+ test/srtp_driver.c | 48 +++++++++++++++++++++++-----------------------
+ 2 files changed, 34 insertions(+), 24 deletions(-)
+
+diff --git a/srtp/srtp.c b/srtp/srtp.c
+index 7ce2b5395..e8f377398 100644
+--- a/srtp/srtp.c
++++ b/srtp/srtp.c
+@@ -937,6 +937,16 @@ srtp_err_status_t srtp_stream_init_keys(srtp_stream_ctx_t *srtp,
+         base_key_length(session_keys->rtp_cipher->type, rtp_keylen);
+     rtp_salt_len = rtp_keylen - rtp_base_key_len;
+ 
++    /*
++     * We assume that the `key` buffer provided by the caller has a length
++     * equal to the greater of `rtp_keylen` and `rtcp_keylen`.  Since we are
++     * about to read `input_keylen` bytes from it, we need to check that we will
++     * not overrun.
++     */
++    if ((rtp_keylen < input_keylen) && (rtcp_keylen < input_keylen)) {
++      return srtp_err_status_bad_param;
++    }
++
+     if (rtp_keylen > kdf_keylen) {
+         kdf_keylen = 46; /* AES-CTR mode is always used for KDF */
+     }
+diff --git a/test/srtp_driver.c b/test/srtp_driver.c
+index db6d3f48e..ed55b218b 100644
+--- a/test/srtp_driver.c
++++ b/test/srtp_driver.c
+@@ -3883,20 +3883,20 @@ const srtp_policy_t aes_only_policy = {
+ const srtp_policy_t hmac_only_policy = {
+     { ssrc_any_outbound, 0 }, /* SSRC */
+     {
+-        SRTP_NULL_CIPHER, /* cipher type                 */
+-        0,                /* cipher key length in octets */
+-        SRTP_HMAC_SHA1,   /* authentication func type    */
+-        20,               /* auth key length in octets   */
+-        4,                /* auth tag length in octets   */
+-        sec_serv_auth     /* security services flag      */
++        SRTP_NULL_CIPHER,               /* cipher type                 */
++        SRTP_AES_ICM_128_KEY_LEN_WSALT, /* cipher key length in octets */
++        SRTP_HMAC_SHA1,                 /* authentication func type    */
++        20,                             /* auth key length in octets   */
++        4,                              /* auth tag length in octets   */
++        sec_serv_auth                   /* security services flag      */
+     },
+     {
+-        SRTP_NULL_CIPHER, /* cipher type                 */
+-        0,                /* cipher key length in octets */
+-        SRTP_HMAC_SHA1,   /* authentication func type    */
+-        20,               /* auth key length in octets   */
+-        4,                /* auth tag length in octets   */
+-        sec_serv_auth     /* security services flag      */
++        SRTP_NULL_CIPHER,               /* cipher type                 */
++        SRTP_AES_ICM_128_KEY_LEN_WSALT, /* cipher key length in octets */
++        SRTP_HMAC_SHA1,                 /* authentication func type    */
++        20,                             /* auth key length in octets   */
++        4,                              /* auth tag length in octets   */
++        sec_serv_auth                   /* security services flag      */
+     },
+     NULL,
+     (srtp_master_key_t **)test_keys,
+@@ -4038,20 +4038,20 @@ const srtp_policy_t aes256_gcm_8_cauth_policy = {
+ const srtp_policy_t null_policy = {
+     { ssrc_any_outbound, 0 }, /* SSRC */
+     {
+-        SRTP_NULL_CIPHER, /* cipher type                 */
+-        0,                /* cipher key length in octets */
+-        SRTP_NULL_AUTH,   /* authentication func type    */
+-        0,                /* auth key length in octets   */
+-        0,                /* auth tag length in octets   */
+-        sec_serv_none     /* security services flag      */
++        SRTP_NULL_CIPHER,               /* cipher type                 */
++        SRTP_AES_GCM_256_KEY_LEN_WSALT, /* cipher key length in octets */
++        SRTP_NULL_AUTH,                 /* authentication func type    */
++        0,                              /* auth key length in octets   */
++        0,                              /* auth tag length in octets   */
++        sec_serv_none                   /* security services flag      */
+     },
+     {
+-        SRTP_NULL_CIPHER, /* cipher type                 */
+-        0,                /* cipher key length in octets */
+-        SRTP_NULL_AUTH,   /* authentication func type    */
+-        0,                /* auth key length in octets   */
+-        0,                /* auth tag length in octets   */
+-        sec_serv_none     /* security services flag      */
++        SRTP_NULL_CIPHER,               /* cipher type                 */
++        SRTP_AES_GCM_256_KEY_LEN_WSALT, /* cipher key length in octets */
++        SRTP_NULL_AUTH,                 /* authentication func type    */
++        0,                              /* auth key length in octets   */
++        0,                              /* auth tag length in octets   */
++        sec_serv_none                   /* security services flag      */
+     },
+     NULL,
+     (srtp_master_key_t **)test_keys,
+
+From c3db75c3c4317a5a2901c7876a3dcc86a9b534e1 Mon Sep 17 00:00:00 2001
+From: "Richard L. Barnes" <richbarn@cisco.com>
+Date: Thu, 9 Dec 2021 16:29:57 -0500
+Subject: [PATCH 3/3] clang-format
+
+---
+ srtp/srtp.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/srtp/srtp.c b/srtp/srtp.c
+index e8f377398..c47830b2a 100644
+--- a/srtp/srtp.c
++++ b/srtp/srtp.c
+@@ -944,7 +944,7 @@ srtp_err_status_t srtp_stream_init_keys(srtp_stream_ctx_t *srtp,
+      * not overrun.
+      */
+     if ((rtp_keylen < input_keylen) && (rtcp_keylen < input_keylen)) {
+-      return srtp_err_status_bad_param;
++        return srtp_err_status_bad_param;
+     }
+ 
+     if (rtp_keylen > kdf_keylen) {
+@@ -3288,7 +3288,7 @@ void srtp_crypto_policy_set_null_cipher_hmac_sha1_80(srtp_crypto_policy_t *p)
+ 
+     p->cipher_type = SRTP_NULL_CIPHER;
+     p->cipher_key_len =
+-        SRTP_AES_ICM_128_KEY_LEN_WSALT; /* 128 bit key, 112 bit salt */;
++        SRTP_AES_ICM_128_KEY_LEN_WSALT; /* 128 bit key, 112 bit salt */
+     p->auth_type = SRTP_HMAC_SHA1;
+     p->auth_key_len = 20;
+     p->auth_tag_len = 10;
+@@ -3303,7 +3303,7 @@ void srtp_crypto_policy_set_null_cipher_hmac_null(srtp_crypto_policy_t *p)
+ 
+     p->cipher_type = SRTP_NULL_CIPHER;
+     p->cipher_key_len =
+-        SRTP_AES_ICM_128_KEY_LEN_WSALT; /* 128 bit key, 112 bit salt */;
++        SRTP_AES_ICM_128_KEY_LEN_WSALT; /* 128 bit key, 112 bit salt */
+     p->auth_type = SRTP_NULL_AUTH;
+     p->auth_key_len = 0;
+     p->auth_tag_len = 0;

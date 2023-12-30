@@ -1,0 +1,93 @@
+From 45683703f1d7aad0b7b2ace59debf341dbaecb01 Mon Sep 17 00:00:00 2001
+From: Dmitry Stogov <dmitry@zend.com>
+Date: Wed, 10 Nov 2021 12:49:20 +0300
+Subject: [PATCH] JIT: Fixed memory leak
+
+---
+ ext/opcache/jit/zend_jit_x86.dasc        | 26 ++++++++++++++++++++++++
+ ext/opcache/tests/jit/assign_op_005.phpt | 18 ++++++++++++++++
+ 2 files changed, 44 insertions(+)
+ create mode 100644 ext/opcache/tests/jit/assign_op_005.phpt
+
+diff --git a/ext/opcache/jit/zend_jit_x86.dasc b/ext/opcache/jit/zend_jit_x86.dasc
+index 9969ad532a298..f44f2a3336e3e 100644
+--- a/ext/opcache/jit/zend_jit_x86.dasc
++++ b/ext/opcache/jit/zend_jit_x86.dasc
+@@ -2149,6 +2149,7 @@ static int zend_jit_undefined_function_stub(dasm_State **Dst)
+ static int zend_jit_negative_shift_stub(dasm_State **Dst)
+ {
+ 	|->negative_shift:
++	|	mov RX, EX->opline
+ 	|	UNDEF_OPLINE_RESULT_IF_USED
+ 	|.if X64
+ 		|.if WIN
+@@ -2171,6 +2172,18 @@ static int zend_jit_negative_shift_stub(dasm_State **Dst)
+ 		|	EXT_CALL zend_throw_error, r0
+ 		|	add r4, 16
+ 	|.endif
++	|	test byte OP:RX->op1_type, (IS_TMP_VAR|IS_VAR)
++	|	je >9
++	|	mov eax, dword OP:RX->op1.var
++	|	add r0, FP
++	|	ZVAL_PTR_DTOR ZEND_ADDR_MEM_ZVAL(ZREG_R0, 0), MAY_BE_ANY|MAY_BE_RC1|MAY_BE_RCN|MAY_BE_REF, 0, 0, NULL
++	|9:
++	|	test byte OP:RX->op2_type, (IS_TMP_VAR|IS_VAR)
++	|	je >9
++	|	mov eax, dword OP:RX->op2.var
++	|	add r0, FP
++	|	ZVAL_PTR_DTOR ZEND_ADDR_MEM_ZVAL(ZREG_R0, 0), MAY_BE_ANY|MAY_BE_RC1|MAY_BE_RCN|MAY_BE_REF, 0, 0, NULL
++	|9:
+ 	|	jmp ->exception_handler
+ 	return 1;
+ }
+@@ -2178,6 +2191,7 @@ static int zend_jit_negative_shift_stub(dasm_State **Dst)
+ static int zend_jit_mod_by_zero_stub(dasm_State **Dst)
+ {
+ 	|->mod_by_zero:
++	|	mov RX, EX->opline
+ 	|	UNDEF_OPLINE_RESULT_IF_USED
+ 	|.if X64
+ 		|.if WIN
+@@ -2200,6 +2214,18 @@ static int zend_jit_mod_by_zero_stub(dasm_State **Dst)
+ 		|	EXT_CALL zend_throw_error, r0
+ 		|	add r4, 16
+ 	|.endif
++	|	test byte OP:RX->op1_type, (IS_TMP_VAR|IS_VAR)
++	|	je >9
++	|	mov eax, dword OP:RX->op1.var
++	|	add r0, FP
++	|	ZVAL_PTR_DTOR ZEND_ADDR_MEM_ZVAL(ZREG_R0, 0), MAY_BE_ANY|MAY_BE_RC1|MAY_BE_RCN|MAY_BE_REF, 0, 0, NULL
++	|9:
++	|	test byte OP:RX->op2_type, (IS_TMP_VAR|IS_VAR)
++	|	je >9
++	|	mov eax, dword OP:RX->op2.var
++	|	add r0, FP
++	|	ZVAL_PTR_DTOR ZEND_ADDR_MEM_ZVAL(ZREG_R0, 0), MAY_BE_ANY|MAY_BE_RC1|MAY_BE_RCN|MAY_BE_REF, 0, 0, NULL
++	|9:
+ 	|	jmp ->exception_handler
+ 	return 1;
+ }
+diff --git a/ext/opcache/tests/jit/assign_op_005.phpt b/ext/opcache/tests/jit/assign_op_005.phpt
+new file mode 100644
+index 0000000000000..bc349f65c9eb6
+--- /dev/null
++++ b/ext/opcache/tests/jit/assign_op_005.phpt
+@@ -0,0 +1,18 @@
++--TEST--
++JIT ASSIGN_OP: 005
++--INI--
++opcache.enable=1
++opcache.enable_cli=1
++opcache.file_update_protection=0
++opcache.jit_buffer_size=1M
++--FILE--
++<?php
++$a = ["xy" => 0];
++$x = "";
++$a["x{$x}y"] %= 0;
++?>
++--EXPECTF--
++Fatal error: Uncaught DivisionByZeroError: Modulo by zero in %sassign_op_005.php:4
++Stack trace:
++#0 {main}
++  thrown in %sassign_op_005.php on line 4

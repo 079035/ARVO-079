@@ -1,0 +1,40 @@
+From 37371268d14ed6d5739af5b65d8bdb38b0e8dda2 Mon Sep 17 00:00:00 2001
+From: practicalswift <practicalswift@users.noreply.github.com>
+Date: Tue, 25 May 2021 21:09:09 +0000
+Subject: [PATCH] Mark `CheckTxInputs` `[[nodiscard]]` (out-param `txfee` only
+ set if call is successful). Avoid UUM in fuzzing harness `coins_view`.
+
+---
+ src/consensus/tx_verify.h    | 2 +-
+ src/test/fuzz/coins_view.cpp | 5 +++--
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/consensus/tx_verify.h b/src/consensus/tx_verify.h
+index e78dc9f2a5a07..d5fd43e1314bc 100644
+--- a/src/consensus/tx_verify.h
++++ b/src/consensus/tx_verify.h
+@@ -24,7 +24,7 @@ namespace Consensus {
+  * @param[out] txfee Set to the transaction fee if successful.
+  * Preconditions: tx.IsCoinBase() is false.
+  */
+-bool CheckTxInputs(const CTransaction& tx, TxValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight, CAmount& txfee);
++[[nodiscard]] bool CheckTxInputs(const CTransaction& tx, TxValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight, CAmount& txfee);
+ } // namespace Consensus
+ 
+ /** Auxiliary functions for transaction validation (ideally should not be exposed) */
+diff --git a/src/test/fuzz/coins_view.cpp b/src/test/fuzz/coins_view.cpp
+index 878b5a27dada8..b509ee0b266f4 100644
+--- a/src/test/fuzz/coins_view.cpp
++++ b/src/test/fuzz/coins_view.cpp
+@@ -236,8 +236,9 @@ FUZZ_TARGET_INIT(coins_view, initialize_coins_view)
+                     // It is not allowed to call CheckTxInputs if CheckTransaction failed
+                     return;
+                 }
+-                (void)Consensus::CheckTxInputs(transaction, state, coins_view_cache, fuzzed_data_provider.ConsumeIntegralInRange<int>(0, std::numeric_limits<int>::max()), tx_fee_out);
+-                assert(MoneyRange(tx_fee_out));
++                if (Consensus::CheckTxInputs(transaction, state, coins_view_cache, fuzzed_data_provider.ConsumeIntegralInRange<int>(0, std::numeric_limits<int>::max()), tx_fee_out)) {
++                    assert(MoneyRange(tx_fee_out));
++                }
+             },
+             [&] {
+                 const CTransaction transaction{random_mutable_transaction};

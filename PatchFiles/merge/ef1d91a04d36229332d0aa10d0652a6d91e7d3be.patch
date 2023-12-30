@@ -1,0 +1,9 @@
+commit ef1d91a04d36229332d0aa10d0652a6d91e7d3be
+Merge: a367293a 963446e2
+Author: LibRaw LLC <info@libraw.org>
+Date:   Tue Aug 30 16:23:25 2022 +0300
+
+    Merge pull request #480 from sashashura/patch-4
+    
+    Fixes Use-of-uninitialized-value in LibRaw::init_fuji_block
+

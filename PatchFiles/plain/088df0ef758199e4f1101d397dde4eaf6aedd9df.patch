@@ -1,0 +1,45 @@
+From 088df0ef758199e4f1101d397dde4eaf6aedd9df Mon Sep 17 00:00:00 2001
+From: Cristy <mikayla-grace@urban-warrior.org>
+Date: Fri, 8 May 2020 18:55:23 -0400
+Subject: [PATCH] https://github.com/ImageMagick/ImageMagick/issues/1999
+
+---
+ coders/txt.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/coders/txt.c b/coders/txt.c
+index a835784a342..f843b79e56e 100644
+--- a/coders/txt.c
++++ b/coders/txt.c
+@@ -443,6 +443,7 @@ static Image *ReadTXTImage(const ImageInfo *image_info,ExceptionInfo *exception)
+     ThrowReaderException(CorruptImageError,"ImproperImageHeader");
+   x_offset=(-1.0);
+   y_offset=(-1.0);
++  q=(Quantum *) NULL;
+   do
+   {
+     width=0;
+@@ -576,7 +577,10 @@ static Image *ReadTXTImage(const ImageInfo *image_info,ExceptionInfo *exception)
+         q=GetAuthenticPixels(image,(ssize_t) x_offset,(ssize_t) y_offset,1,1,
+           exception);
+         if (q == (Quantum *) NULL)
+-          continue;
++          {
++            status=MagickFalse;
++            break;
++          }
+         SetPixelViaPixelInfo(image,&pixel,q);
+         if (SyncAuthenticPixels(image,exception) == MagickFalse)
+           {
+@@ -608,9 +612,8 @@ static Image *ReadTXTImage(const ImageInfo *image_info,ExceptionInfo *exception)
+       }
+   } while (LocaleNCompare((char *) text,MagickTXTID,strlen(MagickTXTID)) == 0);
+   (void) CloseBlob(image);
+-  if (status == MagickFalse)
+-    (void) ThrowMagickException(exception,GetMagickModule(),CorruptImageWarning,
+-      "InsufficientImageDataInFile","`%s'",image->filename);
++  if (q == (Quantum *) NULL)
++    return(DestroyImage(image));
+   return(GetFirstImageInList(image));
+ }
+ 

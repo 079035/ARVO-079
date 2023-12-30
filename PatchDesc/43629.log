@@ -1,12 +1,10 @@
-Vulnerability:
-The vulnerability in the provided diff file is related to uninitialized pixels in the `allocCompositeData` function in the `GrkImage.cpp` file. When multiple tiles are present (`multiTile` is true), the function checks if the output component dimensions are valid and then allocates pixel data for each component. However, there is a possibility of uninitialized pixel data in the `destComp->data` if the allocation fails.
+1. Vulnerability:
+The vulnerability in the original code was that it could potentially lead to the use of uninitialized pixels when the image data was truncated. This could result in undefined behavior, which could be exploited to cause crashes, incorrect program behavior, or even security vulnerabilities.
 
-Summary of the Fix:
-The fix involves zeroing out the composite data to avoid uninitialized pixels when allocating pixel data for the components.
+2. Short Summary of the Fix:
+The fix for this vulnerability involves initializing the pixel data when it is allocated. This is done by passing an additional argument to the `GrkImage::allocData` function, which causes the allocated data to be zeroed out.
 
-Detailed Description of the Fix:
-To fix the vulnerability, the following changes were made in the `GrkImage.cpp` file:
+3. Detailed Description of the Fix:
+In the original code, the `GrkImage::allocData` function was called with a single argument, `destComp`, which is a pointer to the component for which data is being allocated. The function would allocate the necessary memory, but it would not initialize it, potentially leaving it with garbage values.
 
-- Line 400: The function call `GrkImage::allocData(destComp)` has been replaced with `GrkImage::allocData(destComp, true)`. The second argument `true` indicates to zero out the allocated data.
-
-This change ensures that if the allocation fails, the `destComp->data` is allocated and zeroed out to avoid uninitialized pixel data.
+In the patched code, an additional argument, `true`, is passed to the `GrkImage::allocData` function. This argument is a boolean flag that indicates whether the allocated data should be zeroed out. By passing `true`, the function will not only allocate the necessary memory, but also initialize it to zero. This ensures that even if the image data is truncated, the uninitialized pixels will simply be zero, avoiding the undefined behavior that could occur in the original code.

@@ -1,0 +1,52 @@
+From 4b81f09a68d3176af36489a52c2c6ec494ffe644 Mon Sep 17 00:00:00 2001
+From: Nguyen Anh Quynh <aquynh@gmail.com>
+Date: Tue, 19 Mar 2019 00:17:35 +0800
+Subject: [PATCH] arm: brkdiv0 is invalid code. TODO: this is just a quick fix,
+ later fix thisn in tablegen
+
+---
+ arch/ARM/ARMDisassembler.c    | 4 ++++
+ arch/ARM/ARMMappingInsn.inc   | 6 ------
+ arch/ARM/ARMMappingInsnOp.inc | 3 ---
+ 3 files changed, 4 insertions(+), 9 deletions(-)
+
+diff --git a/arch/ARM/ARMDisassembler.c b/arch/ARM/ARMDisassembler.c
+index df6862af57..b2e5723af7 100644
+--- a/arch/ARM/ARMDisassembler.c
++++ b/arch/ARM/ARMDisassembler.c
+@@ -948,6 +948,10 @@ bool Thumb_getInstruction(csh ud, const uint8_t *code, size_t code_len, MCInst *
+ {
+ 	DecodeStatus status = _Thumb_getInstruction((cs_struct *)ud, instr, code, code_len, size, address);
+ 
++	// TODO: fix table gen to eliminate these special cases
++	if (instr->Opcode == ARM_t__brkdiv0)
++		return false;
++
+ 	//return status == MCDisassembler_Success;
+ 	return status != MCDisassembler_Fail;
+ }
+diff --git a/arch/ARM/ARMMappingInsn.inc b/arch/ARM/ARMMappingInsn.inc
+index fa9d908084..74fe82153e 100644
+--- a/arch/ARM/ARMMappingInsn.inc
++++ b/arch/ARM/ARMMappingInsn.inc
+@@ -18770,9 +18770,3 @@
+ #endif
+ },
+ 
+-{
+-	ARM_t__brkdiv0, ARM64_INS_BRK,
+-#ifndef CAPSTONE_DIET
+-	{ 0 }, { 0 }, { ARM_GRP_THUMB, ARM_GRP_THUMB1ONLY, ARM_GRP_V6, 0 }, 0, 0
+-#endif
+-},
+diff --git a/arch/ARM/ARMMappingInsnOp.inc b/arch/ARM/ARMMappingInsnOp.inc
+index 7cfb8f1d88..8db4589874 100644
+--- a/arch/ARM/ARMMappingInsnOp.inc
++++ b/arch/ARM/ARMMappingInsnOp.inc
+@@ -10727,6 +10727,3 @@
+ 	{ CS_AC_WRITE, CS_AC_READ, 0 }
+ },
+ 
+-{	/* ARM_t__brkdiv0, ARM_INS_BRK: brkdiv0 */
+-	{ CS_AC_WRITE, CS_AC_READ, 0 }
+-},

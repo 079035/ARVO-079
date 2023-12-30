@@ -1,14 +1,8 @@
-Vulnerability:
-The vulnerability being patched in this diff file is related to the allocation of the bitstream buffer in the mvcdec module. The default bitstream buffer size is set to 256000. However, it is found that the worst case FGC SEI (Film Grain Characteristics Supplemental Enhancement Information) payload size, along with the worst case sizes of other NALUs (Network Abstraction Layer Units), can be significantly larger than the default buffer size. This can lead to buffer overflow or data loss if the buffer is not large enough to accommodate the worst-case payload.
+1. Vulnerability:
+The vulnerability in the code was related to the allocation of the bitstream buffer size. The original size of 256000 did not account for the worst-case FGC SEI payload size. This could potentially lead to buffer overflow issues if the payload size in conjunction with other NALU's sizes exceeded the default bitstream buffer size.
 
-Summary of Fix:
-To address this vulnerability, the fix increases the size of the minimum bitstream buffer by adding the MAX_FGC_SEI_SIZE to the default buffer size. MAX_FGC_SEI_SIZE is calculated as the sum of the worst-case sizes for all elements in the FGC SEI payload, which is determined to be 110702 bytes.
+2. Short Summary of the Fix:
+The fix involves adjusting the bitstream buffer size to account for the worst-case FGC SEI payload size. The new buffer size is set to the sum of the original size (256000) and the maximum FGC SEI size.
 
-Detailed Description of Fix:
-1. The fix modifies the "imvcd_defs.h" file in the "decoder/mvc" directory.
-2. It adds a new macro named "MAX_FGC_SEI_SIZE" defined as 110702, which represents the worst-case size of the FGC SEI payload.
-3. The existing macro "MIN_BITSTREAMS_BUF_SIZE" is modified to be calculated as the sum of MAX_FGC_SEI_SIZE and the default buffer size (256000). This ensures that the buffer size accounts for the worst-case FGC SEI payload.
-4. The modified "MIN_BITSTREAMS_BUF_SIZE" is used for allocating the bitstream buffer in the mvcdec module.
-5. With this fix, the bitstream buffer size is increased to accommodate the worst-case payload size, preventing buffer overflow or data loss.
-
-Note: The diff file also mentions the bug ID "ossFuzz:58190" and the test "mvc_dec_fuzzer" for verification.
+3. Detailed Description of the Fix:
+In the updated code, a new constant `MAX_FGC_SEI_SIZE` is defined, which represents the worst-case size of the FGC SEI payload. This size is calculated based on the worst-case bits for all elements before 'num_intensity_intervals_minus1', 'film_grain_characteristics_repetition_period', and the elements from the previous line. The `MIN_BITSTREAMS_BUF_SIZE` is then updated to be the sum of `MAX_FGC_SEI_SIZE` and the original buffer size (256000). This ensures that the buffer size is large enough to handle the worst-case scenario, thus preventing potential buffer overflow issues.

@@ -1,0 +1,22 @@
+From 901c4bce459d42dd8e945c4b24f94fa885e1556c Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Tue, 23 Jan 2018 09:54:43 -0500
+Subject: [PATCH] Eliminate invalid write Credit OSS Fuzz
+
+---
+ MagickCore/quantum.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/MagickCore/quantum.c b/MagickCore/quantum.c
+index ab70316857f..c036a7777e9 100644
+--- a/MagickCore/quantum.c
++++ b/MagickCore/quantum.c
+@@ -689,7 +689,7 @@ MagickExport MagickBooleanType SetQuantumDepth(const Image *image,
+   if (quantum_info->pixels != (MemoryInfo **) NULL)
+     DestroyQuantumPixels(quantum_info);
+   quantum=(quantum_info->pad+MaxPixelChannels)*(quantum_info->depth+7)/8;
+-  extent=MagickMax(image->columns,image->rows)*quantum;
++  extent=4*MagickMax(image->columns,image->rows)*quantum;
+   if ((MagickMax(image->columns,image->rows) != 0) &&
+       (quantum != (extent/MagickMax(image->columns,image->rows))))
+     return(MagickFalse);

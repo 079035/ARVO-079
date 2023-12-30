@@ -1,0 +1,38 @@
+commit 21bb933f381321a58bffee8d3d392dee0e8b0c87
+Author: Michael Stahl <michael.stahl@allotropia.de>
+Date:   Wed Mar 1 13:25:02 2023 +0100
+
+    ofz#56382 sw: HTML import: init items with WhichId
+    
+    (regression from commit db115bec9254417ef7a3faf687478fe5424ab378)
+    
+    Change-Id: Ib4865ad1423f0dafb20b376a9d00eaf450b8f271
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/148049
+    Reviewed-by: Michael Stahl <michael.stahl@allotropia.de>
+    Tested-by: Jenkins
+
+diff --git a/sw/source/filter/html/swhtml.cxx b/sw/source/filter/html/swhtml.cxx
+index 14dc6b67b2b7..641bc3d87d1e 100644
+--- a/sw/source/filter/html/swhtml.cxx
++++ b/sw/source/filter/html/swhtml.cxx
+@@ -5369,16 +5369,16 @@ void SwHTMLParser::InsertHorzRule()
+                 switch( eAdjust )
+                 {
+                 case SvxAdjust::Right:
+-                    oLeft.emplace(o3tl::narrowing<sal_uInt16>(nDist), RES_MARGIN_RIGHT);
++                    oLeft.emplace(o3tl::narrowing<sal_uInt16>(nDist), RES_MARGIN_TEXTLEFT);
+                     break;
+                 case SvxAdjust::Left:
+-                    oRight.emplace(o3tl::narrowing<sal_uInt16>(nDist));
++                    oRight.emplace(o3tl::narrowing<sal_uInt16>(nDist), RES_MARGIN_RIGHT);
+                     break;
+                 case SvxAdjust::Center:
+                 default:
+                     nDist /= 2;
+-                    oLeft.emplace(o3tl::narrowing<sal_uInt16>(nDist));
+-                    oRight.emplace(o3tl::narrowing<sal_uInt16>(nDist));
++                    oLeft.emplace(o3tl::narrowing<sal_uInt16>(nDist), RES_MARGIN_TEXTLEFT);
++                    oRight.emplace(o3tl::narrowing<sal_uInt16>(nDist), RES_MARGIN_RIGHT);
+                     break;
+                 }
+ 

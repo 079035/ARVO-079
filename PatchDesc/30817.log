@@ -1,15 +1,17 @@
-Vulnerability:
+1. Vulnerability:
+The vulnerability in the original code was a heap buffer overflow. This type of vulnerability occurs when a program writes more data to a block of allocated memory (a heap) than it can hold. This can lead to the corruption of valid data, causing the program to crash or, in the worst case, enabling an attacker to execute arbitrary code.
 
-A heap buffer overflow vulnerability was found and fixed in the code.
+2. Short Summary of the Fix:
+The fix involves adding a check to ensure that the `ligature_count` does not exceed the length of the array `this->len`. This prevents the program from writing beyond the allocated memory, thus avoiding a heap buffer overflow.
 
-Summary of Fix:
+3. Detailed Description of the Fix:
+In the original code, the `ligature_count` was incremented for each `gid` in `coverage` without checking if it exceeded the length of the array `this->len`. This could lead to a situation where the program would try to write to a location beyond the allocated memory, causing a heap buffer overflow.
 
-The fix ensures that the ligature_count variable does not exceed the length of the LigatureArray, preventing a heap buffer overflow.
+The fix adds a check before incrementing `ligature_count`. If `ligature_count` is greater than or equal to `this->len`, the loop breaks, preventing the program from writing beyond the allocated memory. This effectively prevents the heap buffer overflow vulnerability.
 
-Detailed Description of Fix:
-
-In the original code, the ligature_count variable was incremented without any bounds checking, potentially causing it to exceed the length of the LigatureArray. This could lead to a heap buffer overflow if the coverage iterator contained more elements than the array length.
-
-To fix this issue, a check was added before incrementing ligature_count to ensure that it does not exceed the length of the LigatureArray. If ligature_count is greater than or equal to the array length, the loop is exited using the break statement.
-
-With this fix, the heap buffer overflow vulnerability is mitigated by preventing the ligature_count variable from going beyond the allocated memory for the LigatureArray.
+The code change is as follows:
+```
++      if (ligature_count >= this->len)
++        break;
+```
+This code is added before incrementing `ligature_count`. It checks if `ligature_count` is greater than or equal to the length of the array. If it is, the loop is broken, preventing any further incrementing of `ligature_count` and any potential heap buffer overflow.

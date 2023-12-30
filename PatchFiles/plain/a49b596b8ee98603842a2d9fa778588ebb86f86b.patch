@@ -1,0 +1,52 @@
+From a49b596b8ee98603842a2d9fa778588ebb86f86b Mon Sep 17 00:00:00 2001
+From: "chamarthi.kishore" <chamarthi.kishore@ittiam.com>
+Date: Mon, 27 Feb 2023 14:34:15 +0530
+Subject: [PATCH] svcdec: Modifications to the conditions in NON VCL NAL
+ parsing.
+
+BUG=oss-fuzz: 56386
+Test: svc_dec_fuzzer
+---
+ decoder/svc/isvcd_nal_parse.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/decoder/svc/isvcd_nal_parse.c b/decoder/svc/isvcd_nal_parse.c
+index 922e92d8..3dbdb9c1 100644
+--- a/decoder/svc/isvcd_nal_parse.c
++++ b/decoder/svc/isvcd_nal_parse.c
+@@ -2040,7 +2040,7 @@ WORD32 isvcd_nal_parse_vcl_nal_partial(void *pv_nal_parse_ctxt, UWORD8 *pu1_stre
+         {
+             ppu1_out_buf = &ps_nal_parse_ctxt->pu1_vcl_nal_buf;
+             pu4_bytes_left = &ps_nal_parse_ctxt->u4_bytes_left_vcl;
+-            if(*pu4_bytes_left < MAX_VCL_NAL_BUFF_SIZE * 0.05)
++            if(*pu4_bytes_left < (MAX_VCL_NAL_BUFF_SIZE * 0.05))
+             {
+                 return (VCL_NAL_FOUND_FALSE);
+             }
+@@ -2049,7 +2049,7 @@ WORD32 isvcd_nal_parse_vcl_nal_partial(void *pv_nal_parse_ctxt, UWORD8 *pu1_stre
+         {
+             ppu1_out_buf = &ps_nal_parse_ctxt->pu1_non_vcl_nal_buf;
+             pu4_bytes_left = &ps_nal_parse_ctxt->u4_bytes_left_non_vcl;
+-            if(*pu4_bytes_left < MAX_NON_VCL_NAL_BUFF_SIZE * 0.05)
++            if(*pu4_bytes_left < (MAX_NON_VCL_NAL_BUFF_SIZE * 0.05))
+             {
+                 return (VCL_NAL_FOUND_FALSE);
+             }
+@@ -2336,7 +2336,7 @@ WORD32 isvcd_nal_parse_non_vcl_nal(void *pv_nal_parse_ctxt, UWORD8 *pu1_stream_b
+         {
+             ppu1_out_buf = &ps_nal_parse_ctxt->pu1_vcl_nal_buf;
+             pu4_bytes_left = &ps_nal_parse_ctxt->u4_bytes_left_vcl;
+-            if(*pu4_bytes_left < MAX_VCL_NAL_BUFF_SIZE * 0.05)
++            if(*pu4_bytes_left < (MAX_VCL_NAL_BUFF_SIZE * 0.05))
+             {
+                 return (VCL_NAL_FOUND_FALSE);
+             }
+@@ -2345,7 +2345,7 @@ WORD32 isvcd_nal_parse_non_vcl_nal(void *pv_nal_parse_ctxt, UWORD8 *pu1_stream_b
+         {
+             ppu1_out_buf = &ps_nal_parse_ctxt->pu1_non_vcl_nal_buf;
+             pu4_bytes_left = &ps_nal_parse_ctxt->u4_bytes_left_non_vcl;
+-            if(*pu4_bytes_left < MAX_NON_VCL_NAL_BUFF_SIZE * 0.05)
++            if(*pu4_bytes_left < (MAX_NON_VCL_NAL_BUFF_SIZE * 0.05))
+             {
+                 return (VCL_NAL_FOUND_FALSE);
+             }

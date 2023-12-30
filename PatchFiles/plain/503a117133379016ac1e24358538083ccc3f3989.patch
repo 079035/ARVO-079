@@ -1,0 +1,55 @@
+From 503a117133379016ac1e24358538083ccc3f3989 Mon Sep 17 00:00:00 2001
+From: Thomas Van Lenten <thomasvl@google.com>
+Date: Wed, 14 Apr 2021 17:02:05 -0400
+Subject: [PATCH] Avoid walking off the end of the buffer in two parsing cases.
+
+---
+ Sources/SwiftProtobuf/TextFormatScanner.swift |  7 +++++++
+ Tests/SwiftProtobufTests/Test_FuzzTests.swift | 10 ++++++++++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/Sources/SwiftProtobuf/TextFormatScanner.swift b/Sources/SwiftProtobuf/TextFormatScanner.swift
+index 85d34c401..f0fac48ee 100644
+--- a/Sources/SwiftProtobuf/TextFormatScanner.swift
++++ b/Sources/SwiftProtobuf/TextFormatScanner.swift
+@@ -598,6 +598,10 @@ internal struct TextFormatScanner {
+         let c = p[0]
+         p += 1
+         if c == asciiZero { // leading '0' precedes octal or hex
++            if p == end {
++                // The TextFormat ended with a field value of zero.
++                return 0
++            }
+             if p[0] == asciiLowerX { // 'x' => hex
+                 p += 1
+                 var n: UInt64 = 0
+@@ -683,6 +687,9 @@ internal struct TextFormatScanner {
+         let c = p[0]
+         if c == asciiMinus { // -
+             p += 1
++            if p == end {
++                throw TextFormatDecodingError.malformedNumber
++            }
+             // character after '-' must be digit
+             let digit = p[0]
+             if digit < asciiZero || digit > asciiNine {
+diff --git a/Tests/SwiftProtobufTests/Test_FuzzTests.swift b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+index 55df18a80..ed3f14baa 100644
+--- a/Tests/SwiftProtobufTests/Test_FuzzTests.swift
++++ b/Tests/SwiftProtobufTests/Test_FuzzTests.swift
+@@ -103,5 +103,15 @@ class Test_FuzzTests: XCTestCase {
+       0x34, 0x34, 0x3a, 0x27, 0x32, 0x5c, 0x35, 0x30, 0x31, 0x39, 0x31, 0x3c,
+       0x31, 0x0f, 0x3a, 0x27
+     ])
++
++    // This was caught in by the address sanitizer in a fuzz of the release
++    // build. The code when seeing the last zero was trying to see if it was
++    // octal or hex input and trying to read the next byte without checking if
++    // it was past the end.
++    assertTextFormatSucceeds("    1:0    1:0      1:0")
++    // Code inspection showed that handling a negative value could read off the
++    // end also. Tweaking an input file to this confirmed that the test also
++    // tripped up with the memory issue.
++    assertTextFormatFails("    1:0    1:0      5:-")
+   }
+ }

@@ -1,5 +1,5 @@
 {
-    "fix": "https://chromium.googlesource.com/chromiumos/third_party/tpm2/+/65c804e123ea391008f7675bec4b4108669a0f58",
+    "fix": "https://chromium.googlesource.com/chromiumos/third_party/tpm2/+/65c804e123ea391008f7675bec4b4108669a0f58%5E%21/",
     "verify": "0",
     "localId": 45974,
     "project": "tpm2",

@@ -1,5 +1,5 @@
 {
-    "fix": "https://chromium.googlesource.com/chromiumos/third_party/adhd/+/93da42478916101d701158c355f06912ae526f15",
+    "fix": "https://chromium.googlesource.com/chromiumos/third_party/adhd/+/93da42478916101d701158c355f06912ae526f15%5E%21/",
     "verify": "0",
     "localId": 9242,
     "project": "adhd",

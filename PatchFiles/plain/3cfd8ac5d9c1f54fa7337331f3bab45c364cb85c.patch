@@ -1,0 +1,113 @@
+From 3cfd8ac5d9c1f54fa7337331f3bab45c364cb85c Mon Sep 17 00:00:00 2001
+From: Cory Benfield <lukasa@apple.com>
+Date: Fri, 16 Sep 2022 17:33:40 +0200
+Subject: [PATCH] Add support for newer LLHTTP status codes (#2269)
+
+Motivation:
+
+We should better tolerate LLHTTP status codes we don't yet know about.
+
+Modifications:
+
+- Added support for the status codes that currently exist
+- Add a fallback to the RAW case for the future.
+
+Result:
+
+Better management of LLHTTP status codes
+---
+ Sources/NIOHTTP1/HTTPDecoder.swift            | 26 +++++++++++++++-
+ .../HTTPDecoderTest+XCTest.swift              |  1 +
+ Tests/NIOHTTP1Tests/HTTPDecoderTest.swift     | 31 +++++++++++++++++++
+ 3 files changed, 57 insertions(+), 1 deletion(-)
+
+diff --git a/Sources/NIOHTTP1/HTTPDecoder.swift b/Sources/NIOHTTP1/HTTPDecoder.swift
+index 8a6fa394ec..29a2e11493 100644
+--- a/Sources/NIOHTTP1/HTTPDecoder.swift
++++ b/Sources/NIOHTTP1/HTTPDecoder.swift
+@@ -911,8 +911,32 @@ extension HTTPMethod {
+         case HTTP_SOURCE:
+             // This isn't ideal really.
+             return .RAW(value: "SOURCE")
++        case HTTP_PRI:
++            return .RAW(value: "PRI")
++        case HTTP_DESCRIBE:
++            return .RAW(value: "DESCRIBE")
++        case HTTP_ANNOUNCE:
++            return .RAW(value: "ANNOUNCE")
++        case HTTP_SETUP:
++            return .RAW(value: "SETUP")
++        case HTTP_PLAY:
++            return .RAW(value: "PLAY")
++        case HTTP_PAUSE:
++            return .RAW(value: "PAUSE")
++        case HTTP_TEARDOWN:
++            return .RAW(value: "TEARDOWN")
++        case HTTP_GET_PARAMETER:
++            return .RAW(value: "GET_PARAMETER")
++        case HTTP_SET_PARAMETER:
++            return .RAW(value: "SET_PARAMETER")
++        case HTTP_REDIRECT:
++            return .RAW(value: "REDIRECT")
++        case HTTP_RECORD:
++            return .RAW(value: "RECORD")
++        case HTTP_FLUSH:
++            return .RAW(value: "FLUSH")
+         default:
+-            fatalError("Unexpected http_method \(httpParserMethod)")
++            return .RAW(value: String(cString: c_nio_llhttp_method_name(httpParserMethod)))
+         }
+     }
+ }
+diff --git a/Tests/NIOHTTP1Tests/HTTPDecoderTest+XCTest.swift b/Tests/NIOHTTP1Tests/HTTPDecoderTest+XCTest.swift
+index ce53f06cb6..e530124a7e 100644
+--- a/Tests/NIOHTTP1Tests/HTTPDecoderTest+XCTest.swift
++++ b/Tests/NIOHTTP1Tests/HTTPDecoderTest+XCTest.swift
+@@ -61,6 +61,7 @@ extension HTTPDecoderTest {
+                 ("testDecodingLongHeaderFieldNames", testDecodingLongHeaderFieldNames),
+                 ("testDecodingLongHeaderFieldValues", testDecodingLongHeaderFieldValues),
+                 ("testDecodingLongURLs", testDecodingLongURLs),
++                ("testDecodingRTSPQueries", testDecodingRTSPQueries),
+            ]
+    }
+ }
+diff --git a/Tests/NIOHTTP1Tests/HTTPDecoderTest.swift b/Tests/NIOHTTP1Tests/HTTPDecoderTest.swift
+index 12ff18c12d..86ec95c569 100644
+--- a/Tests/NIOHTTP1Tests/HTTPDecoderTest.swift
++++ b/Tests/NIOHTTP1Tests/HTTPDecoderTest.swift
+@@ -995,4 +995,35 @@ class HTTPDecoderTest: XCTestCase {
+         // We know we'll see an error, we can safely drop it.
+         _ = try? self.channel.finish()
+     }
++
++    func testDecodingRTSPQueries() {
++        let queries = [
++            "DESCRIBE", "ANNOUNCE", "SETUP", "PLAY", "PAUSE",
++            "TEARDOWN", "GET_PARAMETER", "SET_PARAMETER", "REDIRECT",
++            "RECORD", "FLUSH"
++        ]
++
++        for query in queries {
++            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
++            defer {
++                _ = try? channel.finish()
++            }
++
++            let bytes = ByteBuffer(string: "\(query) / RTSP/1.1\r\nHost: example.com\r\nContent-Length: 0\r\n\r\n")
++            XCTAssertNoThrow(try channel.writeInbound(bytes), "Error writing \(query)")
++
++            var maybeHead: HTTPServerRequestPart? = nil
++            var maybeEnd: HTTPServerRequestPart? = nil
++
++            XCTAssertNoThrow(maybeHead = try channel.readInbound())
++            XCTAssertNoThrow(maybeEnd = try channel.readInbound())
++
++            guard case .some(.head(let head)) = maybeHead, case .some(.end(nil)) = maybeEnd else {
++                XCTFail("Did not receive correct bytes for \(query)")
++                continue
++            }
++
++            XCTAssertEqual(head.method, .RAW(value: query))
++        }
++    }
+ }

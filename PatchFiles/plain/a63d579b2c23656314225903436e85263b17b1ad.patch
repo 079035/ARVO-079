@@ -1,0 +1,31 @@
+From a63d579b2c23656314225903436e85263b17b1ad Mon Sep 17 00:00:00 2001
+From: "Victor M. Alvarez" <vmalvarez@virustotal.com>
+Date: Fri, 17 Jul 2020 18:32:04 +0200
+Subject: [PATCH] Set null terminator when creating SIZED_STRING in
+ yr_re_ast_extract_literal.
+
+---
+ libyara/re.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/libyara/re.c b/libyara/re.c
+index 88a798f214..3aa8ded59b 100644
+--- a/libyara/re.c
++++ b/libyara/re.c
+@@ -395,6 +395,7 @@ SIZED_STRING* yr_re_ast_extract_literal(
+   else
+   {
+     child = re_ast->root_node->children_tail;
++
+     while (child != NULL)
+     {
+       string->c_string[--length] = child->value;
+@@ -402,6 +403,8 @@ SIZED_STRING* yr_re_ast_extract_literal(
+     }
+   }
+ 
++  string->c_string[length] = '\0';
++
+   return string;
+ }
+ 

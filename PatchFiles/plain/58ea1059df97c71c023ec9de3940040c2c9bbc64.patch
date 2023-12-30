@@ -1,0 +1,847 @@
+From 58ea1059df97c71c023ec9de3940040c2c9bbc64 Mon Sep 17 00:00:00 2001
+From: Haojian Wu <hokein.wu@gmail.com>
+Date: Thu, 23 Apr 2020 11:14:01 +0200
+Subject: [PATCH] [AST][RecoveryExpr] Build recovery expressions by default for
+ C++.
+
+Reland https://reviews.llvm.org/D76696
+All known crashes have been fixed, another attemption.
+
+We have rolled out this to all internal users for a while, didn't see
+big issues, we consider it is stable enough.
+
+Reviewed By: sammccall
+
+Subscribers: rsmith, hubert.reinterpretcast, ebevhan, jkorous, arphaman, kadircet, usaxena95, cfe-commits
+
+Tags: #clang
+
+Differential Revision: https://reviews.llvm.org/D78350
+---
+ .../clangd/unittests/CodeCompleteTests.cpp    |  4 +-
+ clang/lib/Frontend/CompilerInvocation.cpp     |  5 ++-
+ ...enmp-begin-declare-variant_namespace_1.cpp |  4 +-
+ clang/test/CXX/class.access/p4.cpp            | 12 +++---
+ clang/test/CXX/special/class.ctor/p5-0x.cpp   | 34 ++++++++--------
+ .../stmt.stmt/stmt.iter/stmt.ranged/p1.cpp    |  5 ++-
+ .../test/OpenMP/declare_variant_messages.cpp  |  8 ++--
+ .../OpenMP/target_update_from_messages.cpp    |  6 +--
+ .../test/OpenMP/target_update_to_messages.cpp |  6 +--
+ .../Parser/objcxx0x-lambda-expressions.mm     |  6 ++-
+ clang/test/Parser/objcxx11-invalid-lambda.cpp |  9 +++--
+ clang/test/SemaCXX/cast-conversion.cpp        |  2 +-
+ .../SemaCXX/constant-expression-cxx11.cpp     |  2 +-
+ .../test/SemaCXX/constructor-initializer.cpp  |  2 +-
+ .../SemaCXX/cxx0x-deleted-default-ctor.cpp    | 18 ++++-----
+ .../SemaCXX/cxx1y-deduced-return-type.cpp     |  2 +-
+ clang/test/SemaCXX/cxx1z-copy-omission.cpp    |  8 ++--
+ clang/test/SemaCXX/decltype-crash.cpp         |  5 ++-
+ clang/test/SemaCXX/enable_if.cpp              |  4 +-
+ clang/test/SemaCXX/for-range-dereference.cpp  |  1 +
+ clang/test/SemaCXX/recovery-default-init.cpp  | 14 -------
+ clang/test/SemaCXX/recovery-initializer.cpp   | 29 --------------
+ clang/test/SemaCXX/varargs.cpp                |  3 +-
+ clang/test/SemaCXX/virtual-base-used.cpp      | 21 +---------
+ clang/test/SemaObjCXX/arc-0x.mm               | 40 +++++++++----------
+ .../SemaOpenCLCXX/address-space-references.cl |  2 +-
+ .../instantiate-function-params.cpp           | 16 ++++----
+ clang/test/SemaTemplate/instantiate-init.cpp  |  2 +-
+ 28 files changed, 109 insertions(+), 161 deletions(-)
+ delete mode 100644 clang/test/SemaCXX/recovery-default-init.cpp
+ delete mode 100644 clang/test/SemaCXX/recovery-initializer.cpp
+
+diff --git a/clang-tools-extra/clangd/unittests/CodeCompleteTests.cpp b/clang-tools-extra/clangd/unittests/CodeCompleteTests.cpp
+index b060e67e848fe..909ffce9df595 100644
+--- a/clang-tools-extra/clangd/unittests/CodeCompleteTests.cpp
++++ b/clang-tools-extra/clangd/unittests/CodeCompleteTests.cpp
+@@ -1197,7 +1197,9 @@ TEST(SignatureHelpTest, OpeningParen) {
+     int foo(int a, int b, int c);
+     int main() {
+     #define ID(X) X
+-      ID(foo $p^( foo(10), ^ ))
++      // FIXME: figure out why ID(foo (foo(10), )) doesn't work when preserving
++      // the recovery expression.
++      ID(foo $p^( 10, ^ ))
+     })cpp"};
+ 
+   for (auto Test : Tests) {
+diff --git a/clang/lib/Frontend/CompilerInvocation.cpp b/clang/lib/Frontend/CompilerInvocation.cpp
+index 3aea9164046ca..c7180779d9730 100644
+--- a/clang/lib/Frontend/CompilerInvocation.cpp
++++ b/clang/lib/Frontend/CompilerInvocation.cpp
+@@ -2885,10 +2885,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
+       !Args.hasArg(OPT_fno_concept_satisfaction_caching);
+   if (Args.hasArg(OPT_fconcepts_ts))
+     Diags.Report(diag::warn_fe_concepts_ts_flag);
++  // Recovery AST still heavily relies on dependent-type machinery.
+   Opts.RecoveryAST =
+-      Args.hasFlag(OPT_frecovery_ast, OPT_fno_recovery_ast, false);
++      Args.hasFlag(OPT_frecovery_ast, OPT_fno_recovery_ast, Opts.CPlusPlus);
+   Opts.RecoveryASTType =
+-+      Args.hasFlag(OPT_frecovery_ast_type, OPT_fno_recovery_ast_type, false);
++      Args.hasFlag(OPT_frecovery_ast_type, OPT_fno_recovery_ast_type, false);
+   Opts.HeinousExtensions = Args.hasArg(OPT_fheinous_gnu_extensions);
+   Opts.AccessControl = !Args.hasArg(OPT_fno_access_control);
+   Opts.ElideConstructors = !Args.hasArg(OPT_fno_elide_constructors);
+diff --git a/clang/test/AST/ast-dump-openmp-begin-declare-variant_namespace_1.cpp b/clang/test/AST/ast-dump-openmp-begin-declare-variant_namespace_1.cpp
+index 3cad174feac06..3c94a8f1c4e2b 100644
+--- a/clang/test/AST/ast-dump-openmp-begin-declare-variant_namespace_1.cpp
++++ b/clang/test/AST/ast-dump-openmp-begin-declare-variant_namespace_1.cpp
+@@ -134,6 +134,8 @@ int main() {
+ // CHECK-NEXT: |   | `-UsingDirectiveDecl [[ADDR_65:0x[a-z0-9]*]] <col:3, col:19> col:19 Namespace [[ADDR_0]] 'A'
+ // CHECK-NEXT: |   |-DeclStmt [[ADDR_66:0x[a-z0-9]*]] <line:55:3, col:20>
+ // CHECK-NEXT: |   | `-UsingDirectiveDecl [[ADDR_67:0x[a-z0-9]*]] <col:3, col:19> col:19 Namespace [[ADDR_5]] 'B'
++// CHECK-NEXT: |   |-RecoveryExpr {{.*}} <line:57:3, col:7>
++// CHECK-NEXT: |   | `-UnresolvedLookupExpr {{.*}} <col:3>
+ // CHECK-NEXT: |   `-ReturnStmt [[ADDR_68:0x[a-z0-9]*]] <line:58:3, col:22>
+ // CHECK-NEXT: |     `-BinaryOperator [[ADDR_69:0x[a-z0-9]*]] <col:10, col:22> 'int' '+'
+ // CHECK-NEXT: |       |-PseudoObjectExpr [[ADDR_70:0x[a-z0-9]*]] <col:10, col:14> 'int'
+@@ -159,4 +161,4 @@ int main() {
+ // CHECK-NEXT:         |   `-DeclRefExpr [[ADDR_88:0x[a-z0-9]*]] <col:10> 'int ({{.*}})' {{.*}}Function [[ADDR_42]] 'explicit1' 'int ({{.*}})'
+ // CHECK-NEXT:         `-CallExpr [[ADDR_89:0x[a-z0-9]*]] <col:24, col:34> 'int'
+ // CHECK-NEXT:           `-ImplicitCastExpr [[ADDR_90:0x[a-z0-9]*]] <col:24> 'int (*)({{.*}})' <FunctionToPointerDecay>
+-// CHECK-NEXT:             `-DeclRefExpr [[ADDR_91:0x[a-z0-9]*]] <col:24> 'int ({{.*}})' {{.*}}Function [[ADDR_62]] 'implicit2' 'int ({{.*}})'
++// CHECK-NEXT:             `-DeclRefExpr [[ADDR_91:0x[a-z0-9]*]] <col:24> 'int ({{.*}})' {{.*}}Function [[ADDR_62]] 'implicit2' 'int ({{.*}})'
+\ No newline at end of file
+diff --git a/clang/test/CXX/class.access/p4.cpp b/clang/test/CXX/class.access/p4.cpp
+index b110683f0be83..adc8bbe295833 100644
+--- a/clang/test/CXX/class.access/p4.cpp
++++ b/clang/test/CXX/class.access/p4.cpp
+@@ -220,14 +220,14 @@ namespace test3 {
+   };
+ 
+   class Derived3 :
+-    Base<0>, // expected-note 2{{deleted because base class 'Base<0>' has an inaccessible destructor}}
++    Base<0>, // expected-note {{deleted because base class 'Base<0>' has an inaccessible destructor}}
+     virtual Base<1>,
+     Base2,
+     virtual Base3
+   {};
+-  Derived3 d3; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
++  Derived3 d3; // expected-error {{implicitly-deleted default constructor}}
+ #elif __cplusplus >= 201103L && defined(_MSC_VER)
+-  template <unsigned N> class Base { ~Base(); }; // expected-note 9{{declared private here}}
++  template <unsigned N> class Base { ~Base(); }; // expected-note 6{{declared private here}}
+   // expected-error@+1 {{inherited virtual base class 'Base<2>' has private destructor}}
+   class Base2 : virtual Base<2> { ~Base2(); }; // expected-note 1{{declared private here}}
+   // expected-error@+1 {{inherited virtual base class 'Base<3>' has private destructor}}
+@@ -249,15 +249,13 @@ namespace test3 {
+     ~Derived2() {}
+   };
+ 
+-  class Derived3 : // expected-error 3{{has private destructor}}
++  class Derived3 :
+     Base<0>, // expected-note {{deleted because base class 'Base<0>' has an inaccessible destructor}}
+-             // expected-note@-1 {{destructor of 'Derived3' is implicitly deleted}}
+     virtual Base<1>,
+     Base2,
+     virtual Base3
+   {};
+-  Derived3 d3; // expected-error {{implicitly-deleted default constructor}} expected-error {{use a deleted function}}
+-               // expected-note@-1 {{implicit destructor for}}
++  Derived3 d3; // expected-error {{implicitly-deleted default constructor}}
+ #else
+ #error "missing case of MSVC cross C++ versions"
+ #endif
+diff --git a/clang/test/CXX/special/class.ctor/p5-0x.cpp b/clang/test/CXX/special/class.ctor/p5-0x.cpp
+index 3026f095ef8a3..5fa61008e8b77 100644
+--- a/clang/test/CXX/special/class.ctor/p5-0x.cpp
++++ b/clang/test/CXX/special/class.ctor/p5-0x.cpp
+@@ -4,7 +4,7 @@ struct DefaultedDefCtor1 {};
+ struct DefaultedDefCtor2 { DefaultedDefCtor2() = default; };
+ struct DeletedDefCtor { DeletedDefCtor() = delete; DeletedDefCtor(int); }; // expected-note {{explicitly marked deleted here}}
+ class PrivateDefCtor { PrivateDefCtor() = default; public: PrivateDefCtor(int); };
+-struct DeletedDtor { ~DeletedDtor() = delete; }; // expected-note 8{{explicitly marked deleted here}}
++struct DeletedDtor { ~DeletedDtor() = delete; }; // expected-note 4{{explicitly marked deleted here}}
+ class PrivateDtor { ~PrivateDtor() = default; };
+ class Friend {
+   Friend() = default; ~Friend() = default;
+@@ -122,22 +122,22 @@ NotDeleted6c nd6c;
+ // - any direct or virtual base class or non-static data member has a type with
+ // a destructor that is deleted or inaccessible from the defaulted default
+ // constructor.
+-struct Deleted7a : DeletedDtor {}; // expected-note 2{{because base class 'DeletedDtor' has a deleted destructor}}
+-Deleted7a d7a; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-struct Deleted7b : virtual DeletedDtor {}; // expected-note 2{{because base class 'DeletedDtor' has a deleted destructor}}
+-Deleted7b d7b; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-struct Deleted7c { DeletedDtor a; }; // expected-note 2{{because field 'a' has a deleted destructor}}
+-Deleted7c d7c; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-struct Deleted7d { DeletedDtor a = {}; }; // expected-note 2{{because field 'a' has a deleted destructor}}
+-Deleted7d d7d; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-struct Deleted7e : PrivateDtor {}; // expected-note 2{{base class 'PrivateDtor' has an inaccessible destructor}}
+-Deleted7e d7e; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-struct Deleted7f : virtual PrivateDtor {}; // expected-note 2{{base class 'PrivateDtor' has an inaccessible destructor}}
+-Deleted7f d7f; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-struct Deleted7g { PrivateDtor a; }; // expected-note 2{{field 'a' has an inaccessible destructor}}
+-Deleted7g d7g; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-struct Deleted7h { PrivateDtor a = {}; }; // expected-note 2{{field 'a' has an inaccessible destructor}}
+-Deleted7h d7h; // expected-error {{implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
++struct Deleted7a : DeletedDtor {}; // expected-note {{because base class 'DeletedDtor' has a deleted destructor}}
++Deleted7a d7a; // expected-error {{implicitly-deleted default constructor}}
++struct Deleted7b : virtual DeletedDtor {}; // expected-note {{because base class 'DeletedDtor' has a deleted destructor}}
++Deleted7b d7b; // expected-error {{implicitly-deleted default constructor}}
++struct Deleted7c { DeletedDtor a; }; // expected-note {{because field 'a' has a deleted destructor}}
++Deleted7c d7c; // expected-error {{implicitly-deleted default constructor}}
++struct Deleted7d { DeletedDtor a = {}; }; // expected-note {{because field 'a' has a deleted destructor}}
++Deleted7d d7d; // expected-error {{implicitly-deleted default constructor}}
++struct Deleted7e : PrivateDtor {}; // expected-note {{base class 'PrivateDtor' has an inaccessible destructor}}
++Deleted7e d7e; // expected-error {{implicitly-deleted default constructor}}
++struct Deleted7f : virtual PrivateDtor {}; // expected-note {{base class 'PrivateDtor' has an inaccessible destructor}}
++Deleted7f d7f; // expected-error {{implicitly-deleted default constructor}}
++struct Deleted7g { PrivateDtor a; }; // expected-note {{field 'a' has an inaccessible destructor}}
++Deleted7g d7g; // expected-error {{implicitly-deleted default constructor}}
++struct Deleted7h { PrivateDtor a = {}; }; // expected-note {{field 'a' has an inaccessible destructor}}
++Deleted7h d7h; // expected-error {{implicitly-deleted default constructor}}
+ struct NotDeleted7i : Friend {};
+ NotDeleted7i d7i;
+ struct NotDeleted7j : virtual Friend {};
+diff --git a/clang/test/CXX/stmt.stmt/stmt.iter/stmt.ranged/p1.cpp b/clang/test/CXX/stmt.stmt/stmt.iter/stmt.ranged/p1.cpp
+index 494f001a9cdea..01c758bef19a5 100644
+--- a/clang/test/CXX/stmt.stmt/stmt.iter/stmt.ranged/p1.cpp
++++ b/clang/test/CXX/stmt.stmt/stmt.iter/stmt.ranged/p1.cpp
+@@ -21,7 +21,8 @@ namespace X {
+     auto end(T &&t) -> decltype(t.end()) { return t.end(); } // expected-note {{candidate template ignored: substitution failure [with T = }}
+ 
+   template<typename T>
+-    auto begin(T &&t) -> decltype(t.alt_begin()) { return t.alt_begin(); } // expected-note 2{{candidate template ignored: substitution failure [with T = }}
++    auto begin(T &&t) -> decltype(t.alt_begin()) { return t.alt_begin(); } // expected-note {{selected 'begin' template [with T = }} \
++                                                                           // expected-note 2{{candidate template ignored: substitution failure [with T = }}
+   template<typename T>
+     auto end(T &&t) -> decltype(t.alt_end()) { return t.alt_end(); } // expected-note {{candidate template ignored: substitution failure [with T = }}
+ 
+@@ -35,7 +36,7 @@ namespace X {
+ 
+   struct A { // expected-note 2 {{candidate constructor}}
+     A();
+-    int *begin(); // expected-note {{selected 'begin' function with iterator type 'int *'}} expected-note {{'begin' declared here}}
++    int *begin(); // expected-note 3{{selected 'begin' function with iterator type 'int *'}} expected-note {{'begin' declared here}}
+     int *end();
+   };
+ 
+diff --git a/clang/test/OpenMP/declare_variant_messages.cpp b/clang/test/OpenMP/declare_variant_messages.cpp
+index f8271c999de3e..ab683606b790e 100644
+--- a/clang/test/OpenMP/declare_variant_messages.cpp
++++ b/clang/test/OpenMP/declare_variant_messages.cpp
+@@ -13,7 +13,7 @@ T foofoo();
+ #pragma omp declare variant // expected-error {{expected '(' after 'declare variant'}}
+ #pragma omp declare variant( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+ #pragma omp declare variant(foo // expected-error {{expected ')'}} expected-error {{expected 'match' clause on 'omp declare variant' directive}} expected-note {{to match this '('}}
+-#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}}
++#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}} expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+ #pragma omp declare variant(foo) // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+ #pragma omp declare variant(foofoo <int>) // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+ #pragma omp declare variant(foofoo <int>) xxx // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+@@ -44,7 +44,7 @@ T foofoo();
+ #pragma omp declare variant(foofoo <int>) match(device={kind(}) // expected-error {{expected ')'}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind()}) // expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind(score cpu)}) // expected-error {{expected '(' after 'score'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('<invalid>'); score ignored}}
+-#pragma omp declare variant(foofoo <int>) match(device={kind(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('<invalid>'); score ignored}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
++#pragma omp declare variant(foofoo <int>) match(device={kind(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind(score(2 gpu)}) // expected-error {{expected ')'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('2'); score ignored}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{to match this '('}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind(score(foofoo <int>()) ibm)}) // expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('foofoo<int>()'); score ignored}} expected-warning {{'ibm' is not a valid context property for the context selector 'kind' and the context set 'device'; property ignored}} expected-note {{try 'match(implementation={vendor(ibm)})'}} expected-note {{the ignored property spans until here}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind(score(5): host), kind(llvm)}) // expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('5'); score ignored}} expected-warning {{the context selector 'kind' was used already in the same 'omp declare variant' directive; selector ignored}} expected-note {{the previous context selector 'kind' used here}} expected-note {{the ignored selector spans until here}}
+@@ -54,7 +54,7 @@ int bar();
+ #pragma omp declare variant // expected-error {{expected '(' after 'declare variant'}}
+ #pragma omp declare variant( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+ #pragma omp declare variant(foofoo <T> // expected-error {{expected ')'}} expected-error {{expected 'match' clause on 'omp declare variant' directive}} expected-note {{to match this '('}}
+-#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}}
++#pragma omp declare variant(x) // expected-error {{use of undeclared identifier 'x'}} expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+ #pragma omp declare variant(foo) // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+ #pragma omp declare variant(foofoo) // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+ #pragma omp declare variant(foofoo <T>) // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
+@@ -84,7 +84,7 @@ int bar();
+ #pragma omp declare variant(foofoo <int>) match(device={kind(}) // expected-error {{expected ')'}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind()}) // expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind(score cpu)}) // expected-error {{expected '(' after 'score'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('<invalid>'); score ignored}}
+-#pragma omp declare variant(foofoo <int>) match(device={kind(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('<invalid>'); score ignored}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
++#pragma omp declare variant(foofoo <int>) match(device={kind(score( ibm)}) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind(score(C gpu)}) // expected-error {{expected ')'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('C'); score ignored}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{to match this '('}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind(score(foofoo <int>()) ibm)}) // expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('foofoo<int>()'); score ignored}} expected-warning {{'ibm' is not a valid context property for the context selector 'kind' and the context set 'device'; property ignored}} expected-note {{try 'match(implementation={vendor(ibm)})'}} expected-note {{the ignored property spans until here}}
+ #pragma omp declare variant(foofoo <int>) match(device={kind(score(C+5): host), kind(llvm)}) // expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('C + 5'); score ignored}} expected-warning {{the context selector 'kind' was used already in the same 'omp declare variant' directive; selector ignored}} expected-note {{the previous context selector 'kind' used here}} expected-note {{the ignored selector spans until here}}
+diff --git a/clang/test/OpenMP/target_update_from_messages.cpp b/clang/test/OpenMP/target_update_from_messages.cpp
+index eaf862a105827..141cfc38ffeb1 100644
+--- a/clang/test/OpenMP/target_update_from_messages.cpp
++++ b/clang/test/OpenMP/target_update_from_messages.cpp
+@@ -74,7 +74,7 @@ struct S8 {
+ #pragma omp target update from(*(this->S->i+this->S->s6[0].pp)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+ #pragma omp target update from(*(a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+ #pragma omp target update from(*(*(this->ptr)+a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+-#pragma omp target update from(*(this+this)) // expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}} expected-error {{invalid operands to binary expression ('S8 *' and 'S8 *')}}
++#pragma omp target update from(*(this+this)) // expected-error {{invalid operands to binary expression ('S8 *' and 'S8 *')}}
+   }
+ };
+ 
+@@ -198,8 +198,8 @@ int main(int argc, char **argv) {
+ #pragma omp target update from(**(-(*offset)+BB+*m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+ #pragma omp target update from(**(*(*(&offset))+BB-*m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+ #pragma omp target update from(*(x+*(y+*(**BB+BBB)+s7.i))) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+-#pragma omp target update from(*(m+(m))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+-#pragma omp target update from(*(1+y+y)) // expected-error {{indirection requires pointer operand ('int' invalid)}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
++#pragma omp target update from(*(m+(m))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}}
++#pragma omp target update from(*(1+y+y)) // expected-error {{indirection requires pointer operand ('int' invalid)}}
+ #pragma omp target data map(to: s7.i)
+   {
+ #pragma omp target update from(s7.x)
+diff --git a/clang/test/OpenMP/target_update_to_messages.cpp b/clang/test/OpenMP/target_update_to_messages.cpp
+index 66ba9d3bb23f3..832adc0dd4d09 100644
+--- a/clang/test/OpenMP/target_update_to_messages.cpp
++++ b/clang/test/OpenMP/target_update_to_messages.cpp
+@@ -77,7 +77,7 @@ struct S8 {
+ #pragma omp target update to(*(this->S->i+this->S->s6[0].pp)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+ #pragma omp target update to(*(a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+ #pragma omp target update to(*(*(this->ptr)+a+this->ptr)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+-#pragma omp target update to(*(this+this)) // expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}} expected-error {{invalid operands to binary expression ('S8 *' and 'S8 *')}}
++#pragma omp target update to(*(this+this)) // expected-error {{invalid operands to binary expression ('S8 *' and 'S8 *')}}
+     {}
+   }
+ };
+@@ -205,8 +205,8 @@ int main(int argc, char **argv) {
+ #pragma omp target update to(**(*offset+BB+*m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+ #pragma omp target update to(**(*(*(&offset))+BB+*m)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+ #pragma omp target update to(*(x+*(y+*(**BB+BBB)+s7.i))) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le45-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+-#pragma omp target update to(*(m+(m))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+-#pragma omp target update to(*(1+y+y)) // expected-error {{indirection requires pointer operand ('int' invalid)}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
++#pragma omp target update to(*(m+(m))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}}
++#pragma omp target update to(*(1+y+y)) // expected-error {{indirection requires pointer operand ('int' invalid)}}
+   {}
+   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
+ }
+diff --git a/clang/test/Parser/objcxx0x-lambda-expressions.mm b/clang/test/Parser/objcxx0x-lambda-expressions.mm
+index 0f3e9481a7220..396313816fe5d 100644
+--- a/clang/test/Parser/objcxx0x-lambda-expressions.mm
++++ b/clang/test/Parser/objcxx0x-lambda-expressions.mm
+@@ -11,7 +11,8 @@ void f() {
+ 
+     []; // expected-error {{expected body of lambda expression}}
+     [=,foo+] {}; // expected-error {{expected ',' or ']' in lambda capture list}}
+-    [&this] {}; // expected-error {{cannot take the address of an rvalue of type 'C *'}}
++    [&this] {}; // expected-error {{cannot take the address of an rvalue of type 'C *'}} \
++                // expected-error {{expected identifier}}
+     [] {}; 
+     [=] (int i) {}; 
+     [&] (int) mutable -> void {}; 
+@@ -24,7 +25,8 @@ void f() {
+     [foo{bar}] () {};
+     [foo = {bar}] () {}; // expected-error {{<initializer_list>}}
+ 
+-    [foo(bar) baz] () {}; // expected-error {{called object type 'int' is not a function}}
++    [foo(bar) baz] () {}; // expected-error {{called object type 'int' is not a function}} \
++                          // expected-error {{expected ';'}}
+     [foo(bar), baz] () {}; // ok
+ 
+     [foo = bar baz]; // expected-warning {{receiver type 'int'}} expected-warning {{instance method '-baz'}}
+diff --git a/clang/test/Parser/objcxx11-invalid-lambda.cpp b/clang/test/Parser/objcxx11-invalid-lambda.cpp
+index bdb4e880fd0b7..221cae9b90709 100644
+--- a/clang/test/Parser/objcxx11-invalid-lambda.cpp
++++ b/clang/test/Parser/objcxx11-invalid-lambda.cpp
+@@ -1,10 +1,11 @@
+ // RUN: %clang_cc1 -fsyntax-only -verify -x objective-c++ -std=c++11 %s
+ 
+-void foo() {  // expected-note {{to match this '{'}}
++void foo() {
+   int bar;
+   auto baz = [
+-      bar(  // expected-note {{to match this '('}} expected-note {{to match this '('}}
++      bar(  // expected-note 2{{to match this '('}}\
++            // expected-warning {{captures are a C++14 extension}}
+         foo_undeclared() // expected-error{{use of undeclared identifier 'foo_undeclared'}}
+       /* ) */
+-    ] () { };   // expected-error{{expected ')'}}
+-}               // expected-error{{expected ')'}} expected-error {{expected ',' or ']'}} expected-error{{expected ';' at end of declaration}} expected-error{{expected '}'}}
++    ] () { };   // expected-error 2{{expected ')'}}
++}
+\ No newline at end of file
+diff --git a/clang/test/SemaCXX/cast-conversion.cpp b/clang/test/SemaCXX/cast-conversion.cpp
+index 4d5abfdcfb1e3..e48d918f889bc 100644
+--- a/clang/test/SemaCXX/cast-conversion.cpp
++++ b/clang/test/SemaCXX/cast-conversion.cpp
+@@ -1,4 +1,4 @@
+-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-unknown-unknown -verify %s -std=c++11
++// RUN: %clang_cc1 -fsyntax-only -triple x86_64-unknown-unknown -verify %s -std=c++11 -Wno-unused
+ 
+ struct R {
+   R(int);
+diff --git a/clang/test/SemaCXX/constant-expression-cxx11.cpp b/clang/test/SemaCXX/constant-expression-cxx11.cpp
+index 084e9701464d2..dd6d7ccba19f8 100644
+--- a/clang/test/SemaCXX/constant-expression-cxx11.cpp
++++ b/clang/test/SemaCXX/constant-expression-cxx11.cpp
+@@ -877,7 +877,7 @@ static_assert((Derived*)(Base*)pb1 == (Derived*)pok2, "");
+ // null pointer in C++11. Just check for an integer literal with value 0.
+ constexpr Base *nullB = 42 - 6 * 7; // expected-error {{cannot initialize a variable of type 'Class::Base *const' with an rvalue of type 'int'}}
+ constexpr Base *nullB1 = 0;
+-static_assert((Bottom*)nullB == 0, ""); // expected-error {{static_assert expression is not an integral constant expression}}
++static_assert((Bottom*)nullB == 0, "");
+ static_assert((Derived*)nullB1 == 0, "");
+ static_assert((void*)(Bottom*)nullB1 == (void*)(Derived*)nullB1, "");
+ Base *nullB2 = '\0'; // expected-error {{cannot initialize a variable of type 'Class::Base *' with an rvalue of type 'char'}}
+diff --git a/clang/test/SemaCXX/constructor-initializer.cpp b/clang/test/SemaCXX/constructor-initializer.cpp
+index 102ff1e80d032..df89914167123 100644
+--- a/clang/test/SemaCXX/constructor-initializer.cpp
++++ b/clang/test/SemaCXX/constructor-initializer.cpp
+@@ -250,7 +250,7 @@ namespace test3 {
+     B(const String& s, int e=0) // expected-error {{unknown type name}} 
+       : A(e), m_String(s) , m_ErrorStr(__null) {} // expected-error {{no matching constructor}} expected-error {{does not name}}
+     B(const B& e)
+-      : A(e), m_String(e.m_String), m_ErrorStr(__null) { // expected-error {{does not name}} \
++      : A(e), m_String(e.m_String), m_ErrorStr(__null) { // expected-error 2{{does not name}} \
+       // expected-error {{no member named 'm_String' in 'test3::B'}}
+     }
+   };
+diff --git a/clang/test/SemaCXX/cxx0x-deleted-default-ctor.cpp b/clang/test/SemaCXX/cxx0x-deleted-default-ctor.cpp
+index 7a43fb5437d89..feb483546c3eb 100644
+--- a/clang/test/SemaCXX/cxx0x-deleted-default-ctor.cpp
++++ b/clang/test/SemaCXX/cxx0x-deleted-default-ctor.cpp
+@@ -8,9 +8,9 @@ struct non_trivial {
+ };
+ 
+ union bad_union {
+-  non_trivial nt; // expected-note {{non-trivial default constructor}} expected-note {{destructor of 'bad_union' is implicitly deleted}}
++  non_trivial nt; // expected-note {{non-trivial default constructor}}
+ };
+-bad_union u; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
++bad_union u; // expected-error {{call to implicitly-deleted default constructor}}
+ union bad_union2 { // expected-note {{all data members are const-qualified}}
+   const int i;
+ };
+@@ -18,10 +18,10 @@ bad_union2 u2; // expected-error {{call to implicitly-deleted default constructo
+ 
+ struct bad_anon {
+   union {
+-    non_trivial nt; // expected-note {{non-trivial default constructor}} expected-note {{destructor of 'bad_anon' is implicitly deleted}}
++    non_trivial nt; // expected-note {{non-trivial default constructor}}
+   };
+ };
+-bad_anon a; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
++bad_anon a; // expected-error {{call to implicitly-deleted default constructor}}
+ struct bad_anon2 {
+   union { // expected-note {{all data members of an anonymous union member are const-qualified}}
+     const int i;
+@@ -62,7 +62,7 @@ struct no_default {
+   no_default() = delete; // expected-note 5{{deleted here}}
+ };
+ struct no_dtor {
+-  ~no_dtor() = delete; // expected-note 4{{deleted here}}
++  ~no_dtor() = delete; // expected-note 2{{deleted here}}
+ };
+ 
+ struct bad_field_default {
+@@ -74,12 +74,12 @@ struct bad_base_default : no_default { // expected-note {{base class 'no_default
+ bad_base_default bbd; // expected-error {{call to implicitly-deleted default constructor}}
+ 
+ struct bad_field_dtor {
+-  no_dtor nd; // expected-note {{field 'nd' has a deleted destructor}} expected-note {{destructor of 'bad_field_dtor' is implicitly deleted }}
++  no_dtor nd; // expected-note {{field 'nd' has a deleted destructor}}
+ };
+-bad_field_dtor bfx; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-struct bad_base_dtor : no_dtor { // expected-note {{base class 'no_dtor' has a deleted destructor}} expected-note {{destructor of 'bad_base_dtor' is implicitly deleted}}
++bad_field_dtor bfx; // expected-error {{call to implicitly-deleted default constructor}}
++struct bad_base_dtor : no_dtor { // expected-note {{base class 'no_dtor' has a deleted destructor}}
+ };
+-bad_base_dtor bbx; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
++bad_base_dtor bbx; // expected-error {{call to implicitly-deleted default constructor}}
+ 
+ struct ambiguous_default {
+   ambiguous_default();
+diff --git a/clang/test/SemaCXX/cxx1y-deduced-return-type.cpp b/clang/test/SemaCXX/cxx1y-deduced-return-type.cpp
+index fafc6ead73c41..687ecf28ee3d7 100644
+--- a/clang/test/SemaCXX/cxx1y-deduced-return-type.cpp
++++ b/clang/test/SemaCXX/cxx1y-deduced-return-type.cpp
+@@ -100,7 +100,7 @@ auto fac(int n) {
+ auto fac_2(int n) { // expected-note {{declared here}}
+   if (n > 2)
+     return n * fac_2(n-1); // expected-error {{cannot be used before it is defined}}
+-  return n;
++  return n; // expected-error {{cannot initialize return object of type 'auto'}}
+ }
+ 
+ auto void_ret() {}
+diff --git a/clang/test/SemaCXX/cxx1z-copy-omission.cpp b/clang/test/SemaCXX/cxx1z-copy-omission.cpp
+index a7133d79b463f..eceac810e72a5 100644
+--- a/clang/test/SemaCXX/cxx1z-copy-omission.cpp
++++ b/clang/test/SemaCXX/cxx1z-copy-omission.cpp
+@@ -1,4 +1,4 @@
+-// RUN: %clang_cc1 -std=c++1z -verify %s
++// RUN: %clang_cc1 -std=c++1z -verify -Wno-unused %s
+ 
+ struct Noncopyable {
+   Noncopyable();
+@@ -107,8 +107,10 @@ void test_expressions(bool b) {
+   sizeof(make_indestructible()); // expected-error {{deleted}}
+   sizeof(make_incomplete()); // expected-error {{incomplete}}
+   typeid(Indestructible{}); // expected-error {{deleted}}
+-  typeid(make_indestructible()); // expected-error {{deleted}}
+-  typeid(make_incomplete()); // expected-error {{incomplete}}
++  typeid(make_indestructible()); // expected-error {{deleted}} \
++                                 // expected-error {{need to include <typeinfo>}}
++  typeid(make_incomplete()); // expected-error {{incomplete}} \
++                             // expected-error {{need to include <typeinfo>}}
+ 
+   // FIXME: The first two cases here are now also valid in C++17 onwards.
+   using I = decltype(Indestructible()); // expected-error {{deleted}}
+diff --git a/clang/test/SemaCXX/decltype-crash.cpp b/clang/test/SemaCXX/decltype-crash.cpp
+index 1cebfcd72c861..1ffc525a27037 100644
+--- a/clang/test/SemaCXX/decltype-crash.cpp
++++ b/clang/test/SemaCXX/decltype-crash.cpp
+@@ -3,5 +3,8 @@
+ int& a();
+ 
+ void f() {
+-  decltype(a()) c; // expected-warning {{'decltype' is a keyword in C++11}} expected-error {{use of undeclared identifier 'decltype'}}
++  decltype(a()) c; // expected-warning {{'decltype' is a keyword in C++11}} \
++                   // expected-error {{use of undeclared identifier 'decltype'}} \
++                   // expected-error {{expected ';' after expression}} \
++                   // expected-error {{use of undeclared identifier 'c'}}
+ }
+diff --git a/clang/test/SemaCXX/enable_if.cpp b/clang/test/SemaCXX/enable_if.cpp
+index 50d898959c454..9c87ffebf83d7 100644
+--- a/clang/test/SemaCXX/enable_if.cpp
++++ b/clang/test/SemaCXX/enable_if.cpp
+@@ -414,8 +414,8 @@ static_assert(templated<1>() == 1, "");
+ 
+ template <int N> constexpr int callTemplated() { return templated<N>(); }
+ 
+-constexpr int B = 10 + // the carat for the error should be pointing to the problematic call (on the next line), not here.
+-    callTemplated<0>(); // expected-error{{initialized by a constant expression}} expected-error@-3{{no matching function for call to 'templated'}} expected-note{{in instantiation of function template}} expected-note@-10{{candidate disabled}}
++constexpr int B = 10 + // expected-error {{initialized by a constant expression}}
++    callTemplated<0>(); // expected-error@-3{{no matching function for call to 'templated'}} expected-note{{in instantiation of function template}} expected-note@-10{{candidate disabled}} expected-note {{in call to 'callTemplated()'}} expected-note@-3 {{subexpression not valid in a constant expression}}
+ static_assert(callTemplated<1>() == 1, "");
+ }
+ 
+diff --git a/clang/test/SemaCXX/for-range-dereference.cpp b/clang/test/SemaCXX/for-range-dereference.cpp
+index bd8bb57173625..de4958c31bce7 100644
+--- a/clang/test/SemaCXX/for-range-dereference.cpp
++++ b/clang/test/SemaCXX/for-range-dereference.cpp
+@@ -85,4 +85,5 @@ expected-note {{when looking up 'end' function for range expression of type 'Del
+ 
+   for (Data *p : pt) { } // expected-error {{invalid range expression of type 'T *'; did you mean to dereference it with '*'?}}
+   // expected-error@-1 {{no viable conversion from 'Data' to 'Data *'}}
++  // expected-note@4 {{selected 'begin' function with iterator type 'Data *'}}
+ }
+diff --git a/clang/test/SemaCXX/recovery-default-init.cpp b/clang/test/SemaCXX/recovery-default-init.cpp
+deleted file mode 100644
+index 8ba3d8df58a3f..0000000000000
+--- a/clang/test/SemaCXX/recovery-default-init.cpp
++++ /dev/null
+@@ -1,14 +0,0 @@
+-// RUN: %clang_cc1 %s -fsyntax-only -frecovery-ast -verify -std=c++11
+-
+-// NOTE: the test can be merged into existing tests once -frecovery-ast is on
+-// by default.
+-
+-struct Foo { // expected-note {{candidate constructor (the implicit copy constructor) not viable}}
+-  Foo(int); // expected-note {{candidate constructor not viable}}
+-  ~Foo() = delete;
+-};
+-
+-void test() {
+-  // we expect the "attempt to use a deleted function" diagnostic is suppressed.
+-  Foo foo; // expected-error {{no matching constructor for initialization of}}
+-}
+diff --git a/clang/test/SemaCXX/recovery-initializer.cpp b/clang/test/SemaCXX/recovery-initializer.cpp
+deleted file mode 100644
+index e1f35dbc1f933..0000000000000
+--- a/clang/test/SemaCXX/recovery-initializer.cpp
++++ /dev/null
+@@ -1,29 +0,0 @@
+-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -frecovery-ast -verify %s
+-
+-// NOTE: these tests can be merged to existing tests after -frecovery-ast is
+-// turned on by default.
+-void test1() {
+-  struct Data {};
+-  struct T {
+-    Data *begin();
+-    Data *end();
+-  };
+-  T *pt;
+-  for (Data *p : T()) {} // expected-error {{no viable conversion from 'Data' to 'Data *'}}
+-                         // expected-note@-5 {{selected 'begin' function with iterator type}}
+-}
+-
+-void test2() {
+-  struct Bottom {
+-    constexpr Bottom() {}
+-  };
+-  struct Base : Bottom {
+-    constexpr Base(int a = 42, const char *b = "test") : a(a), b(b) {}
+-    int a;
+-    const char *b;
+-  };
+-  constexpr Base *nullB = 12; // expected-error {{cannot initialize a variable of type}}
+-  // verify that the "static_assert expression is not an integral constant expr"
+-  // diagnostic is suppressed.
+-  static_assert((Bottom*)nullB == 0, "");
+-}
+diff --git a/clang/test/SemaCXX/varargs.cpp b/clang/test/SemaCXX/varargs.cpp
+index f2f53dc2001fd..625f1dce18f3d 100644
+--- a/clang/test/SemaCXX/varargs.cpp
++++ b/clang/test/SemaCXX/varargs.cpp
+@@ -22,7 +22,8 @@ void no_params(...) {
+ // default ctor.
+ void record_context(int a, ...) {
+   struct Foo {
+-    // expected-error@+1 {{'va_start' cannot be used outside a function}}
++    // expected-error@+2 {{'va_start' cannot be used outside a function}}
++    // expected-error@+1 {{default argument references parameter 'a'}}
+     void meth(int a, int b = (__builtin_va_start(ap, a), 0)) {}
+   };
+ }
+diff --git a/clang/test/SemaCXX/virtual-base-used.cpp b/clang/test/SemaCXX/virtual-base-used.cpp
+index ad0aa62a359cb..aa19010e4cee4 100644
+--- a/clang/test/SemaCXX/virtual-base-used.cpp
++++ b/clang/test/SemaCXX/virtual-base-used.cpp
+@@ -40,7 +40,6 @@ struct B : public virtual A {
+   // expected-note@-7 {{destructor of 'B' is implicitly deleted because field 'x' has an inaccessible destructor}}
+ #ifdef MSABI
+   // expected-note@-9 {{default constructor of 'B' is implicitly deleted because field 'x' has an inaccessible destructor}}
+-  // expected-note@-10 {{destructor of 'B' is implicitly deleted}}
+ #endif
+ #endif
+ };
+@@ -60,10 +59,6 @@ struct D : public virtual B {
+   ~D();
+ #if __cplusplus >= 201103L
+   //expected-error@-2 {{non-deleted function '~D' cannot override a deleted function}}
+-#ifdef MSABI
+-//expected-error@-4 {{use a deleted function}}
+-#else
+-#endif
+ #endif
+ };
+ 
+@@ -72,8 +67,7 @@ D d;
+ #if __cplusplus <= 199711L
+ // expected-note@-2 2{{implicit default constructor for 'D' first required here}}
+ #else
+-// expected-error@-4 {{call to implicitly-deleted default constructor of 'D'}}
+-// expected-note@-5 {{implicit destructor for 'D' first required here}}
++// expected-error@-4 {{call to implicitly-deleted default constructor of 'D'}}å
+ #endif
+ #else
+ void D::foo() {
+@@ -98,7 +92,6 @@ struct E : public virtual A {
+   // expected-note@-7 {{destructor of 'E' is implicitly deleted because field 'x' has an inaccessible destructor}}
+ #ifdef MSABI
+   // expected-note@-9 {{default constructor of 'E' is implicitly deleted because field 'x' has an inaccessible destructor}}
+-  // expected-note@-10 {{destructor of 'E' is implicitly deleted}}
+ #endif
+ #endif
+ };
+@@ -113,7 +106,6 @@ struct F : public E {
+ // expected-note@-7 {{overridden virtual function is here}}
+ #ifdef MSABI
+ // expected-note@-9 {{default constructor of 'F' is implicitly deleted because base class 'E' has a deleted default constructor}}
+-// expected-note@-10 {{destructor of 'F' is implicitly deleted}}
+ #endif
+ #endif
+ };
+@@ -133,9 +125,6 @@ struct G : public virtual F {
+   ~G();
+ #if __cplusplus >= 201103L
+   //expected-error@-2 {{non-deleted function '~G' cannot override a deleted function}}
+-#ifdef MSABI
+-  //expected-error@-4 {{use a deleted function}}
+-#endif
+ #endif
+ };
+ 
+@@ -145,7 +134,6 @@ G g;
+ // expected-note@-2 2{{implicit default constructor for 'G' first required here}}
+ #else
+ // expected-error@-4 {{call to implicitly-deleted default constructor of 'G'}}
+-// expected-note@-5 {{mplicit destructor for 'G' first required here}}
+ #endif
+ #else
+ void G::foo() {
+@@ -171,7 +159,6 @@ struct H : public virtual A {
+   // expected-note@-7 {{destructor of 'H' is implicitly deleted because field 'x' has an inaccessible destructor}}
+ #ifdef MSABI
+   // expected-note@-9 {{default constructor of 'H' is implicitly deleted because field 'x' has an inaccessible destructor}}
+-  // expected-note@-10 {{destructor of 'H' is implicitly deleted}}
+ #endif
+ #endif
+ };
+@@ -201,11 +188,6 @@ struct J : public I {
+ 
+   virtual void foo();
+   ~J();
+-#ifdef MSABI
+-#if __cplusplus >= 201103L
+-//expected-error@-3 {{use a deleted function}}
+-#endif
+-#endif
+ };
+ 
+ #ifdef MSABI
+@@ -214,7 +196,6 @@ J j;
+ // expected-note@-2 2{{implicit default constructor for 'J' first required here}}
+ #else
+ // expected-error@-4 {{call to implicitly-deleted default constructor of 'J'}}
+-// expected-note@-5 {{implicit destructor for 'J' first required here}}
+ #endif
+ 
+ #else
+diff --git a/clang/test/SemaObjCXX/arc-0x.mm b/clang/test/SemaObjCXX/arc-0x.mm
+index 0e80b7baf2a1b..734f28a65eb6e 100644
+--- a/clang/test/SemaObjCXX/arc-0x.mm
++++ b/clang/test/SemaObjCXX/arc-0x.mm
+@@ -116,13 +116,13 @@ void test() {
+   // Implicitly-declared special functions of a union are deleted by default if
+   // ARC is enabled and the union has an ObjC pointer field.
+   union U0 {
+-    id f0; // expected-note 7 {{'U0' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
++    id f0; // expected-note 6 {{'U0' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
+   };
+ 
+   union U1 {
+-    __weak id f0; // expected-note 13 {{'U1' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
++    __weak id f0; // expected-note 12 {{'U1' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
+     U1() = default; // expected-warning {{explicitly defaulted default constructor is implicitly deleted}} expected-note {{explicitly defaulted function was implicitly deleted here}}
+-    ~U1() = default; // expected-warning {{explicitly defaulted destructor is implicitly deleted}} expected-note 2{{explicitly defaulted function was implicitly deleted here}}
++    ~U1() = default; // expected-warning {{explicitly defaulted destructor is implicitly deleted}} expected-note {{explicitly defaulted function was implicitly deleted here}}
+     U1(const U1 &) = default; // expected-warning {{explicitly defaulted copy constructor is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}}
+     U1(U1 &&) = default; // expected-warning {{explicitly defaulted move constructor is implicitly deleted}}
+     U1 & operator=(const U1 &) = default; // expected-warning {{explicitly defaulted copy assignment operator is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}}
+@@ -154,15 +154,15 @@ void test() {
+   // functions of the containing class.
+   struct S0 {
+     union {
+-      id f0; // expected-note 7 {{'' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
++      id f0; // expected-note 6 {{'' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
+       char f1;
+     };
+   };
+ 
+   struct S1 {
+     union {
+-      union { // expected-note 7 {{'S1' is implicitly deleted because field '' has a deleted}}
+-        id f0; // expected-note 3 {{'' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
++      union { // expected-note {{copy constructor of 'S1' is implicitly deleted because field '' has a deleted copy constructor}} expected-note {{copy assignment operator of 'S1' is implicitly deleted because field '' has a deleted copy assignment operator}} expected-note 4 {{'S1' is implicitly deleted because field '' has a deleted}}
++        id f0; // expected-note 2 {{'' is implicitly deleted because variant field 'f0' is an ObjC pointer}}
+         char f1;
+       };
+       int f2;
+@@ -172,7 +172,7 @@ void test() {
+   struct S2 {
+     union {
+       // FIXME: the note should say 'f0' is causing the special functions to be deleted.
+-      struct { // expected-note 7 {{'S2' is implicitly deleted because variant field '' has a non-trivial}}
++      struct { // expected-note 6 {{'S2' is implicitly deleted because variant field '' has a non-trivial}}
+         id f0;
+         int f1;
+       };
+@@ -189,18 +189,14 @@ void test() {
+   S1 *x5;
+   S2 *x6;
+ 
+-  static union { // expected-error {{call to implicitly-deleted default constructor of}} expected-error {{attempt to use a deleted function}}
+-    id g0; // expected-note {{default constructor of '' is implicitly deleted because variant field 'g0' is an ObjC pointer}} \
+-           // expected-note {{destructor of '' is implicitly deleted because}}
++  static union { // expected-error {{call to implicitly-deleted default constructor of}}
++    id g0; // expected-note {{default constructor of '' is implicitly deleted because variant field 'g0' is an ObjC pointer}}
+   };
+ 
+-  static union { // expected-error {{call to implicitly-deleted default constructor of}} expected-error {{attempt to use a deleted function}}
+-    union { // expected-note {{default constructor of '' is implicitly deleted because field '' has a deleted default constructor}} \
+-            // expected-note {{destructor of '' is implicitly deleted because}}
+-      union { // expected-note {{default constructor of '' is implicitly deleted because field '' has a deleted default constructor}} \
+-              // expected-note {{destructor of '' is implicitly deleted because}}
+-        __weak id g1; // expected-note {{default constructor of '' is implicitly deleted because variant field 'g1' is an ObjC pointer}} \
+-                      // expected-note {{destructor of '' is implicitly deleted because}}
++  static union { // expected-error {{call to implicitly-deleted default constructor of}}
++    union { // expected-note {{default constructor of '' is implicitly deleted because field '' has a deleted default constructor}}
++      union { // expected-note {{default constructor of '' is implicitly deleted because field '' has a deleted default constructor}}
++        __weak id g1; // expected-note {{default constructor of '' is implicitly deleted because variant field 'g1' is an ObjC pointer}}
+         int g2;
+       };
+       int g3;
+@@ -209,13 +205,13 @@ void test() {
+   };
+ 
+   void testDefaultConstructor() {
+-    U0 t0; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-    U1 t1; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
++    U0 t0; // expected-error {{call to implicitly-deleted default constructor}}
++    U1 t1; // expected-error {{call to implicitly-deleted default constructor}}
+     U2 t2;
+     U3 t3;
+-    S0 t4; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-    S1 t5; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
+-    S2 t6; // expected-error {{call to implicitly-deleted default constructor}} expected-error {{attempt to use a deleted function}}
++    S0 t4; // expected-error {{call to implicitly-deleted default constructor}}
++    S1 t5; // expected-error {{call to implicitly-deleted default constructor}}
++    S2 t6; // expected-error {{call to implicitly-deleted default constructor}}
+   }
+ 
+   void testDestructor(U0 *u0, U1 *u1, U2 *u2, U3 *u3, S0 *s0, S1 *s1, S2 *s2) {
+diff --git a/clang/test/SemaOpenCLCXX/address-space-references.cl b/clang/test/SemaOpenCLCXX/address-space-references.cl
+index 068318dfa1415..66cd1c02e32f9 100644
+--- a/clang/test/SemaOpenCLCXX/address-space-references.cl
++++ b/clang/test/SemaOpenCLCXX/address-space-references.cl
+@@ -11,7 +11,7 @@ int bar(const __global unsigned int &i); // expected-note{{passing argument to p
+ int bar(const unsigned int &i);
+ 
+ void foo() {
+-  bar(1) // expected-error{{binding reference of type 'const __global unsigned int' to value of type 'int' changes address space}}
++  bar(1); // expected-error{{binding reference of type 'const __global unsigned int' to value of type 'int' changes address space}}
+ }
+ 
+ // Test addr space conversion with nested pointers
+diff --git a/clang/test/SemaTemplate/instantiate-function-params.cpp b/clang/test/SemaTemplate/instantiate-function-params.cpp
+index 505034d004d19..7dd5595de58a3 100644
+--- a/clang/test/SemaTemplate/instantiate-function-params.cpp
++++ b/clang/test/SemaTemplate/instantiate-function-params.cpp
+@@ -3,32 +3,32 @@
+ // PR6619
+ template<bool C> struct if_c { };
+ template<typename T1> struct if_ {
+-  typedef if_c< static_cast<bool>(T1::value)> almost_type_; // expected-note 5{{in instantiation}}
++  typedef if_c< static_cast<bool>(T1::value)> almost_type_; // expected-note 7{{in instantiation}}
+ };
+ template <class Model, void (Model::*)()> struct wrap_constraints { };
+ template <class Model> 
+ inline char has_constraints_(Model* , // expected-note 3{{candidate template ignored}}
+-                               wrap_constraints<Model,&Model::constraints>* = 0); // expected-note 2{{in instantiation}}
++                               wrap_constraints<Model,&Model::constraints>* = 0); // expected-note 4{{in instantiation}}
+ 
+ template <class Model> struct not_satisfied {
+   static const bool value = sizeof( has_constraints_((Model*)0)  == 1); // expected-error 3{{no matching function}} \
+-  // expected-note 2{{while substituting deduced template arguments into function template 'has_constraints_' [with }}
++  // expected-note 4{{while substituting deduced template arguments into function template 'has_constraints_' [with }}
+ };
+ template <class ModelFn> struct requirement_;
+ template <void(*)()> struct instantiate {
+ };
+-template <class Model> struct requirement_<void(*)(Model)>                           : if_<       not_satisfied<Model>         >::type { // expected-note 5{{in instantiation}}
++template <class Model> struct requirement_<void(*)(Model)>                           : if_<       not_satisfied<Model>         >::type { // expected-error 3{{no type named 'type' in}} expected-note 7{{in instantiation}}
+ };
+ template <class Model> struct usage_requirements {
+ };
+ template < typename TT > struct InputIterator                            {
+-    typedef  instantiate< & requirement_<void(*)(usage_requirements<InputIterator> x)>::failed> boost_concept_check1; // expected-note {{in instantiation}}
++    typedef  instantiate< & requirement_<void(*)(usage_requirements<InputIterator> x)>::failed> boost_concept_check1; // expected-note 2{{in instantiation}}
+ };
+-template < typename TT > struct ForwardIterator                              : InputIterator<TT>                              { // expected-note {{in instantiation}}
+-  typedef instantiate< & requirement_<void(*)(usage_requirements<ForwardIterator> x)>::failed> boost_concept_check2; // expected-note {{in instantiation}}
++template < typename TT > struct ForwardIterator                              : InputIterator<TT>                              { // expected-note 2{{in instantiation}}
++  typedef instantiate< & requirement_<void(*)(usage_requirements<ForwardIterator> x)>::failed> boost_concept_check2; // expected-note 2{{in instantiation}}
+ 
+ };
+-typedef instantiate< &requirement_<void(*)(ForwardIterator<char*> x)>::failed> boost_concept_checkX;// expected-note 3{{in instantiation}}
++typedef instantiate< &requirement_<void(*)(ForwardIterator<char*> x)>::failed> boost_concept_checkX;// expected-note 6{{in instantiation}}
+ 
+ template<typename T> struct X0 { };
+ template<typename R, typename A1> struct X0<R(A1 param)> { };
+diff --git a/clang/test/SemaTemplate/instantiate-init.cpp b/clang/test/SemaTemplate/instantiate-init.cpp
+index 6a4f65095dd55..dee0f4422e91c 100644
+--- a/clang/test/SemaTemplate/instantiate-init.cpp
++++ b/clang/test/SemaTemplate/instantiate-init.cpp
+@@ -108,7 +108,7 @@ namespace PR7985 {
+     integral_c<1> ic1 = array_lengthof(Description<int>::data);
+     (void)sizeof(array_lengthof(Description<float>::data));
+ 
+-    sizeof(array_lengthof( // expected-error{{no matching function for call to 'array_lengthof'}}
++    (void)sizeof(array_lengthof( // expected-error{{no matching function for call to 'array_lengthof'}}
+                           Description<int*>::data // expected-note{{in instantiation of static data member 'PR7985::Description<int *>::data' requested here}}
+                           ));
+ 

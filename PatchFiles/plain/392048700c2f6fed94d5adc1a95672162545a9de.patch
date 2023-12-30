@@ -1,0 +1,59 @@
+From 392048700c2f6fed94d5adc1a95672162545a9de Mon Sep 17 00:00:00 2001
+From: Guy Harris <gharris@sonic.net>
+Date: Thu, 2 Jul 2020 19:00:16 -0700
+Subject: [PATCH] Revert "Quick test to make sure compilers warn about
+ de-constification."
+
+This reverts commit 10dbaabafb2ea88f5c3cce8a66f00831abca1ebd.
+
+OK, we got the warnings we expected.
+---
+ pcap.c    | 13 -------------
+ sf-pcap.c | 10 ----------
+ 2 files changed, 23 deletions(-)
+
+diff --git a/pcap.c b/pcap.c
+index a4911dad8a..58ef71d279 100644
+--- a/pcap.c
++++ b/pcap.c
+@@ -315,19 +315,6 @@ pcap_init(unsigned int opts, char *errbuf)
+ 	return (0);
+ }
+ 
+-/*
+- * PART OF A TEMPORARY TEST OF COMPILER WARNINGS FOR DE-CONSTIFYING
+- * POINTERS.
+- */
+-extern const char *func1(void);
+-
+-const char *
+-func2(void)
+-{
+-	char *str = func1();
+-	return str;
+-}
+-
+ /*
+  * String containing the library version.
+  * Not explicitly exported via a header file - the right API to use
+diff --git a/sf-pcap.c b/sf-pcap.c
+index 0a88a44e16..d8443e9825 100644
+--- a/sf-pcap.c
++++ b/sf-pcap.c
+@@ -145,16 +145,6 @@ struct pcap_sf {
+ 	tstamp_scale_type_t scale_type;
+ };
+ 
+-/*
+- * PART OF A TEMPORARY TEST OF COMPILER WARNINGS FOR DE-CONSTIFYING
+- * POINTERS.
+- */
+-const char *
+-func1(void)
+-{
+-	return "";
+-}
+-
+ /*
+  * Check whether this is a pcap savefile and, if it is, extract the
+  * relevant information from the header.

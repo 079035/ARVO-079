@@ -1,0 +1,9 @@
+commit 62583dc1ea86da3a302319a20a05acc063324ab7
+Merge: feaaf7a6 4021b784
+Author: brailovich <91924341+brailovich@users.noreply.github.com>
+Date:   Mon Jan 24 17:54:41 2022 -0800
+
+    Merge pull request #1 from brailovich/brailovich-patch-1
+    
+    fix for error message in recursive mode for an empty folder
+

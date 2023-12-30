@@ -1,0 +1,73 @@
+commit ecae51e5f14dad2591d6a15f2e70b4d024fb7985
+Author: Caolán McNamara <caolanm@redhat.com>
+Date:   Mon May 23 08:54:04 2022 +0100
+
+    tiled tiff found at rhbz552360-2.tiff
+    
+    fix up wrt skew and buffer size and the right put function
+    
+    Change-Id: Iff93876c39213668f38ba341e597741b695b47bf
+    Reviewed-on: https://gerrit.libreoffice.org/c/core/+/134759
+    Tested-by: Jenkins
+    Reviewed-by: Caolán McNamara <caolanm@redhat.com>
+
+diff --git a/vcl/source/filter/itiff/itiff.cxx b/vcl/source/filter/itiff/itiff.cxx
+index f919cda526dc..cb512d58577d 100644
+--- a/vcl/source/filter/itiff/itiff.cxx
++++ b/vcl/source/filter/itiff/itiff.cxx
+@@ -53,7 +53,7 @@ namespace
+         {
+         }
+ 
+-        void SetPixels(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
++        void SetPixels(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t skew)
+         {
+             const uint32_t* pSrc = aBuffer.data();
+ 
+@@ -66,6 +66,7 @@ namespace
+                     pAlphaAccess->SetPixelIndex(y + nRow, x + nCol, 255 - TIFFGetA(*pSrc));
+                     ++pSrc;
+                 }
++                pSrc += skew;
+             }
+         }
+     };
+@@ -124,11 +125,11 @@ static void putContigPixel(TIFFRGBAImage* img, uint32_t* /*raster*/,
+ {
+     Context* pContext = static_cast<Context*>(TIFFClientdata(img->tif));
+ 
+-    pContext->aBuffer.resize(w * h);
++    pContext->aBuffer.resize((w + toskew) * h);
+     (pContext->pOrigContig)(img, pContext->aBuffer.data(), 0, 0, w, h,
+                             fromskew, toskew, cp);
+ 
+-    pContext->SetPixels(x, y, w, h);
++    pContext->SetPixels(x, y, w, h, toskew);
+ }
+ 
+ static void putSeparatePixel(TIFFRGBAImage* img, uint32_t* /*raster*/,
+@@ -138,11 +139,11 @@ static void putSeparatePixel(TIFFRGBAImage* img, uint32_t* /*raster*/,
+ {
+     Context* pContext = static_cast<Context*>(TIFFClientdata(img->tif));
+ 
+-    pContext->aBuffer.resize(w * h);
++    pContext->aBuffer.resize((w + toskew) * h);
+     (pContext->pOrigSeparate)(img, pContext->aBuffer.data(), 0, 0, w, h,
+                               fromskew, toskew, r, g, b, a);
+ 
+-    pContext->SetPixels(x, y, w, h);
++    pContext->SetPixels(x, y, w, h, toskew);
+ }
+ 
+ bool ImportTiffGraphicImport(SvStream& rTIFF, Graphic& rGraphic)
+@@ -204,8 +205,8 @@ bool ImportTiffGraphicImport(SvStream& rTIFF, Graphic& rGraphic)
+         if (TIFFRGBAImageOK(tif, emsg) && TIFFRGBAImageBegin(&img, tif, 1, emsg))
+         {
+             img.req_orientation = ORIENTATION_TOPLEFT;
+-            assert(!TIFFIsTiled(img.tif));
+-            if (!TIFFIsTiled(img.tif))
++            assert(img.isContig);
++            if (img.isContig)
+             {
+                 aContext.pOrigContig = img.put.contig;
+                 img.put.contig = putContigPixel;

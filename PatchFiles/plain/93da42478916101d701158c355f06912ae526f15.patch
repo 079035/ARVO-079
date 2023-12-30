@@ -1,0 +1,28 @@
+commit 93da42478916101d701158c355f06912ae526f15
+Author: Dylan Reid <dgreid@chromium.org>
+Date:   Tue Jul 3 22:55:16 2018 +0000
+
+    CRAS: Check that the AEC dump message is the correct length
+    
+    Fixes reading past the end of the message found by continuous fuzzing.
+    Credit to OSS-Fuzz for finding it quickly.
+    
+    Change-Id: Ifcc3d2c3bf7081e124c37e191f61141a7fd76ccf
+    Signed-off-by: Dylan Reid <dgreid@chromium.org>
+    Reviewed-on: https://chromium-review.googlesource.com/1125331
+    Commit-Ready: ChromeOS CL Exonerator Bot <chromiumos-cl-exonerator@appspot.gserviceaccount.com>
+    Reviewed-by: Cheng-Yi Chiang <cychiang@chromium.org>
+
+diff --git a/cras/src/server/cras_rclient.c b/cras/src/server/cras_rclient.c
+index 5cf683e6..307f52d7 100644
+--- a/cras/src/server/cras_rclient.c
++++ b/cras/src/server/cras_rclient.c
+@@ -642,6 +642,8 @@ int cras_rclient_message_from_client(struct cras_rclient *client,
+ 	case CRAS_SERVER_SET_AEC_DUMP: {
+ 		const struct cras_set_aec_dump *m =
+ 			(const struct cras_set_aec_dump *)msg;
++		if (!MSG_LEN_VALID(msg, struct cras_set_aec_dump))
++			return -EINVAL;
+ 		audio_thread_set_aec_dump(
+ 				cras_iodev_list_get_audio_thread(),
+ 				m->stream_id,

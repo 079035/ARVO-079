@@ -1,5 +1,5 @@
 {
-    "fix": "https://aomedia.googlesource.com/aom/+/c7f4ccbbaca5fc8b5f28357b919a3b0f0487e8cd",
+    "fix": "https://aomedia.googlesource.com/aom/+/c7f4ccbbaca5fc8b5f28357b919a3b0f0487e8cd%5E%21/",
     "verify": "0",
     "localId": 9253,
     "project": "aom",

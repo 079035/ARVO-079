@@ -1,0 +1,91 @@
+From f65ac3f1a9511fd802518a41e91ff21c4a2c99ae Mon Sep 17 00:00:00 2001
+From: Georg Brandl <georg@python.org>
+Date: Thu, 24 Dec 2020 16:59:46 +0100
+Subject: [PATCH] Fix raw token lexer w.r.t. Unicode.
+
+fixes #1616
+---
+ CHANGES                    |  1 +
+ pygments/lexers/special.py | 36 ++++++++++++++++++------------------
+ 2 files changed, 19 insertions(+), 18 deletions(-)
+
+diff --git a/CHANGES b/CHANGES
+index d68df87a4e..931332984d 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -20,6 +20,7 @@ Version 2.7.4
+ - Fixed backtracking string regexes in JavaScript/TypeScript lexers (#1637)
+ - Limit recursion with nesting Ruby heredocs (#1638)
+ - Fixed a few inefficient regexes for guessing lexers
++- Fixed the raw token lexer handling of Unicode (#1616)
+ 
+ 
+ Version 2.7.3
+diff --git a/pygments/lexers/special.py b/pygments/lexers/special.py
+index 84a924d903..48bb719e86 100644
+--- a/pygments/lexers/special.py
++++ b/pygments/lexers/special.py
+@@ -39,7 +39,7 @@ def analyse_text(text):
+ 
+ _ttype_cache = {}
+ 
+-line_re = re.compile(b'.*?\n')
++line_re = re.compile('.*?\n')
+ 
+ 
+ class RawTokenLexer(Lexer):
+@@ -65,20 +65,20 @@ def __init__(self, **options):
+         Lexer.__init__(self, **options)
+ 
+     def get_tokens(self, text):
+-        if isinstance(text, str):
+-            # raw token stream never has any non-ASCII characters
+-            text = text.encode('ascii')
+-        if self.compress == 'gz':
+-            import gzip
+-            gzipfile = gzip.GzipFile('', 'rb', 9, BytesIO(text))
+-            text = gzipfile.read()
+-        elif self.compress == 'bz2':
+-            import bz2
+-            text = bz2.decompress(text)
+-
+-        # do not call Lexer.get_tokens() because we do not want Unicode
+-        # decoding to occur, and stripping is not optional.
+-        text = text.strip(b'\n') + b'\n'
++        if self.compress:
++            if isinstance(text, str):
++                text = text.encode('latin1')
++            if self.compress == 'gz':
++                import gzip
++                gzipfile = gzip.GzipFile('', 'rb', 9, BytesIO(text))
++                text = gzipfile.read()
++            elif self.compress == 'bz2':
++                import bz2
++                text = bz2.decompress(text)
++            text = text.decode('latin1')
++
++        # do not call Lexer.get_tokens() because stripping is not optional.
++        text = text.strip('\n') + '\n'
+         for i, t, v in self.get_tokens_unprocessed(text):
+             yield t, v
+ 
+@@ -86,9 +86,9 @@ def get_tokens_unprocessed(self, text):
+         length = 0
+         for match in line_re.finditer(text):
+             try:
+-                ttypestr, val = match.group().split(b'\t', 1)
++                ttypestr, val = match.group().rstrip().split('\t', 1)
+             except ValueError:
+-                val = match.group().decode('ascii', 'replace')
++                val = match.group()
+                 ttype = Error
+             else:
+                 ttype = _ttype_cache.get(ttypestr)
+@@ -100,6 +100,6 @@ def get_tokens_unprocessed(self, text):
+                             raise ValueError('malformed token name')
+                         ttype = getattr(ttype, ttype_)
+                     _ttype_cache[ttypestr] = ttype
+-                val = val[2:-2].decode('unicode-escape')
++                val = val[1:-1].encode().decode('unicode-escape')
+             yield length, ttype, val
+             length += len(val)

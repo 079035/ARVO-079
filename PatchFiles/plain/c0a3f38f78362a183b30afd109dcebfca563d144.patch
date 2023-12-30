@@ -1,0 +1,26 @@
+From c0a3f38f78362a183b30afd109dcebfca563d144 Mon Sep 17 00:00:00 2001
+From: Behdad Esfahbod <behdad@behdad.org>
+Date: Tue, 28 Aug 2018 17:22:38 -0700
+Subject: [PATCH] Fix distcheck
+
+---
+ src/Makefile.sources | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/Makefile.sources b/src/Makefile.sources
+index 0d975383c76..97efda2276b 100644
+--- a/src/Makefile.sources
++++ b/src/Makefile.sources
+@@ -209,9 +209,12 @@ HB_ICU_headers = hb-icu.h
+ HB_SUBSET_sources = \
+ 	hb-static.cc \
+ 	hb-subset.cc \
++	hb-subset.hh \
+ 	hb-subset-glyf.cc \
++	hb-subset-glyf.hh \
+ 	hb-subset-input.cc \
+ 	hb-subset-plan.cc \
++	hb-subset-plan.hh \
+ 	$(NULL)
+ 
+ HB_SUBSET_headers = \

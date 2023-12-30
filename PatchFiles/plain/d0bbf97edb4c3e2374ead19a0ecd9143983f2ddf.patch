@@ -1,0 +1,87 @@
+From 34a12c83b46b51373ae183c3fb8fcce990414a05 Mon Sep 17 00:00:00 2001
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date: Tue, 15 Mar 2022 18:17:42 +0100
+Subject: [PATCH] IsLetterGroup: Do not blindly walk back in the word
+
+strlen(p) may be arbitrarily long, that would underflow the word, for
+instance:
+
+testing fr Latn
+=================================================================
+==3741805==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffd733c1329 at pc 0x7ff5ffbad2de bp 0x7ffd733bf310 sp 0x7ffd733bf308
+READ of size 1 at 0x7ffd733c1329 thread T0
+    #0 0x7ff5ffbad2dd in IsLetterGroup src/libespeak-ng/dictionary.c:714
+    #1 0x7ff5ffbbe425 in MatchRule src/libespeak-ng/dictionary.c:1979
+    #2 0x7ff5ffbc09e9 in TranslateRules src/libespeak-ng/dictionary.c:2301
+    #3 0x7ff5ffc26656 in TranslateWord3 src/libespeak-ng/translate.c:733
+    #4 0x7ff5ffc2a10b in TranslateWord src/libespeak-ng/translate.c:1100
+    #5 0x7ff5ffc2bef2 in TranslateWord2 src/libespeak-ng/translate.c:1361
+    #6 0x7ff5ffc374e2 in TranslateClause src/libespeak-ng/translate.c:2623
+    #7 0x7ff5ffc1d010 in SpeakNextClause src/libespeak-ng/synthesize.c:1569
+    #8 0x7ff5ffbfbd46 in Synthesize src/libespeak-ng/speech.c:492
+    #9 0x7ff5ffbfd52a in sync_espeak_Synth src/libespeak-ng/speech.c:570
+    #10 0x7ff5ffbfdd1f in espeak_ng_Synthesize src/libespeak-ng/speech.c:678
+    #11 0x7ff5ffbc72fd in espeak_Synth src/libespeak-ng/espeak_api.c:90
+    #12 0x5627511a3137 in main src/espeak-ng.c:691
+    #13 0x7ff5fee557fc in __libc_start_main ../csu/libc-start.c:332
+    #14 0x5627511a0569 in _start (/home/samy/ens/projet/1/speech/espeak-ng-git/src/.libs/espeak-ng+0x6569)
+
+Address 0x7ffd733c1329 is located in stack of thread T0 at offset 1177 in frame
+    #0 0x7ff5ffc2f760 in TranslateClause src/libespeak-ng/translate.c:1941
+
+  This frame has 16 object(s):
+    [48, 52) 'cc' (line 1944)
+    [64, 68) 'source_index' (line 1945)
+    [80, 84) 'prev_in' (line 1948)
+    [96, 100) 'prev_out' (line 1949)
+    [112, 116) 'next_in' (line 1952)
+    [128, 132) 'char_inserted' (line 1954)
+    [144, 148) 'word_flags' (line 1963)
+    [160, 164) 'charix_top' (line 1975)
+    [176, 180) 'tone' (line 1985)
+    [192, 196) 'next2_in' (line 2294)
+    [208, 212) 'c_temp' (line 2518)
+    [224, 374) 'number_buf' (line 2522)
+    [448, 1048) 'num_wtab' (line 2523)
+    [1184, 1984) 'sbuf' (line 1982) <== Memory access at offset 1177 underflows this variable
+    [2112, 3720) 'charix' (line 1977)
+    [3856, 7456) 'words' (line 1978)
+
+sbuf is however properly '\0'-header, so we can make IsLetterGroup
+carefully walk back in the word and issue a mismatch if it walks back
+too much.
+
+Fixes #1108
+---
+ src/libespeak-ng/dictionary.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/src/libespeak-ng/dictionary.c b/src/libespeak-ng/dictionary.c
+index f93be0217..e23dc33d1 100644
+--- a/src/libespeak-ng/dictionary.c
++++ b/src/libespeak-ng/dictionary.c
+@@ -693,7 +693,7 @@ static int IsLetterGroup(Translator *tr, char *word, int group, int pre)
+ 	 */
+ 	char *p; // group counter
+ 	char *w; // word counter
+-	int len = 0;
++	int len = 0, i;
+ 
+ 	p = tr->letterGroups[group];
+ 	if (p == NULL)
+@@ -702,7 +702,14 @@ static int IsLetterGroup(Translator *tr, char *word, int group, int pre)
+ 	while (*p != RULE_GROUP_END) {
+ 		if (pre) {
+ 			len = strlen(p);
+-			w = word - len + 1;
++			w = word;
++			for (i = 0; i < len-1; i++)
++			{
++				w--;
++				if (*w == 0)
++					// Not found
++					return -1;
++			}
+ 		} else
+ 			w = word;
+ 

@@ -1,0 +1,24 @@
+From a8e36de0ac38f5e9c1175c519adefa52f054598a Mon Sep 17 00:00:00 2001
+From: Steve Lhomme <robux4@ycbcr.xyz>
+Date: Fri, 9 Jul 2021 11:26:26 +0200
+Subject: [PATCH] mft: support NV12 output
+
+That's the preferred output format for most codec and also with better DXGI
+display support.
+---
+ modules/codec/mft.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/modules/codec/mft.c b/modules/codec/mft.c
+index 46e03bdcab0b..452beec97161 100644
+--- a/modules/codec/mft.c
++++ b/modules/codec/mft.c
+@@ -410,7 +410,7 @@ static int SetOutputType(decoder_t *p_dec, DWORD stream_id, IMFMediaType **resul
+ 
+         if (p_dec->fmt_in.i_cat == VIDEO_ES)
+         {
+-            if (IsEqualGUID(&subtype, &MFVideoFormat_YV12) || IsEqualGUID(&subtype, &MFVideoFormat_I420))
++            if (IsEqualGUID(&subtype, &MFVideoFormat_NV12) || IsEqualGUID(&subtype, &MFVideoFormat_YV12) || IsEqualGUID(&subtype, &MFVideoFormat_I420))
+                 found = true;
+             /* Transform might offer output in a D3DFMT propietary FCC. If we can
+              * use it, fall back to it in case we do not find YV12 or I420 */

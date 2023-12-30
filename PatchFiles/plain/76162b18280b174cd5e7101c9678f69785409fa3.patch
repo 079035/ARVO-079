@@ -1,0 +1,37 @@
+commit 76162b18280b174cd5e7101c9678f69785409fa3
+Author: Jouni Malinen <j@w1.fi>
+Date:   Tue Jan 28 14:17:52 2020 +0200
+
+    TLS: Fix bounds checking in certificate policy parser
+    
+    The recent addition of the X.509v3 certificatePolicies parser had a
+    copy-paste issue on the inner SEQUENCE parser that ended up using
+    incorrect length for the remaining buffer. Fix that to calculate the
+    remaining length properly to avoid reading beyond the end of the buffer
+    in case of corrupted input data.
+    
+    Credit to OSS-Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=20363
+    Fixes: d165b32f3887 ("TLS: TOD-STRICT and TOD-TOFU certificate policies")
+    Signed-off-by: Jouni Malinen <j@w1.fi>
+
+diff --git a/src/tls/x509v3.c b/src/tls/x509v3.c
+index 2b0743116..5c8ac5676 100644
+--- a/src/tls/x509v3.c
++++ b/src/tls/x509v3.c
+@@ -1205,14 +1205,14 @@ static int x509_parse_ext_certificate_policies(struct x509_certificate *cert,
+ 		struct asn1_oid oid;
+ 		char buf[80];
+ 
+-		if (asn1_get_next(pos, len, &hdr) < 0 ||
++		if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+ 		    hdr.class != ASN1_CLASS_UNIVERSAL ||
+ 		    hdr.tag != ASN1_TAG_SEQUENCE) {
+ 			wpa_printf(MSG_DEBUG, "X509: Expected SEQUENCE (PolicyInformation) - found class %d tag 0x%x",
+ 				   hdr.class, hdr.tag);
+ 			return -1;
+ 		}
+-		if (hdr.length > pos + len - hdr.payload)
++		if (hdr.length > end - hdr.payload)
+ 			return -1;
+ 		pos = hdr.payload;
+ 		pol_end = pos + hdr.length;

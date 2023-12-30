@@ -1,0 +1,41 @@
+From 1a22fc0c8837838e60daecc0bf01648f359dd6fd Mon Sep 17 00:00:00 2001
+From: Cristy <urban-warrior@imagemagick.org>
+Date: Fri, 5 Oct 2018 19:20:04 -0400
+Subject: [PATCH] ...
+
+---
+ coders/pict.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/coders/pict.c b/coders/pict.c
+index 9112be6f049..c8a77aabe55 100644
+--- a/coders/pict.c
++++ b/coders/pict.c
+@@ -444,7 +444,7 @@ static unsigned char *DecodeImage(Image *blob,Image *image,
+     bytes_per_line=width;
+   row_bytes=(size_t) (image->columns | 0x8000);
+   if (image->storage_class == DirectClass)
+-    row_bytes=(size_t) (4*(image->columns | 0x8000));
++    row_bytes=(size_t) ((4*image->columns) | 0x8000);
+   /*
+     Allocate pixel and scanline buffer.
+   */
+@@ -1778,7 +1778,7 @@ static MagickBooleanType WritePICTImage(const ImageInfo *image_info,
+   /*
+     Allocate memory.
+   */
+-  bytes_per_line=image->columns | 0x8000;
++  bytes_per_line=image->columns;
+   if (storage_class == DirectClass)
+     bytes_per_line*=image->alpha_trait != UndefinedPixelTrait ? 4 : 3;
+   buffer=(unsigned char *) AcquireQuantumMemory(PictInfoSize,sizeof(*buffer));
+@@ -1799,7 +1799,8 @@ static MagickBooleanType WritePICTImage(const ImageInfo *image_info,
+       ThrowWriterException(ResourceLimitError,"MemoryAllocationFailed");
+     }
+   (void) memset(scanline,0,row_bytes);
+-  (void) memset(packed_scanline,0,(size_t) (row_bytes+2*MaxCount));
++  (void) memset(packed_scanline,0,(size_t) (row_bytes+2*MaxCount)*
++    sizeof(*packed_scanline));
+   /*
+     Write header, header size, size bounding box, version, and reserved.
+   */

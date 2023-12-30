@@ -1,0 +1,24 @@
+From fc0617280eed3fd951e1cd097d5d056fb36823e7 Mon Sep 17 00:00:00 2001
+From: Kim Kulling <kim.kulling@googlemail.com>
+Date: Sat, 13 Nov 2021 08:16:34 +0100
+Subject: [PATCH] Disable m3d-export
+
+---
+ CMakeLists.txt | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 63c153df9d..091ab2d3fc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -41,8 +41,8 @@ SET(CMAKE_POLICY_DEFAULT_CMP0092 NEW)
+ CMAKE_MINIMUM_REQUIRED( VERSION 3.10 )
+ 
+ # Disabled importers: m3d for 5.1
+-ADD_DEFINITIONS ( -DASSIMP_BUILD_NO_M3D_IMPORTER )
+-
++ADD_DEFINITIONS( -DASSIMP_BUILD_NO_M3D_IMPORTER)
++ADD_DEFINITIONS( -DASSIMP_BUILD_NO_M3D_EXPORTER)
+ # Toggles the use of the hunter package manager
+ option(ASSIMP_HUNTER_ENABLED "Enable Hunter package manager support" OFF)
+ 

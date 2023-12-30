@@ -1,20 +1,8 @@
-Vulnerability:
-This code patch fixes a vulnerability in the `HashMgr::add_word` function of the `hashmgr.cxx` file. The vulnerability allows an attacker to cause a segmentation fault (segfault) by providing an invalid value for the `aff` parameter.
+1. Vulnerability:
+The vulnerability in the code was a potential segmentation fault (Segv) on an unknown address with an invalid affix length (aff). This could occur when the affix length exceeded the maximum limit of the 'short' data type. This could lead to undefined behavior and potential crashes.
 
-Summary of Fix:
-The fix adds a check to ensure that the length of the affix (`al`) is not greater than the maximum limit defined by `std::numeric_limits<short>::max()`. If the length exceeds this limit, a warning is printed and the function returns with an error code.
+2. Short Summary of the Fix:
+The fix involves adding a check to ensure that the affix length does not exceed the maximum limit of the 'short' data type. If the affix length is too large, a warning is printed to the standard error output, the affix is freed, and the function returns an error code.
 
-Detailed Description of Fix:
-1. The fix starts by adding the following check to the code:
-   ```
-   if (al > std::numeric_limits<short>::max()) {
-     HUNSPELL_WARNING(stderr, "error: affix len %d is over max limit\n", al);
-     free_flag(aff, al);
-     return 1;
-   }
-   ```
-   This check compares the length (`al`) of the affix with the maximum limit defined by `std::numeric_limits<short>::max()`. If the length exceeds this limit, it means that the affix is too long, and a warning is printed to the stderr stream. The `HUNSPELL_WARNING` macro is used to print the warning message. After printing the warning, the function frees the memory allocated for the `aff` parameter using the `free_flag` function and returns with an error code of `1`.
-
-2. The rest of the code remains unchanged.
-
-By adding this check, the fix prevents the vulnerability by ensuring that the length of the affix is within the allowed limit. If an invalid affix length is provided, the function prints a warning and returns an error code, avoiding the potential segmentation fault.
+3. Detailed Description of the Fix:
+The fix is implemented in the 'add_word' function of the 'HashMgr' class. At the start of the function, a check is added to ensure that the affix length ('al') does not exceed the maximum limit of the 'short' data type. This is done using the 'std::numeric_limits<short>::max()' function. If the affix length is too large, a warning message is printed to the standard error output using the 'HUNSPELL_WARNING' macro. The message includes the affix length that caused the error. After printing the warning, the affix is freed using the 'free_flag' function, and the function returns 1 to indicate an error. This prevents the function from continuing with an invalid affix length, which could lead to a segmentation fault.

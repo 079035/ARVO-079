@@ -1,0 +1,92 @@
+{
+    "fix": "https://github.com/pygments/pygments/commit/eb39c43b6ef992abadb0d25f0504d0cf2f3ccd86",
+    "verify": "0",
+    "localId": 29475,
+    "project": "pygments",
+    "fuzzer": "libfuzzer",
+    "sanitizer": "asan",
+    "crash_type": "Uncaught exception",
+    "report": {
+        "comments": [
+            {
+                "projectName": "oss-fuzz",
+                "localId": 29475,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1610318250,
+                "content": "Detailed Report: https://oss-fuzz.com/testcase?key=5950214416498688\n\nProject: pygments\nFuzzing Engine: libFuzzer\nFuzz Target: pygments_fuzzer\nJob Type: libfuzzer_asan_pygments\nPlatform Id: linux\n\nCrash Type: Uncaught exception\nCrash Address: \nCrash State:\n  popstate_tag_callback\n  get_tokens_unprocessed\n  streamer\n  \nSanitizer: address (ASAN)\n\nRegressed: https://oss-fuzz.com/revisions?job=libfuzzer_asan_pygments&range=202012170626:202012180625\n\nReproducer Testcase: https://oss-fuzz.com/download?testcase_id=5950214416498688\n\nIssue filed automatically.\n\nSee https://google.github.io/oss-fuzz/advanced-topics/reproducing for instructions to reproduce this bug locally.\nWhen you fix this bug, please\n  * mention the fix revision(s).\n  * state whether the bug was a short-lived regression or an old bug in any stable releases.\n  * add any other useful information.\nThis information can help downstream consumers.\n\nIf you need to contact the OSS-Fuzz team with a question, concern, or any other feedback, please file an issue at https://github.com/google/oss-fuzz/issues. Comments on individual Monorail issues are not monitored.\n\nThis bug is subject to a 90 day disclosure deadline. If 90 days elapse\nwithout an upstream patch, then the bug report will automatically\nbecome visible to the public.",
+                "descriptionNum": 1
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 29475,
+                "sequenceNum": 1,
+                "commenter": {
+                    "userId": "1881033810",
+                    "displayName": "georg...@gmail.com"
+                },
+                "timestamp": 1610355205,
+                "content": "This should be fixed in eb39c43b6ef992abadb0d25f0504d0cf2f3ccd86"
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 29475,
+                "sequenceNum": 2,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1610395379,
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "Disclosure-2021-04-12"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 29475,
+                "sequenceNum": 3,
+                "commenter": {
+                    "userId": "382749006",
+                    "displayName": "ClusterFuzz-External"
+                },
+                "timestamp": 1610467271,
+                "content": "ClusterFuzz testcase 5950214416498688 is verified as fixed in https://oss-fuzz.com/revisions?job=libfuzzer_asan_pygments&range=202101110601:202101120617\n\nIf this is incorrect, please file a bug on https://github.com/google/oss-fuzz/issues/new",
+                "amendments": [
+                    {
+                        "fieldName": "Status",
+                        "newOrDeltaValue": "Verified",
+                        "oldValue": "New"
+                    },
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "ClusterFuzz-Verified"
+                    }
+                ]
+            },
+            {
+                "projectName": "oss-fuzz",
+                "localId": 29475,
+                "sequenceNum": 4,
+                "commenter": {
+                    "userId": "1950284618",
+                    "displayName": "sheriffbot"
+                },
+                "timestamp": 1613073288,
+                "content": "This bug has been fixed for 30 days. It has been opened to the public.\n\n- Your friendly Sheriffbot",
+                "amendments": [
+                    {
+                        "fieldName": "Labels",
+                        "newOrDeltaValue": "-restrict-view-commit"
+                    }
+                ]
+            }
+        ]
+    },
+    "fix_commit": "eb39c43b6ef992abadb0d25f0504d0cf2f3ccd86",
+    "repo_addr": "https://github.com/pygments/pygments.git"
+}

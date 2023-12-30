@@ -1,16 +1,8 @@
-Vulnerability:
-The vulnerability in the given diff file is that the cue sheet parsing code skips the first second (S) when parsing cuepoints in the format MM:SS.SS. This leads to incorrect parsing of cuepoints, where "00:12.34" would be parsed as "00:02.34".
+1. Vulnerability:
+The vulnerability in the code was in the cuesheet parsing function `local__parse_ms_`. The function was designed to parse cuepoints of the form MM:SS.SS, but it had a bug where the first S (second) of the template was skipped. This meant that a time like 00:12.34 was incorrectly parsed as 00:02.34. This could lead to incorrect time calculations and potential issues in the functionality of the software.
 
-Fix Summary:
-The fix for this vulnerability involves removing the line that skips the ":" character after parsing the minutes field.
+2. Short Summary of the Fix:
+The fix involved removing an unnecessary increment of the string pointer `s` after the minutes field was parsed. This increment was causing the parser to skip the first digit of the seconds field.
 
-Detailed Fix Description:
-In the original code, after parsing the minutes field, the code skips the ":" character. This is not intended behavior and results in the vulnerability. Removing this line will ensure that the full cuepoint string is processed correctly.
-
-To fix the vulnerability, the following line should be removed from the code:
-
-```c
-s++; /* skip the ':' */
-```
-
-After applying the fix, the code will correctly parse the cuepoints in the format MM:SS.SS without skipping any characters.
+3. Detailed Description of the Fix:
+In the function `local__parse_ms_`, the string pointer `s` was being incremented to skip the ':' character after the minutes field was parsed. However, this was causing the parser to skip the first digit of the seconds field. The fix was to remove this increment operation. Now, the parser correctly parses the seconds field after the ':' character. The function also checks if the remaining string only contains digits or a decimal point, converts the string to a double using `strtod`, and checks if the parsed number is within the valid range for seconds (0.0 to 60.0). The parsed seconds are then converted to samples and added to the total sample count `ret`.

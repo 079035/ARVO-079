@@ -1,0 +1,21 @@
+commit 9a63e4cf79052a7897db2f8f239b7a5249155f7e
+Author: Gerald Combs <gerald@wireshark.org>
+Date:   Wed Mar 8 15:44:17 2023 -0800
+
+    ORAN FH CUS: Add an array length check
+    
+    Fixes #18895.
+
+diff --git a/epan/dissectors/packet-oran.c b/epan/dissectors/packet-oran.c
+index d78790b7e7..0a75ecb898 100644
+--- a/epan/dissectors/packet-oran.c
++++ b/epan/dissectors/packet-oran.c
+@@ -1617,7 +1617,7 @@ static int dissect_oran_c_section(tvbuff_t *tvb, proto_tree *tree, packet_info *
+                         ext11_settings.ext6_rbg_size = 16; break;
+                     /* N.B., encoded in 3 bits, so no other values are possible */
+                 }
+-                for (guint n=0; n < 28; n++) {
++                for (guint n=0; n < 28 && ext11_settings.ext6_num_bits_set < 28; n++) {
+                     if ((rbgMask >> n) & 0x01) {
+                         ext11_settings.ext6_bits_set[ext11_settings.ext6_num_bits_set++] = n;
+                     }

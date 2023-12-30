@@ -1,0 +1,41 @@
+From 4782d10257693a30bf84b4b33159d02594ece005 Mon Sep 17 00:00:00 2001
+From: "Victor M. Alvarez" <vmalvarez@virustotal.com>
+Date: Tue, 5 Jan 2021 10:52:15 +0100
+Subject: [PATCH] Fix buffer overrun in dotnet module.
+
+---
+ libyara/modules/dotnet/dotnet.c                   |   7 +++++--
+ ...tcase-minimized-dotnet_fuzzer-5880393521430528 | Bin 0 -> 347 bytes
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+ create mode 100644 tests/oss-fuzz/dotnet_fuzzer_corpus/clusterfuzz-testcase-minimized-dotnet_fuzzer-5880393521430528
+
+diff --git a/libyara/modules/dotnet/dotnet.c b/libyara/modules/dotnet/dotnet.c
+index 4d137e1f34..7468d2d33b 100644
+--- a/libyara/modules/dotnet/dotnet.c
++++ b/libyara/modules/dotnet/dotnet.c
+@@ -865,8 +865,11 @@ void dotnet_parse_tilde_2(
+           blob_length = blob_result.length;
+           blob_offset += blob_result.size;
+ 
+-          // Quick sanity check to make sure the blob entry is within bounds.
+-          if (blob_offset + blob_length >= pe->data + pe->data_size)
++          // Quick sanity check to make sure the blob entry is within bounds
++          // and its length is at least 3 (2 bytes for the 16 bits prolog and
++          // 1 byte for the string length)
++          if (blob_length < 3 ||
++              blob_offset + blob_length >= pe->data + pe->data_size)
+           {
+             row_ptr += row_size;
+             continue;
+diff --git a/tests/oss-fuzz/dotnet_fuzzer_corpus/clusterfuzz-testcase-minimized-dotnet_fuzzer-5880393521430528 b/tests/oss-fuzz/dotnet_fuzzer_corpus/clusterfuzz-testcase-minimized-dotnet_fuzzer-5880393521430528
+new file mode 100644
+index 0000000000000000000000000000000000000000..0827e09c7b85c9f71a66759e4fe25d3aaf39cd10
+GIT binary patch
+literal 347
+zcmeZ`QUC)L1_lNYBfu5NfU?07K*A~5%L&G2L6Q?dV#DMW{xc|Chlu}IcFM_5f=i$=
+z{wpw`i9oqHgb}j;cR}q{u0xoi99&YAnU`J+QT87Qz$^v@FkM_y1k?lZAxIp|!9qZE
+aLrIW&5JmxtXnYh&1w92}hB$}{1_c04tTHD6
+
+literal 0
+HcmV?d00001
+

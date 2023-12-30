@@ -1,0 +1,33 @@
+From d9f191a20b46aa83ab45d509adf4cc83a2591adf Mon Sep 17 00:00:00 2001
+From: Dirk Lemstra <dirk@lemstra.org>
+Date: Sat, 2 Nov 2019 09:54:25 +0100
+Subject: [PATCH] Reverted incorrect patch.
+
+---
+ coders/dpx.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/coders/dpx.c b/coders/dpx.c
+index 2f472b66d0a..4f23c5de952 100644
+--- a/coders/dpx.c
++++ b/coders/dpx.c
+@@ -1254,6 +1254,9 @@ static Image *ReadDPXImage(const ImageInfo *image_info,ExceptionInfo *exception)
+       size_t
+         length;
+ 
++      ssize_t
++        row_offset;
++
+       stream=ReadBlobStream(image,extent,pixels,&count);
+       if (count != (ssize_t) extent)
+         break;
+@@ -1268,7 +1271,8 @@ static Image *ReadDPXImage(const ImageInfo *image_info,ExceptionInfo *exception)
+           if (proceed == MagickFalse)
+             break;
+         }
+-      q=QueueAuthenticPixels(image,0,++row,image->columns,1,exception);
++      row_offset=row++;
++      q=QueueAuthenticPixels(image,0,row_offset,image->columns,1,exception);
+       if (q == (Quantum *) NULL)
+         break;
+       length=ImportQuantumPixels(image,(CacheView *) NULL,quantum_info,

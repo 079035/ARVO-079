@@ -1,0 +1,62 @@
+From d5aed7b0e3eaee4f4fb9465580107e3c3c232981 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?M=C3=A1t=C3=A9=20Kocsis?= <kocsismate@woohoolabs.com>
+Date: Sat, 4 Sep 2021 16:42:18 +0200
+Subject: [PATCH] Fix default value of $flags in idn_to_ascii() and
+ idn_to_utf8()
+
+---
+ ext/intl/idn/idn.c          | 2 +-
+ ext/intl/php_intl.stub.php  | 4 ++--
+ ext/intl/php_intl_arginfo.h | 4 ++--
+ 3 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/ext/intl/idn/idn.c b/ext/intl/idn/idn.c
+index f9c4ee391b274..b46170f4bf0a7 100644
+--- a/ext/intl/idn/idn.c
++++ b/ext/intl/idn/idn.c
+@@ -175,7 +175,7 @@ static void php_intl_idn_to_46(INTERNAL_FUNCTION_PARAMETERS,
+ static void php_intl_idn_handoff(INTERNAL_FUNCTION_PARAMETERS, int mode)
+ {
+ 	zend_string *domain;
+-	zend_long option = 0,
++	zend_long option = UIDNA_DEFAULT,
+ 	variant = INTL_IDN_VARIANT_UTS46;
+ 	zval *idna_info = NULL;
+ 
+diff --git a/ext/intl/php_intl.stub.php b/ext/intl/php_intl.stub.php
+index e876db6f3464a..796ab63b84757 100644
+--- a/ext/intl/php_intl.stub.php
++++ b/ext/intl/php_intl.stub.php
+@@ -269,10 +269,10 @@ function grapheme_extract(string $haystack, int $size, int $type = GRAPHEME_EXTR
+ /* idn */
+ 
+ /** @param array $idna_info */
+-function idn_to_ascii(string $domain, int $flags = 0, int $variant = INTL_IDNA_VARIANT_UTS46, &$idna_info = null): string|false {}
++function idn_to_ascii(string $domain, int $flags = IDNA_DEFAULT, int $variant = INTL_IDNA_VARIANT_UTS46, &$idna_info = null): string|false {}
+ 
+ /** @param array $idna_info */
+-function idn_to_utf8(string $domain, int $flags = 0, int $variant = INTL_IDNA_VARIANT_UTS46, &$idna_info = null): string|false {}
++function idn_to_utf8(string $domain, int $flags = IDNA_DEFAULT, int $variant = INTL_IDNA_VARIANT_UTS46, &$idna_info = null): string|false {}
+ 
+ /* locale */
+ 
+diff --git a/ext/intl/php_intl_arginfo.h b/ext/intl/php_intl_arginfo.h
+index 3d2884a86384f..b4a5b553c5e36 100644
+--- a/ext/intl/php_intl_arginfo.h
++++ b/ext/intl/php_intl_arginfo.h
+@@ -1,5 +1,5 @@
+ /* This is a generated file, edit the .stub.php file instead.
+- * Stub hash: 55a689451b2c1ff5900c47111d350168f3ddec00 */
++ * Stub hash: 2e8cfd93b809a0595709dc5c544ec326f7ce1922 */
+ 
+ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_intlcal_create_instance, 0, 0, IntlCalendar, 1)
+ 	ZEND_ARG_INFO_WITH_DEFAULT_VALUE(0, timezone, "null")
+@@ -494,7 +494,7 @@ ZEND_END_ARG_INFO()
+ 
+ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_MASK_EX(arginfo_idn_to_ascii, 0, 1, MAY_BE_STRING|MAY_BE_FALSE)
+ 	ZEND_ARG_TYPE_INFO(0, domain, IS_STRING, 0)
+-	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, flags, IS_LONG, 0, "0")
++	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, flags, IS_LONG, 0, "IDNA_DEFAULT")
+ 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, variant, IS_LONG, 0, "INTL_IDNA_VARIANT_UTS46")
+ 	ZEND_ARG_INFO_WITH_DEFAULT_VALUE(1, idna_info, "null")
+ ZEND_END_ARG_INFO()

@@ -1,0 +1,26 @@
+From 1f876a46746af3135cb3ae303045bd871e58f2ed Mon Sep 17 00:00:00 2001
+From: Frederik Deweerdt <fdeweerdt@fastly.com>
+Date: Fri, 21 Dec 2018 15:06:03 -0800
+Subject: [PATCH] Fix leak in `h2o_http2_scheduler_relocate` if `src` has no
+ children
+
+---
+ lib/http2/scheduler.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/lib/http2/scheduler.c b/lib/http2/scheduler.c
+index bcaa4f187f..5d557676cd 100644
+--- a/lib/http2/scheduler.c
++++ b/lib/http2/scheduler.c
+@@ -267,8 +267,10 @@ void h2o_http2_scheduler_relocate(h2o_http2_scheduler_openref_t *dst, h2o_http2_
+         h2o_linklist_insert_list(&dst->node._all_refs, &src->node._all_refs);
+         /* node._queue */
+         dst->node._queue = src->node._queue;
+-        src->node._queue = NULL;
++    } else {
++        free(src->node._queue);
+     }
++    src->node._queue = NULL;
+ 
+     /* swap all_link */
+     h2o_linklist_insert(&src->_all_link, &dst->_all_link);

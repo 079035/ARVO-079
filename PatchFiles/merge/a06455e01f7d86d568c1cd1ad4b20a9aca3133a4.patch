@@ -1,0 +1,7 @@
+commit a06455e01f7d86d568c1cd1ad4b20a9aca3133a4
+Merge: 789d20ac1 5e1db5ba3
+Author: Ryan Zuklie <rzuklie@google.com>
+Date:   Fri Jan 6 22:45:19 2023 +0000
+
+    Merge "Remove forced inlines within the proto decoder"
+

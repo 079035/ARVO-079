@@ -1,0 +1,23 @@
+From b7bef5a3dd3389def940b8093bc974913620485c Mon Sep 17 00:00:00 2001
+From: David Anderson <davea42@linuxmail.org>
+Date: Sat, 6 May 2023 10:42:12 -0700
+Subject: [PATCH] Added a .h in safestrcpy rule 	modified:   test/Makefile.am
+
+---
+ test/Makefile.am | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/test/Makefile.am b/test/Makefile.am
+index 9d2e131c..9abddd78 100644
+--- a/test/Makefile.am
++++ b/test/Makefile.am
+@@ -230,7 +230,8 @@ test_sanitized_CPPFLAGS = -DTESTING \
+ -I$(top_srcdir)/src/lib/libdwarf
+ 
+ test_safestrcpy_SOURCES = test_safe_strcpy.c \
+-    $(top_srcdir)/src/lib/libdwarf/dwarf_safe_strcpy.c
++    $(top_srcdir)/src/lib/libdwarf/dwarf_safe_strcpy.c \
++    $(top_srcdir)/src/lib/libdwarf/dwarf_safe_strcpy.h
+ test_safestrcpy_CFLAGS = $(DWARF_CFLAGS_WARN)
+ test_safestrcpy_CPPFLAGS = \
+ -I$(top_srcdir) -I$(top_builddir) \

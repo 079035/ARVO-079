@@ -1,0 +1,19 @@
+commit 4f42b6ea0641aaad1bf9835988616c52ac111fc3
+Author: Marcus Meissner <meissner@suse.de>
+Date:   Sat Apr 23 20:42:33 2022 +0200
+
+    add brackets to macro to avoid bad macro expansion
+
+diff --git a/libexif/fuji/exif-mnote-data-fuji.c b/libexif/fuji/exif-mnote-data-fuji.c
+index b055c45..2a8a77f 100644
+--- a/libexif/fuji/exif-mnote-data-fuji.c
++++ b/libexif/fuji/exif-mnote-data-fuji.c
+@@ -28,7 +28,7 @@
+ 
+ #include "exif-mnote-data-fuji.h"
+ 
+-#define CHECKOVERFLOW(offset,datasize,structsize) (( offset >= datasize) || (structsize > datasize) || (offset > datasize - structsize ))
++#define CHECKOVERFLOW(offset,datasize,structsize) (( offset >= datasize) || ((structsize) > datasize) || (offset > datasize - (structsize) ))
+ 
+ struct _MNoteFujiDataPrivate {
+ 	ExifByteOrder order;

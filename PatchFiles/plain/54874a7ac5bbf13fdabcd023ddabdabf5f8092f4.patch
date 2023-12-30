@@ -1,0 +1,34 @@
+From 54874a7ac5bbf13fdabcd023ddabdabf5f8092f4 Mon Sep 17 00:00:00 2001
+From: Evan Miller <emmiller@gmail.com>
+Date: Fri, 10 May 2019 16:21:18 -0400
+Subject: [PATCH] Fix fuzzing build error
+
+---
+ src/test/test_error.c | 2 +-
+ src/test/test_types.h | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/test/test_error.c b/src/test/test_error.c
+index 86f9cfc9..0f2a78f1 100644
+--- a/src/test/test_error.c
++++ b/src/test/test_error.c
+@@ -48,7 +48,7 @@ void push_error(rt_parse_ctx_t *ctx,
+     error->file = ctx->file;
+     error->file_format = ctx->file_format;
+     error->file_extension = ctx->file_extension;
+-    error->pos = ctx->buffer_ctx->pos;
++    error->pos = ((rt_buffer_ctx_t *)ctx->buffer_ctx)->pos;
+     error->var_index = ctx->var_index;
+     error->obs_index = ctx->obs_index;
+     snprintf(error->msg, sizeof(error->msg), "%s", msg);
+diff --git a/src/test/test_types.h b/src/test/test_types.h
+index e74e49fb..de9a94e6 100644
+--- a/src/test/test_types.h
++++ b/src/test/test_types.h
+@@ -107,5 +107,5 @@ typedef struct rt_parse_ctx_s {
+     size_t           max_file_label_len;
+     size_t           max_table_name_len;
+ 
+-    rt_buffer_ctx_t *buffer_ctx;
++    void            *buffer_ctx;
+ } rt_parse_ctx_t;
