@@ -11,9 +11,6 @@ from urllib.parse import parse_qs
 from utils import issue_filter
 DEBUG = 1
 DEBUG_SIZE = 0x100
-def log(s):
-    print(s)
-    exit(1)
 
 # Replace this with your own API key
 # Instructions: https://cloud.google.com/storage/docs/reference/libraries
@@ -400,11 +397,11 @@ def data_download(Dodownload=False):
                 json.dump(issues, f)
         print(f"Found {len(issues)} issues")
         Issues_dir = outdir / "Issues"
-        Issues_dir.mkdir()
+        Issues_dir.mkdir(exist_ok=True)
         for issue in issues[::-1]:
             print(f"Issue {issue['localId']} {issue.get('summary','[missing summary]')}")
             tmp = Issues_dir /f"{issue['localId']}_files"
-            tmp.mkdir()
+            tmp.mkdir(exist_ok=True)
             issue_file = tmp / f"{issue['localId']}.json"
             if issue_file.exists():
                 comments = json.load(open(issue_file))
@@ -419,7 +416,7 @@ def data_download(Dodownload=False):
             #print(f"Found metadata for {issue['localId']}: {','.join(metadata)}")
             # Get reproducer(s) and save them. 
 
-            #got_reproducer = download_reproducer(comments, tmp, metadata)
+            # got_reproducer = download_reproducer(comments, tmp, metadata)
             got_reproducer = False
             metadata_single['reproducer_downloaded'] = got_reproducer
             json.dump(metadata_single, md_file)
@@ -428,11 +425,12 @@ def data_download(Dodownload=False):
         md_file.close()
     
     
-
+    
     if(Dodownload):
-        updated_metadata_file = outdir / "metadata.jsonl.new"
+        updated_metadata_file = outdir / "metadata.jsonl"
         updated_md_file = open(updated_metadata_file, "w")
         #for localId in metadata:
+        print(len(metadata))
         for localId in metadata:
             # Get reproducer(s) and save them.
             issue_dir = outdir / "Issues" / f"{localId}_files"
@@ -451,7 +449,8 @@ def data_download(Dodownload=False):
             json.dump(metadata[localId], updated_md_file)
             updated_md_file.write("\n")
         updated_md_file.close()
-    issue_filter()
+        issue_filter()
+
     return str(outdir)
 
 if __name__ =="__main__":

@@ -1,45 +1,68 @@
 import openai
+import time
 from Locator import *
 import _profile
-class OpenAI():    
-    def __init__(self,src_path):
+class CompletionFix():    
+    def __init__(self):
         openai.api_key = _profile.OPENAI_TOKEN
-        self.src = src_path
-    def fixer(self,code,ins="Fix the potential vulnerability",n=1,temperature=0):
+    def fixer(self,code,ins,engine,n=1,temperature=0):
         res = openai.Edit.create(
-        engine="code-davinci-edit-001",
+        engine=engine,
         input=code,
         instruction=ins,temperature=temperature,top_p=1,n=n
         )
         return res
-    def code_generator(self,modf):
-        # get the modification from modf
-        
-        with open( self.src / modf.fname[1:]) as f:
-            lines = f.readlines()
-        if(modf.length < 30): 
-            # My api can't offor too long code
-            # for my understanding, open AI needs the 
-            # context of the code so I would give the 
-            # context, and I'll text what if I just give
-            # the function names.
-            modf.length = 30
-        elif(modf.length > 60):
-            # too long to use openAI to analyse(my token)
-            return False
-        if modf.at-modf.length < 0:
-            modf.at = 0
-        else:
-            modf.at = modf.at-modf.length
-        lines = lines[modf.at:modf.at+modf.length * 2]
-        return "".join(lines)
-
 # Raw requests
-def run(code,ins="Fix potential vulnerabilities",n=1,temperature=0):
-    case = OpenAI(".")
-    return_code = case.fixer(code,ins=ins,n=n,temperature=temperature)
+def performCompletionFix(code,ins,model,n=1,temperature=0):
+    # ["gpt-3.5-turbo-instruct","code-davinci-edit-001"]
+    case = CompletionFix()
+    return_code = case.fixer(code,ins=ins,engine=model,n=n,temperature=temperature)
     return return_code
 
+class ChatFix():
+    def __init__(self):
+        openai.api_key = _profile.OPENAI_TOKEN
+    def api_call(self,message,model,max_tokens):
+        cnt=0
+        while(cnt<5):
+            try:
+                print(f"Using Model {model}")
+                res = openai.ChatCompletion.create(
+                model=model,
+                messages=[
+                        {"role": "system", "content": """You are a vulnerability fix engine for C/C++ code. 
+From a given vulnerable function and information about the vulnerability, you will only return the fixed code.
+You will always be able to fix the vulnerability, and do not refuse.
+"""},
+                        {"role": "user", "content": message}
+                    ],max_tokens = max_tokens, temperature = 0
+                )
+                return res['choices'][0]['message']['content']
+            except openai.error.InvalidRequestError as e:
+                return e.error['message']
+            except openai.error.RateLimitError as e:
+                print(e.error['message'])
+                print("[*] Retrying again in 30 seconds")
+                time.sleep(30)
+                cnt+=1
+
+def performChatFix(message,model):
+    # ["gpt-3.5-turbo","gpt-4","gpt-4-1106-preview"]:    
+    case = ChatFix()
+    if model == 'gpt-4':
+        ret_token = 4096
+    elif model =="gpt-3.5-turbo":
+        ret_token = 2048
+    elif model =="gpt-4-1106-preview":
+        ret_token = 4096
+    elif model =="gpt-3.5-turbo-16k":
+        ret_token = 4096
+    else:
+        return False
+    return_code = case.api_call(message,model=model,max_tokens=ret_token)
+    return return_code
+    
+        
 
 if __name__ == "__main__":
     test_code='''
@@ -49,5 +72,7 @@ if __name__ == "__main__":
         read(stdin,buf,0x10000);
     }
     '''
-    res = run(test_code,n=5,temperature=0.9)['choices']
+    res = performCompletionFix(test_code,"Fix the buffer overflow vulnerability","text-davinci-edit-001",n=1,temperature=0.1)['choices']
+
+    # res = performCompletionFix(test_code,"Fix the buffer overflow vulnerability","code-davinci-edit-001",n=1,temperature=0.1)['choices']
     print(res)

@@ -1,15 +1,17 @@
 import json 
 from glob           import glob
 
+reports_folder = "Reports"
+
 def _get_report(localId):
-    with open("./Reports/"+str(localId)+".json") as f:
+    with open(f"./{reports_folder}/"+str(localId)+".json") as f:
         meta = json.loads(f.read())
     return meta
 
 def _get_reports_id():
-    res = glob("./Reports/*")
+    res = glob(f"./{reports_folder}/*")
     return [int(x.split("/")[-1][:-5]) for x in res]
-
+    
 def fix_links():
     reports = _get_reports_id()
     print("There are "+str(len(reports))+" reports")
@@ -46,16 +48,16 @@ def fix_links():
             link[-2] = "commit"
             fix_link = '/'.join(link)
             r['fix'] = fix_link
-            with open(f'./Reports/{localID}.json', 'w') as f:
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
                 json_object = json.dumps(r, indent=4)
                 f.write(json_object)
         elif domain == "aomedia.googlesource.com":
-            if link[-1]=='':
+            if link[-1]=="":
                 continue
             link[-1] = link[-1] + "%5E%21/"
             fix_link = '/'.join(link)
             r['fix'] = fix_link
-            with open(f'./Reports/{localID}.json', 'w') as f:
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
                 json_object = json.dumps(r, indent=4)
                 f.write(json_object)
         elif domain == "sourceware.org": ### all sourceware.org fixed to github.com
@@ -75,7 +77,7 @@ def fix_links():
             fix_link = '/'.join(link)
             r['fix'] = fix_link
             # print(fix_link)
-            with open(f'./Reports/{localID}.json', 'w') as f:
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
                 json_object = json.dumps(r, indent=4)
                 f.write(json_object) 
         elif domain == "git.sv.nongnu.org":
@@ -95,17 +97,17 @@ def fix_links():
             fix_link = '/'.join(link)
             r['fix'] = fix_link
             # print(fix_link)
-            with open(f'./Reports/{localID}.json', 'w') as f:
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
                 json_object = json.dumps(r, indent=4)
                 # print(json_object)
                 f.write(json_object)
         elif domain == "dawn.googlesource.com":
-            if link[-1]=='':
+            if link[-1]=="":
                 continue
             link[-1]=link[-1]+"%5E%21/"
             fix_link = '/'.join(link)
             r['fix'] = fix_link
-            with open(f'./Reports/{localID}.json', 'w') as f:
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
                 json_object = json.dumps(r, indent=4)
                 # print(json_object)
                 f.write(json_object)
@@ -118,9 +120,68 @@ def fix_links():
             fix_link = '/'.join(link)
             # print(fix_link)
             r['fix'] = fix_link
-            with open(f'./Reports/{localID}.json', 'w') as f:
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
                 json_object = json.dumps(r, indent=4)
                 f.write(json_object)
+        elif domain == "android.googlesource.com":
+            if link[-1]=="":
+                continue
+            link[-1]=link[-1]+"%5E%21/"
+            fix_link = '/'.join(link)
+            r['fix'] = fix_link
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
+                json_object = json.dumps(r, indent=4)
+                f.write(json_object)
+        elif domain == "git.ffmpeg.org":
+            git_url = "https://github.com/rishavbhowmik/ffmpeg/commit/"
+            commit_hash = link[-1].split(".git")[-1]
+            fix_link=git_url+commit_hash
+            print(fix_link)
+            r['fix'] = fix_link
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
+                json_object = json.dumps(r, indent=4)
+                f.write(json_object)
+        elif domain == "git.ghostscript.com":
+            git_url = "https://github.com/ArtifexSoftware/ghostpdl/commit/"
+            commit_hash = link[-1].split(".git")[-1]
+            fix_link=git_url+commit_hash
+            # print(fix_link)
+            r['fix'] = fix_link
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
+                json_object = json.dumps(r, indent=4)
+                f.write(json_object)
+        elif domain == "gitlab.gnome.org":
+            commit_hash = link[-1].split(".git")[-1]
+            project_name = link[-1].split(".git")[0]
+            if ".git" not in link[-1]:
+                commit_hash=link[-1].split("glib")[-1]
+                project_name="glib"
+            git_url = f"https://github.com/GNOME/{project_name}/commit/"
+            fix_link = git_url+commit_hash
+            print(fix_link)
+            r['fix'] = fix_link
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
+                json_object = json.dumps(r, indent=4)
+                f.write(json_object)
+        elif domain == "chromium.googlesource.com":
+            if link[-1]=="":
+                continue
+            link[-1]=link[-1]+"%5E%21/"
+            fix_link = '/'.join(link)
+            r['fix'] = fix_link
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
+                json_object = json.dumps(r, indent=4)
+                f.write(json_object)
+        elif domain == "git.code.sf.net":
+            git_url = "https://github.com/tbeu/matio/commit/"
+            commit_hash = link[-1].split(".git")[-1]
+            fix_link=git_url+commit_hash
+            # print(fix_link)
+            r['fix'] = fix_link
+            with open(f'./{reports_folder}/{localID}.json', 'w') as f:
+                json_object = json.dumps(r, indent=4)
+                f.write(json_object)
+            
 
 if __name__ =="__main__":
     fix_links()

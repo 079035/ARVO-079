@@ -2,7 +2,7 @@
 # Locate the patch, based on poc and diff file
 # import subprocess
 from utils import *
-from n132 import *
+from reproducer import *
 import json
 from pathlib import Path
 from unidiff import PatchSet
@@ -51,9 +51,7 @@ def check_build(commit,localId,pname):
         build_res = build_from_srcmap(tmp_srcmap,issue)
         if build_res !=True:
             return leave(None)
-        res = crash_verfiy(issue,case_path)
-        if res != True:
-            res = False
+        res = crashVerify(issue,case_path)
         return leave(res)
     else:
         print(f"Have more than 2 Scrmap")
@@ -71,9 +69,9 @@ def dichotomy_search(commits_list,localId,pname):
     res = check_build(commits_list[mid],localId,pname)
     if res == None:
         return False
-    elif res == True:
+    elif res == True: # Not Crash
         return dichotomy_search(commits_list[:mid+1],localId,pname)
-    elif res == False:
+    elif res == False:# Crash
         return dichotomy_search(commits_list[mid+1:],localId,pname)
     else:
         panic(f"dichotomy_search: res->{res}")
@@ -134,13 +132,13 @@ def prepare_vul_repo(commit,localId):
     shutil.copytree(code_dir, wk_dir,symlinks=True)
     check_call(['git','reset','--hard',commit],wk_dir)
     return wk_dir
-def vul_commit(localId,pname):
+def vulCommit(localId,pname):
     
     commits = list_commits(localId,pname)
     
     if len(commits)<=1:
         return False
-    
+    commits = commits[1:]
     target_commit = dichotomy_search(commits,localId,pname)
     if target_commit == False:
         return False
@@ -184,7 +182,7 @@ def report(localId):
     
     info1['url'],_ = transform.trans_table(except_name,info1['url'],info1['type'])
     repo = info1['url']
-    fix_commit= vul_commit(localId,pname)
+    fix_commit= vulCommit(localId,pname)
     if fix_commit == False:
         eventLog(f"[-] Failed to locate the fixes for issue {localId}")
         return False
@@ -220,7 +218,7 @@ def report(localId):
     res['report'] = json.loads(open(DATADIR / "Issues" / (str(localId) + "_files")/(str(localId)+".json")).read())
     res['fix_commit'] = fix_commit
     res['repo_addr'] = info1['url']
-    fname = Path(oss_reproducer_dir)/"Reports"/(str(localId)+".json")
+    fname = oss_reproducer_dir/"Reports"/(str(localId)+".json")
 
     with open(fname,'w') as f:
         f.write(json.dumps(res, indent=4))

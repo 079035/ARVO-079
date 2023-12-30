@@ -9,7 +9,7 @@ OSS_DB_MAP  = OSS_DB/"map"
 RETRY       = 4
 import _profile 
 def eventLog(s):
-    with open(Path(_profile.oss_reproducer_dir)/"Log"/"_Event.log",'a') as f:
+    with open(_profile.oss_reproducer_dir/"Log"/"_Event.log",'a') as f:
         f.write(s+"\n")
 def DB_DUMP(rec):
     ct = 0 
